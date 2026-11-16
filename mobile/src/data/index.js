@@ -1,4 +1,5 @@
 import seed from "./seed.json";
+import { localeTag, t, tk } from "../lib/i18n";
 
 // Seed times were frozen when the data was extracted; shift them so "2h ago" stays "2h ago".
 const SHIFT = Date.now() - seed.BOOT_AT;
@@ -61,24 +62,24 @@ export function toneFor(name) {
 export function ago(at) {
   const diff = Math.max(0, Date.now() - at);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "ora";
-  if (min < 60) return `${min} min`;
+  if (min < 1) return t("ora");
+  if (min < 60) return t("{n} min", { n: min });
   const hours = Math.floor(min / 60);
-  if (hours < 24) return `${hours} h`;
+  if (hours < 24) return t("{n} h", { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} g`;
-  return `${Math.floor(days / 7)} sett`;
+  if (days < 7) return t("{n} g", { n: days });
+  return t("{n} sett", { n: Math.floor(days / 7) });
 }
 
 export function euro(value) {
   const n = Number(value) || 0;
-  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
+  return new Intl.NumberFormat(localeTag(), { style: "currency", currency: "EUR", maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
 }
 
 export function compact(n) {
   if (typeof n === "string") return n;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".0", "")} Mln`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(".0", "")}k`.replace(".", ",");
+  if (n >= 1_000_000) return t("{n} Mln", { n: (n / 1_000_000).toFixed(1).replace(".0", "") });
+  if (n >= 1000) return t("{n}k", { n: new Intl.NumberFormat(localeTag(), { maximumFractionDigits: 1 }).format(Math.round(n / 100) / 10) });
   return String(n);
 }
 
@@ -89,12 +90,12 @@ export const SHIPPING_FEE = 6.9;
 export const FREE_SHIPPING = 80;
 
 export function stockLabel(product) {
-  if (product.service && product.stock == null) return { tone: "ok", text: "Su prenotazione" };
-  if (product.stock == null && !product.madeToOrder) return { tone: "ok", text: "Disponibile" };
-  if (product.madeToOrder && !product.stock) return { tone: "order", text: `Su ordinazione · ${product.madeToOrder} sett.` };
-  if (!product.stock) return { tone: "out", text: "Esaurito" };
-  if (product.stock <= 3) return { tone: "low", text: `Ultimi ${product.stock}` };
-  return { tone: "ok", text: "Disponibile" };
+  if (product.service && product.stock == null) return { tone: "ok", text: t("Su prenotazione") };
+  if (product.stock == null && !product.madeToOrder) return { tone: "ok", text: t("Disponibile") };
+  if (product.madeToOrder && !product.stock) return { tone: "order", text: t("Su ordinazione · {n} sett.", { n: product.madeToOrder }) };
+  if (!product.stock) return { tone: "out", text: t("Esaurito") };
+  if (product.stock <= 3) return { tone: "low", text: t("Ultimi {n}", { n: product.stock }) };
+  return { tone: "ok", text: t("Disponibile") };
 }
 
 export function productRef(product, owner) {
@@ -146,7 +147,7 @@ export function seededReviews(key) {
 
 export function reviewsFor(key, mineMap, me) {
   const seed = seededReviews(key);
-  const mine = (mineMap?.[key] || []).map((review, index) => ({ id: `me-${index}`, ...review, name: me?.name || "Tu", src: me?.src || AVATAR, mine: true }));
+  const mine = (mineMap?.[key] || []).map((review, index) => ({ id: `me-${index}`, ...review, name: me?.name || t("Tu"), src: me?.src || AVATAR, mine: true }));
   const count = seed.count + mine.length;
   const avg = mine.length ? (seed.avg * seed.count + mine.reduce((sum, review) => sum + review.stars, 0)) / count : seed.avg;
   return { count, avg, list: [...mine, ...seed.list] };
@@ -188,11 +189,11 @@ export function deliveryWindow(store) {
   const [low, high] = String(store?.shipsIn || "2–3").split("–").map(Number);
   const from = new Date(Date.now() + ((low || 2) + 2) * 86_400_000);
   const to = new Date(Date.now() + ((high || low || 3) + 4) * 86_400_000);
-  const day = (date) => date.toLocaleDateString("it-IT", { weekday: "short", day: "numeric" });
-  return `${day(from)} – ${day(to)} ${to.toLocaleDateString("it-IT", { month: "short" })}`;
+  const day = (date) => date.toLocaleDateString(localeTag(), { weekday: "short", day: "numeric" });
+  return `${day(from)} – ${day(to)} ${to.toLocaleDateString(localeTag(), { month: "short" })}`;
 }
 
-export const PRICE_BANDS = [["all", null, null, "Tutti"], ["u25", 0, 25, "Sotto 25 €"], ["25-50", 25, 50, "25–50 €"], ["50-100", 50, 100, "50–100 €"], ["o100", 100, null, "Oltre 100 €"]];
+export const PRICE_BANDS = [["all", null, null, tk("Tutti")], ["u25", 0, 25, tk("Sotto 25 €")], ["25-50", 25, 50, tk("25–50 €")], ["50-100", 50, 100, tk("50–100 €")], ["o100", 100, null, tk("Oltre 100 €")]];
 export const NO_FILTERS = { price: "all", rating: 0, freeShip: false, ready: false, noCourses: false };
 
 export function applyFilters(list, filters) {
@@ -230,7 +231,7 @@ export function sortRefs(list, sort) {
   return out;
 }
 
-export const SORTS = [["relevance", "Rilevanza"], ["rating", "Più votati"], ["new", "Più recenti"], ["low", "Prezzo crescente"], ["high", "Prezzo decrescente"]];
+export const SORTS = [["relevance", tk("Rilevanza")], ["rating", tk("Più votati")], ["new", tk("Più recenti")], ["low", tk("Prezzo crescente")], ["high", tk("Prezzo decrescente")]];
 
 // ---------------------------------------------------------------------------
 // Home feed (web FEED_PAGES, MEET)

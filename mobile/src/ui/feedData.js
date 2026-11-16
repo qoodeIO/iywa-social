@@ -1,6 +1,7 @@
 // Data helpers for the Home feed, posts, comments, hashtags and notifications.
 // Mirrors the web helpers in src/App.jsx (FEED_PAGES, hashtagPool, tally, commentCount, shown…).
 import { AVATAR, CONTACTS, EXPLORE, FEED_PAGES, PEOPLE, PORTRAIT, POSTS, REELS, WORKS, avatarFor, personByName } from "../data";
+import { t, tk } from "../lib/i18n";
 
 export const FEED_ITEMS = FEED_PAGES.flat();
 
@@ -76,7 +77,7 @@ export const HOME_HERO = {
   ...POSTS[0],
   src: AVATAR,
   handle: "Milano",
-  time: "2 ore fa",
+  time: tk("2 ore fa"),
 };
 
 function reelPosts() {
@@ -124,11 +125,11 @@ export function handleOf(name) {
 
 export function noteAgo(at) {
   const diff = Math.max(0, Date.now() - at);
-  if (diff < 60_000) return "ora";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} g`;
-  return `${Math.floor(diff / (7 * 86_400_000))} sett`;
+  if (diff < 60_000) return t("ora");
+  if (diff < 3_600_000) return t("{n} min", { n: Math.floor(diff / 60_000) });
+  if (diff < 86_400_000) return t("{n} h", { n: Math.floor(diff / 3_600_000) });
+  if (diff < 7 * 86_400_000) return t("{n} g", { n: Math.floor(diff / 86_400_000) });
+  return t("{n} sett", { n: Math.floor(diff / (7 * 86_400_000)) });
 }
 
 export const SHARE_BASE = "https://space.app/p/";

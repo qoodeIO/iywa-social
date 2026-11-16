@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { INSET, useTheme } from "../theme";
 import { ChevronLeft, Star, Verified } from "./icons";
+import { t } from "../lib/i18n";
 
 export function tap(style = "light") {
   Haptics.impactAsync(style === "medium" ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -70,7 +71,7 @@ export function Header({ title, subtitle, right, back = true, onBack, border = f
     <View style={{ paddingTop: insets.top, backgroundColor: theme.bg, borderBottomWidth: border ? StyleSheet.hairlineWidth : 0, borderBottomColor: theme.line }}>
       <View style={styles.header}>
         <View style={styles.side}>
-          {back ? <IconBtn icon={ChevronLeft} size={26} weight="bold" label="Indietro" onPress={() => (onBack ? onBack() : router.canGoBack() ? router.back() : router.replace("/"))} /> : null}
+          {back ? <IconBtn icon={ChevronLeft} size={26} weight="bold" label={t("Indietro")} onPress={() => (onBack ? onBack() : router.canGoBack() ? router.back() : router.replace("/"))} /> : null}
         </View>
         <View style={styles.titleBox}>
           {typeof title === "string" ? <T size={16} weight="700" lines={1}>{title}</T> : title}

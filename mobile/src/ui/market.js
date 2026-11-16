@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
+import { t } from "../lib/i18n";
 import { FREE_SHIPPING, SHIPPING_FEE, deliveryWindow, euro, reviewsFor, sellerRating, stockLabel, storeOf } from "../data";
 import { Bag, Bolt, Clock, Heart, Medal, Return, ShieldCheck, Truck, Verified } from "./icons";
 import { Avatar, Btn, Name, Rating, Stars, T, tap } from "./kit";
@@ -21,7 +22,7 @@ export function WishButton({ refValue, size = 30 }) {
   return (
     <Pressable
       hitSlop={6}
-      accessibilityLabel={on ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}
+      accessibilityLabel={on ? t("Rimuovi dai preferiti") : t("Aggiungi ai preferiti")}
       onPress={() => { tap(); store.toggleWish(refValue); }}
       style={[styles.wish, { width: size, height: size, borderRadius: size / 2, backgroundColor: on ? "#fff" : "rgba(0,0,0,0.38)" }]}
     >
@@ -42,14 +43,14 @@ export function MarketCard({ refValue, width = CARD_W, showShop = true }) {
       <View>
         <Image source={product.images[0] ? { uri: product.images[0] } : null} style={{ width, height: width, borderRadius: 8, backgroundColor: theme.fill }} contentFit="cover" transition={200} />
         {stock.tone !== "ok" ? (
-          <View style={styles.flag}><T size={11} weight="600" color="#fff">{stock.tone === "order" ? "Su ordinazione" : stock.text}</T></View>
+          <View style={styles.flag}><T size={11} weight="600" color="#fff">{stock.tone === "order" ? t("Su ordinazione") : stock.text}</T></View>
         ) : null}
         <View style={{ position: "absolute", right: 6, bottom: 6 }}><WishButton refValue={refValue} /></View>
       </View>
       <T size={13.5} lines={1} style={{ marginTop: 7 }}>{product.name}</T>
       <T size={15} weight="700">{euro(product.price)}</T>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 1 }}>
-        {refValue.owner ? <Rating avg={rating.avg} count={rating.count} extra={showShop ? shop?.title : null} /> : <T size={12} color={theme.text2}>Il tuo shop</T>}
+        {refValue.owner ? <Rating avg={rating.avg} count={rating.count} extra={showShop ? shop?.title : null} /> : <T size={12} color={theme.text2}>{t("Il tuo shop")}</T>}
       </View>
     </Pressable>
   );
@@ -95,7 +96,7 @@ export function StoreCard({ shop }) {
         </View>
       </View>
       {rating.top ? (
-        <View style={styles.topFlag}><Medal size={12} weight="fill" color="#ffc53d" /><T size={11} weight="600" color="#fff">Venditore top</T></View>
+        <View style={styles.topFlag}><Medal size={12} weight="fill" color="#ffc53d" /><T size={11} weight="600" color="#fff">{t("Venditore top")}</T></View>
       ) : null}
     </Pressable>
   );
@@ -104,9 +105,9 @@ export function StoreCard({ shop }) {
 export function SellerBadges({ shop, rating, compact }) {
   const theme = useTheme();
   const items = [];
-  if (rating.top) items.push(["top", Medal, "Venditore top", "#f5a400"]);
-  if (shop.responds) items.push(["fast", Bolt, `Risponde ${shop.responds}`, theme.blue]);
-  if (!compact) items.push(["ship", Truck, `Spedisce in ${shop.shipsIn} giorni`, theme.green]);
+  if (rating.top) items.push(["top", Medal, t("Venditore top"), "#f5a400"]);
+  if (shop.responds) items.push(["fast", Bolt, t("Risponde {when}", { when: shop.responds }), theme.blue]);
+  if (!compact) items.push(["ship", Truck, t("Spedisce in {n} giorni", { n: shop.shipsIn }), theme.green]);
   if (!items.length) return null;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: compact ? 8 : 6, justifyContent: compact ? "flex-start" : "center" }}>
@@ -132,7 +133,7 @@ export function SellerCard({ shop }) {
         <Rating avg={rating.avg} count={rating.count} size={13} extra={shop.city} />
         <SellerBadges shop={shop} rating={rating} compact />
       </View>
-      <Btn title="Visita" onPress={() => router.push(`/store/${encodeURIComponent(shop.owner)}`)} height={32} />
+      <Btn title={t("Visita")} onPress={() => router.push(`/store/${encodeURIComponent(shop.owner)}`)} height={32} />
     </Pressable>
   );
 }
@@ -142,12 +143,12 @@ export function TrustRows({ shop, product }) {
   const food = /dispensa|menu/i.test(product.category || "");
   const rows = [];
   if (product.service) {
-    rows.push([Clock, "Prenoti in chat", shop?.responds ? `La bottega di solito risponde ${shop.responds}` : "La bottega ti conferma la data"]);
+    rows.push([Clock, t("Prenoti in chat"), shop?.responds ? t("La bottega di solito risponde {when}", { when: shop.responds }) : t("La bottega ti conferma la data")]);
   } else {
-    rows.push([Truck, product.madeToOrder && !product.stock ? `Realizzato per te in ${product.madeToOrder} settimane` : `Arriva ${deliveryWindow(shop)}`, product.price >= FREE_SHIPPING ? "Spedizione gratuita" : `Spedizione ${euro(SHIPPING_FEE)} · gratis sopra ${euro(FREE_SHIPPING)}`]);
-    rows.push([Return, food || !shop?.returns ? "Niente resi sugli alimentari" : `Resi entro ${shop.returns} giorni`, food || !shop?.returns ? "Prodotto fresco, fatto in giornata" : "Scrivi alla bottega nel Direct per avviarlo"]);
+    rows.push([Truck, product.madeToOrder && !product.stock ? t("Realizzato per te in {n} settimane", { n: product.madeToOrder }) : t("Arriva {when}", { when: deliveryWindow(shop) }), product.price >= FREE_SHIPPING ? t("Spedizione gratuita") : t("Spedizione {fee} · gratis sopra {free}", { fee: euro(SHIPPING_FEE), free: euro(FREE_SHIPPING) })]);
+    rows.push([Return, food || !shop?.returns ? t("Niente resi sugli alimentari") : t("Resi entro {n} giorni", { n: shop.returns }), food || !shop?.returns ? t("Prodotto fresco, fatto in giornata") : t("Scrivi alla bottega nel Direct per avviarlo")]);
   }
-  rows.push([ShieldCheck, "Paghi dopo la conferma della bottega", "Pagamento e spedizione si concordano nel Direct"]);
+  rows.push([ShieldCheck, t("Paghi dopo la conferma della bottega"), t("Pagamento e spedizione si concordano nel Direct")]);
   return (
     <View style={{ borderRadius: 12, backgroundColor: theme.fill, marginTop: 14 }}>
       {rows.map(([Icon, title, sub], index) => (
@@ -171,7 +172,7 @@ export function RatingSummary({ avg, count }) {
       <View style={{ alignItems: "center", gap: 3 }}>
         <T size={34} weight="800" style={{ letterSpacing: -1 }}>{avg.toFixed(1)}</T>
         <Stars value={avg} size={13} />
-        <T size={12} color={theme.text2}>{count} recensioni</T>
+        <T size={12} color={theme.text2}>{count === 1 ? t("1 recensione") : t("{n} recensioni", { n: count })}</T>
       </View>
       <View style={{ flex: 1, gap: 5 }}>
         {bars.map(([value, share]) => (
@@ -192,7 +193,7 @@ export function CartButton() {
   const store = useStore();
   const count = store.cart.reduce((sum, item) => sum + item.qty, 0);
   return (
-    <Pressable hitSlop={8} accessibilityLabel="Carrello" onPress={() => router.push("/shop/cart")} style={{ padding: 6 }}>
+    <Pressable hitSlop={8} accessibilityLabel={t("Carrello")} onPress={() => router.push("/shop/cart")} style={{ padding: 6 }}>
       <Bag size={26} color={theme.text} />
       {count ? <View style={[styles.cartBadge, { backgroundColor: theme.red, borderColor: theme.bg }]}><T size={10.5} weight="700" color="#fff">{count}</T></View> : null}
     </Pressable>
@@ -204,7 +205,7 @@ export function WishlistButton() {
   const store = useStore();
   const count = store.wishlist.length;
   return (
-    <Pressable hitSlop={8} accessibilityLabel="Preferiti" onPress={() => router.push("/shop/wishlist")} style={{ padding: 6 }}>
+    <Pressable hitSlop={8} accessibilityLabel={t("Preferiti")} onPress={() => router.push("/shop/wishlist")} style={{ padding: 6 }}>
       <Heart size={26} color={theme.text} />
       {count ? <View style={[styles.cartBadge, { backgroundColor: theme.text, borderColor: theme.bg }]}><T size={10.5} weight="700" color={theme.bg}>{count}</T></View> : null}
     </Pressable>

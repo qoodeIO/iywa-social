@@ -15,6 +15,7 @@ import { Close, Eye, Heart, More, Send } from "../../ui/icons";
 import { Music } from "../../ui/storyIcons";
 import { Avatar, T, tap } from "../../ui/kit";
 import { StoryMedia, StoryStickers } from "../../ui/story";
+import { t } from "../../lib/i18n";
 
 const EASE = Easing.bezier(0.32, 0.72, 0, 1);
 
@@ -325,7 +326,7 @@ export default function StoryViewer() {
     sendReply(char);
     setReply("");
     inputRef.current?.blur();
-    note("Reazione inviata");
+    note(t("Reazione inviata"));
   }
 
   const faces = [who - 1, who, who + 1].filter((index) => decks[index]);
@@ -379,7 +380,7 @@ export default function StoryViewer() {
 
         {focused && !reply.trim() ? (
           <Pressable style={styles.reactions} onPress={() => inputRef.current?.blur()}>
-            <T size={14} weight="600" color="rgba(255,255,255,0.85)">Reazioni rapide</T>
+            <T size={14} weight="600" color="rgba(255,255,255,0.85)">{t("Reazioni rapide")}</T>
             <View style={styles.reactGrid}>
               {STORY_REACTIONS.map((char, i) => <ReactButton key={char} char={char} delay={i * 25} onPress={() => react(char)} />)}
             </View>
@@ -392,12 +393,12 @@ export default function StoryViewer() {
               <View style={{ flexDirection: "row" }}>
                 {PEOPLE.slice(0, 3).map((person) => <Image key={person.name} source={{ uri: person.src }} style={styles.face} />)}
               </View>
-              <T size={12.5} weight="600" color="#fff">{`Attività · ${views}`}</T>
+              <T size={12.5} weight="600" color="#fff">{t("Attività · {n}", { n: views })}</T>
             </Pressable>
-            <Pressable hitSlop={8} style={styles.icon} accessibilityLabel="Elimina" onPress={() => setMenu(true)}><More size={26} color="#fff" weight="bold" /></Pressable>
+            <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Elimina")} onPress={() => setMenu(true)}><More size={26} color="#fff" weight="bold" /></Pressable>
           </View>
         ) : !canReply ? (
-          <T size={13} color="rgba(255,255,255,0.75)" style={[styles.closed, { bottom: insets.bottom + 24, opacity: chrome }]}>Risposte disattivate</T>
+          <T size={13} color="rgba(255,255,255,0.75)" style={[styles.closed, { bottom: insets.bottom + 24, opacity: chrome }]}>{t("Risposte disattivate")}</T>
         ) : (
           <View style={[styles.foot, { bottom, opacity: chrome }]}>
             <View style={[styles.reply, focused ? { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "#fff" } : null]}>
@@ -407,7 +408,7 @@ export default function StoryViewer() {
                 onChangeText={setReply}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 120)}
-                placeholder={`Rispondi a ${deck.name}…`}
+                placeholder={t("Rispondi a {name}…", { name: deck.name })}
                 placeholderTextColor="rgba(255,255,255,0.85)"
                 returnKeyType="send"
                 onSubmitEditing={() => {
@@ -416,10 +417,10 @@ export default function StoryViewer() {
                   setReply("");
                   sendReply(text);
                   inputRef.current?.blur();
-                  note("Messaggio inviato");
+                  note(t("Messaggio inviato"));
                 }}
                 style={styles.replyInput}
-                accessibilityLabel="Rispondi alla storia"
+                accessibilityLabel={t("Rispondi alla storia")}
               />
             </View>
             {reply.trim() ? (
@@ -431,17 +432,17 @@ export default function StoryViewer() {
                   setReply("");
                   sendReply(text);
                   inputRef.current?.blur();
-                  note("Messaggio inviato");
+                  note(t("Messaggio inviato"));
                 }}
               >
-                <T size={15} weight="700" color="#fff">Invia</T>
+                <T size={15} weight="700" color="#fff">{t("Invia")}</T>
               </Pressable>
             ) : (
               <>
                 <Pressable
                   hitSlop={6}
                   style={styles.icon}
-                  accessibilityLabel="Mi piace"
+                  accessibilityLabel={t("Mi piace")}
                   onPress={() => {
                     store.toggleStoryLike(story.id);
                     if (!liked) {
@@ -452,7 +453,7 @@ export default function StoryViewer() {
                 >
                   <LikeIcon on={liked} />
                 </Pressable>
-                <Pressable hitSlop={6} style={styles.icon} accessibilityLabel="Condividi" onPress={() => { tap(); note("Inviata"); }}>
+                <Pressable hitSlop={6} style={styles.icon} accessibilityLabel={t("Condividi")} onPress={() => { tap(); note(t("Inviata")); }}>
                   <Send size={26} color="#fff" />
                 </Pressable>
               </>
@@ -468,7 +469,7 @@ export default function StoryViewer() {
           {mine ? (
             <SheetRow
               warn
-              label="Elimina"
+              label={t("Elimina")}
               onPress={() => {
                 setMenu(false);
                 const id = story.id;
@@ -478,17 +479,17 @@ export default function StoryViewer() {
                   setTimeout(() => store.deleteStory(id), 320);
                 } else {
                   store.deleteStory(id);
-                  note("Eliminata");
+                  note(t("Eliminata"));
                 }
               }}
             />
           ) : (
             <>
-              <SheetRow label={`Silenzia ${deck.name}`} onPress={() => { setMenu(false); deck.frames.forEach((item) => store.markStorySeen(item.id)); spin(1); }} />
-              <SheetRow warn label="Segnala" onPress={() => { setMenu(false); note("Segnalata"); }} />
+              <SheetRow label={t("Silenzia {name}", { name: deck.name })} onPress={() => { setMenu(false); deck.frames.forEach((item) => store.markStorySeen(item.id)); spin(1); }} />
+              <SheetRow warn label={t("Segnala")} onPress={() => { setMenu(false); note(t("Segnalata")); }} />
             </>
           )}
-          <SheetRow label="Annulla" onPress={() => setMenu(false)} />
+          <SheetRow label={t("Annulla")} onPress={() => setMenu(false)} />
         </DarkSheet>
       ) : null}
 
@@ -503,7 +504,7 @@ export default function StoryViewer() {
               <Avatar src={person.src} size={44} />
               <T size={14.5} weight="600" color="#fff" style={{ flex: 1 }}>{person.name}</T>
               {index === 0 ? <Heart size={18} weight="fill" color="#ff3040" /> : null}
-              <T size={13} color="rgba(255,255,255,0.55)">{index === 0 ? "Ora" : `${index + 1} h`}</T>
+              <T size={13} color="rgba(255,255,255,0.55)">{index === 0 ? t("Ora") : t("{n} h", { n: index + 1 })}</T>
             </View>
           ))}
         </DarkSheet>
@@ -569,13 +570,13 @@ function LiveBar({ progress }) {
 
 function Head({ deck, story, top, opacity, u, onMore, onClose }) {
   const music = (story.stickers || []).find((item) => item.type === "music");
-  const time = story.time === "Now" ? "Adesso" : story.time || "2 h";
+  const time = story.time === "Now" ? t("Adesso") : story.time || t("{n} h", { n: 2 });
   return (
     <View pointerEvents="box-none" style={[styles.head, { top, opacity }]}>
       <Image source={{ uri: deck.src }} style={{ width: 34 * u, height: 34 * u, borderRadius: 17 * u }} contentFit="cover" />
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 7 }}>
-          <T size={14} weight="600" color="#fff" lines={1} style={styles.textShadow}>{deck.mine ? "La tua storia" : deck.name}</T>
+          <T size={14} weight="600" color="#fff" lines={1} style={styles.textShadow}>{deck.mine ? t("La tua storia") : deck.name}</T>
           <T size={13} color="rgba(255,255,255,0.75)" style={styles.textShadow}>{time}</T>
         </View>
         {music ? (
@@ -585,8 +586,8 @@ function Head({ deck, story, top, opacity, u, onMore, onClose }) {
           </View>
         ) : null}
       </View>
-      {onMore ? <Pressable hitSlop={8} style={styles.icon} accessibilityLabel="Altro" onPress={onMore}><More size={26} weight="bold" color="#fff" /></Pressable> : null}
-      {onClose ? <Pressable hitSlop={8} style={styles.icon} accessibilityLabel="Chiudi" onPress={onClose}><Close size={26} color="#fff" /></Pressable> : null}
+      {onMore ? <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Altro")} onPress={onMore}><More size={26} weight="bold" color="#fff" /></Pressable> : null}
+      {onClose ? <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Chiudi")} onPress={onClose}><Close size={26} color="#fff" /></Pressable> : null}
     </View>
   );
 }
@@ -626,14 +627,14 @@ function FlyEmoji({ item, u }) {
     v.value = withDelay(item.d, withTiming(1, { duration: 1500, easing: Easing.bezier(0.2, 0.7, 0.3, 1) }));
   }, [item.d, v]);
   const style = useAnimatedStyle(() => {
-    const t = v.value;
-    const early = Math.min(1, t / 0.15);
+    const k = v.value;
+    const early = Math.min(1, k / 0.15);
     return {
-      opacity: t === 0 ? 0 : t < 0.15 ? early : 1 - (t - 0.15) / 0.85,
+      opacity: k === 0 ? 0 : k < 0.15 ? early : 1 - (k - 0.15) / 0.85,
       transform: [
-        { translateY: t < 0.15 ? -60 * u * early : -60 * u - (520 - 60) * u * ((t - 0.15) / 0.85) },
-        { scale: t < 0.15 ? 0.4 + 0.75 * early : 1.15 - 0.25 * ((t - 0.15) / 0.85) },
-        { rotate: `${t < 0.15 ? item.r * early : item.r - 2 * item.r * ((t - 0.15) / 0.85)}deg` },
+        { translateY: k < 0.15 ? -60 * u * early : -60 * u - (520 - 60) * u * ((k - 0.15) / 0.85) },
+        { scale: k < 0.15 ? 0.4 + 0.75 * early : 1.15 - 0.25 * ((k - 0.15) / 0.85) },
+        { rotate: `${k < 0.15 ? item.r * early : item.r - 2 * item.r * ((k - 0.15) / 0.85)}deg` },
       ],
     };
   });

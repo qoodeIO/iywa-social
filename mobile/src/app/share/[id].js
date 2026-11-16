@@ -13,6 +13,7 @@ import { ArrowUpRightGlyph, LinkGlyph } from "../../ui/feedIcons";
 import { T, tap } from "../../ui/kit";
 import { SHARE_BASE, findPost, personHidden } from "../../ui/feedData";
 import { useKeyboardPad } from "../../ui/comments";
+import { t } from "../../lib/i18n";
 
 // Send a post to people, add it to your story, copy its link or open the system share sheet (web ShareScreen).
 export default function ShareSheet() {
@@ -46,7 +47,7 @@ export default function ShareSheet() {
       const payload = image ? { kind: "image", image, text: text || `${post.name}: ${post.text || ""}`.trim() } : { text: `${text ? `${text} · ` : ""}${post.name}: ${post.text || link}` };
       setTimeout(() => store.sendMessage(chatId, payload), 0);
     }
-    note("Inviato");
+    note(t("Inviato"));
     setTimeout(() => router.back(), 650);
   }
 
@@ -55,7 +56,7 @@ export default function ShareSheet() {
       <View style={[styles.grab, { backgroundColor: theme.text3 }]} />
       <View style={[styles.search, { backgroundColor: theme.fill }]}>
         <Search size={17} color={theme.text2} />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Cerca" placeholderTextColor={theme.text2} accessibilityLabel="Cerca persone" style={[styles.searchInput, { color: theme.text }]} />
+        <TextInput value={query} onChangeText={setQuery} placeholder={t("Cerca")} placeholderTextColor={theme.text2} accessibilityLabel={t("Cerca persone")} style={[styles.searchInput, { color: theme.text }]} />
       </View>
       <FlatList
         data={people}
@@ -82,20 +83,20 @@ export default function ShareSheet() {
       <Animated.View style={pad}>
         {picked.length ? (
           <View style={[styles.send, { borderTopColor: theme.line, paddingBottom: insets.bottom + 10 }]}>
-            <TextInput value={message} onChangeText={setMessage} placeholder="Scrivi un messaggio…" placeholderTextColor={theme.text2} accessibilityLabel="Messaggio" style={[styles.message, { color: theme.text }]} />
+            <TextInput value={message} onChangeText={setMessage} placeholder={t("Scrivi un messaggio…")} placeholderTextColor={theme.text2} accessibilityLabel={t("Messaggio")} style={[styles.message, { color: theme.text }]} />
             <Pressable onPress={send} style={({ pressed }) => [styles.sendBtn, { backgroundColor: theme.blue, opacity: pressed ? 0.8 : 1 }]}>
-              <T size={15} weight="600" color="#fff">{picked.length > 1 ? `Invia separatamente (${picked.length})` : "Invia"}</T>
+              <T size={15} weight="600" color="#fff">{picked.length > 1 ? t("Invia separatamente ({n})", { n: picked.length }) : t("Invia")}</T>
             </Pressable>
           </View>
         ) : (
           <View style={[styles.actions, { borderTopColor: theme.line, paddingBottom: insets.bottom + 10 }]}>
-            <ShareAction icon={PlusSquare} label="Aggiungi alla storia" onPress={() => {
+            <ShareAction icon={PlusSquare} label={t("Aggiungi alla storia")} onPress={() => {
               if (!post) return;
-              store.addStory?.({ id: `st-me-${Date.now()}`, image: image || AVATAR, text: "", stickers: [{ type: "tag", name: post.name, x: 50, y: 82, s: 1, r: 0 }], time: "ora", at: Date.now() });
-              note("Aggiunto alla tua storia");
+              store.addStory?.({ id: `st-me-${Date.now()}`, image: image || AVATAR, text: "", stickers: [{ type: "tag", name: post.name, x: 50, y: 82, s: 1, r: 0 }], time: t("ora"), at: Date.now() });
+              note(t("Aggiunto alla tua storia"));
             }} />
-            <ShareAction icon={LinkGlyph} label="Copia link" onPress={() => { Clipboard.setStringAsync(link).catch(() => {}); note("Link copiato"); }} />
-            <ShareAction icon={ArrowUpRightGlyph} label="Condividi su…" onPress={() => post && Share.share({ title: post.name, message: `${post.name}: ${post.text || ""}\n${link}`.trim(), url: link }).catch(() => {})} />
+            <ShareAction icon={LinkGlyph} label={t("Copia link")} onPress={() => { Clipboard.setStringAsync(link).catch(() => {}); note(t("Link copiato")); }} />
+            <ShareAction icon={ArrowUpRightGlyph} label={t("Condividi su…")} onPress={() => post && Share.share({ title: post.name, message: `${post.name}: ${post.text || ""}\n${link}`.trim(), url: link }).catch(() => {})} />
           </View>
         )}
       </Animated.View>

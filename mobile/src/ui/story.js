@@ -14,6 +14,7 @@ import { HelpCircle, LinkIcon, MessageCircle, Music, Timer } from "./storyIcons"
 import { Btn, Rating, Sheet, T, tap } from "./kit";
 import { productHref } from "./market";
 import { INSET, useTheme } from "../theme";
+import { t } from "../lib/i18n";
 
 const MONO = Platform.select({ ios: "Courier New", default: "monospace" });
 
@@ -166,8 +167,8 @@ function EqBar({ rest, on, u, delay }) {
   const v = useSharedValue(rest);
   useEffect(() => {
     if (on) {
-      const t = setTimeout(() => { v.value = withRepeat(withTiming(1, { duration: 700 }), -1, true); }, delay);
-      return () => { clearTimeout(t); cancelAnimation(v); };
+      const timer = setTimeout(() => { v.value = withRepeat(withTiming(1, { duration: 700 }), -1, true); }, delay);
+      return () => { clearTimeout(timer); cancelAnimation(v); };
     }
     cancelAnimation(v);
     v.value = withTiming(rest, { duration: 150 });
@@ -245,7 +246,7 @@ export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPi
     case "link":
     case "notify": {
       const Icon = { place: MapPin, tag: At, hash: Hash, link: LinkIcon, notify: Bell }[item.type];
-      const label = { place: item.name, tag: item.name, hash: item.tag, link: item.label, notify: notified ? "Notifiche attive" : "Attiva notifiche" }[item.type];
+      const label = { place: item.name, tag: item.name, hash: item.tag, link: item.label, notify: notified ? t("Notifiche attive") : t("Attiva notifiche") }[item.type];
       const on = item.type === "notify" && notified;
       return (
         <Pressable disabled={!live} onPress={() => act()} style={[st.pill(u), on ? { backgroundColor: "#0095f6" } : null]}>
@@ -285,15 +286,15 @@ export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPi
     case "ask":
       return (
         <Pressable disabled={!live} onPress={() => act()} style={st.card(u)}>
-          <Kicker icon={item.type === "ask" ? MessageCircle : null} u={u}>{item.type === "ask" ? "Domanda" : "Aggiungi il tuo"}</Kicker>
+          <Kicker icon={item.type === "ask" ? MessageCircle : null} u={u}>{item.type === "ask" ? t("Domanda") : t("Aggiungi il tuo")}</Kicker>
           <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.prompt}</T>
-          <T size={12 * u} color="rgba(0,0,0,0.5)">{item.type === "ask" ? "Rispondi" : "Tocca e rispondi"}</T>
+          <T size={12 * u} color="rgba(0,0,0,0.5)">{item.type === "ask" ? t("Rispondi") : t("Tocca e rispondi")}</T>
         </Pressable>
       );
     case "count":
       return (
         <View style={st.card(u)}>
-          <Kicker icon={Timer} u={u}>Countdown</Kicker>
+          <Kicker icon={Timer} u={u}>{t("Countdown")}</Kicker>
           <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.label}</T>
           <T size={12 * u} color="rgba(0,0,0,0.5)">{item.when}</T>
         </View>
@@ -315,7 +316,7 @@ export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPi
     case "quiz":
       return (
         <View style={st.card(u)}>
-          <Kicker icon={HelpCircle} u={u}>Quiz</Kicker>
+          <Kicker icon={HelpCircle} u={u}>{t("Quiz")}</Kicker>
           <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.question}</T>
           {item.options.map((label, index) => {
             const picked = quizPick === index;
@@ -403,14 +404,14 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
     if (type === "slider") onNote?.(`${value}%`);
     if (type === "notify") {
       setNotified((on) => {
-        onNote?.(on ? "Notifiche spente" : "Notifiche attive");
+        onNote?.(on ? t("Notifiche spente") : t("Notifiche attive"));
         return !on;
       });
     }
     if (type === "poll" && !vote) setVote(value);
     if (type === "quiz" && quizPick == null) {
       setQuizPick(value);
-      onNote?.(value === item.answer ? "Giusto" : "Quasi");
+      onNote?.(value === item.answer ? t("Giusto") : t("Quasi"));
     }
     if (type === "ask" || type === "yours") {
       setAsk(true);
@@ -425,7 +426,7 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
     setAsk(false);
     Keyboard.dismiss();
     onPause?.(false);
-    onNote?.("Risposta inviata");
+    onNote?.(t("Risposta inviata"));
   }
 
   return (
@@ -443,14 +444,14 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
             autoFocus
             value={answer}
             onChangeText={setAnswer}
-            placeholder="La tua risposta"
+            placeholder={t("La tua risposta")}
             placeholderTextColor="#8e8e8e"
             returnKeyType="send"
             onSubmitEditing={send}
             onBlur={() => { if (!answer.trim()) { setAsk(false); onPause?.(false); } }}
             style={{ flex: 1, height: 42, borderRadius: 21, paddingHorizontal: 14, backgroundColor: "#fff", color: "#111", fontSize: 15 }}
           />
-          <Pressable onPress={send} accessibilityLabel="Invia" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={send} accessibilityLabel={t("Invia")} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
             <Send size={20} color="#111" />
           </Pressable>
         </View>
@@ -458,7 +459,7 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
       {!quiet && products.length ? (
         <Pressable style={[st.shopPill, { bottom: 18 + bottomInset }]} onPress={() => { tap(); setShopping(products); onPause?.(true); }}>
           <Bag size={15} weight="fill" color="#111" />
-          <T size={13.5} weight="700" color="#111">{products.length === 1 ? "Vedi prodotto" : `Vedi ${products.length} prodotti`}</T>
+          <T size={13.5} weight="700" color="#111">{products.length === 1 ? t("Vedi prodotto") : t("Vedi {n} prodotti", { n: products.length })}</T>
         </Pressable>
       ) : null}
       {!quiet ? (
@@ -482,7 +483,7 @@ export function ProductSheet({ items, onClose, onOpen }) {
     return { product, owner: item.owner || null };
   });
   return (
-    <Sheet open={Boolean(items)} onClose={onClose} title={list.length > 1 ? `${list.length} prodotti` : "Prodotto in questa storia"}>
+    <Sheet open={Boolean(items)} onClose={onClose} title={list.length > 1 ? t("{n} prodotti", { n: list.length }) : t("Prodotto in questa storia")}>
       {list.map(({ product, owner }, index) => {
         const ref = productRef(product, owner);
         const shop = owner ? storeOf(owner) : null;
@@ -497,15 +498,15 @@ export function ProductSheet({ items, onClose, onOpen }) {
                 <T size={15} weight="700" lines={1}>{product.name}</T>
                 <T size={15} weight="700">{euro(product.price)}</T>
                 {owner ? <Rating avg={rating.avg} count={rating.count} /> : null}
-                <T size={12.5} lines={1} color={theme.text2}>{shop ? shop.title : "Il tuo shop"} · <T size={12.5} color={stock.tone === "out" ? theme.red : stock.tone === "low" ? "#ff8a00" : theme.green}>{stock.text}</T></T>
+                <T size={12.5} lines={1} color={theme.text2}>{shop ? shop.title : t("Il tuo shop")} · <T size={12.5} color={stock.tone === "out" ? theme.red : stock.tone === "low" ? "#ff8a00" : theme.green}>{stock.text}</T></T>
               </View>
               <ChevronRight size={14} weight="bold" color={theme.text3} />
             </Pressable>
             {owner ? (
               <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
                 <Btn icon={Heart} kind={wished ? "done" : "gray"} height={40} onPress={() => store.toggleWish(ref)} />
-                <Btn title={added === ref.key ? "Aggiunto" : "Aggiungi al carrello"} icon={added === ref.key ? Check : null} kind={added === ref.key ? "done" : "gray"} height={40} flex={1} onPress={() => { store.addToCart(ref, 1, product.variants?.[0] || ""); setAdded(ref.key); setTimeout(() => setAdded(""), 1400); }} />
-                <Btn title="Vedi" kind="primary" height={40} flex={1} onPress={() => onOpen(productHref(ref))} />
+                <Btn title={added === ref.key ? t("Aggiunto") : t("Aggiungi al carrello")} icon={added === ref.key ? Check : null} kind={added === ref.key ? "done" : "gray"} height={40} flex={1} onPress={() => { store.addToCart(ref, 1, product.variants?.[0] || ""); setAdded(ref.key); setTimeout(() => setAdded(""), 1400); }} />
+                <Btn title={t("Vedi")} kind="primary" height={40} flex={1} onPress={() => onOpen(productHref(ref))} />
               </View>
             ) : null}
           </View>

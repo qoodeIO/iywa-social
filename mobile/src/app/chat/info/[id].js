@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { CONTACTS, PEOPLE, AVATAR } from "../../../data";
 import { useStore } from "../../../lib/store";
+import { t } from "../../../lib/i18n";
 import { useLive } from "../../../live/LiveStore";
 import { personOf, useThreads } from "../../../live/threads";
 import { personHidden, seenText } from "../../../live/format";
@@ -84,7 +85,7 @@ function MediaGrid({ media, voices, tab, voiceLabel }) {
       <View style={[styles.media, { backgroundColor: theme.bg }]}>
         {media.map((src, index) => <Image key={`${index}-${String(src).slice(-16)}`} source={{ uri: src }} recyclingKey={String(src).slice(-32)} style={styles.mediaCell} contentFit="cover" transition={120} />)}
       </View>
-    ) : <T size={14} color={theme.text2} style={styles.empty}>Ancora nessuna foto condivisa.</T>;
+    ) : <T size={14} color={theme.text2} style={styles.empty}>{t("Ancora nessuna foto condivisa.")}</T>;
   }
   return voices.length ? (
     <View style={{ backgroundColor: theme.bg }}>
@@ -95,7 +96,7 @@ function MediaGrid({ media, voices, tab, voiceLabel }) {
         </View>
       ))}
     </View>
-  ) : <T size={14} color={theme.text2} style={styles.empty}>Ancora nessun messaggio vocale.</T>;
+  ) : <T size={14} color={theme.text2} style={styles.empty}>{t("Ancora nessun messaggio vocale.")}</T>;
 }
 
 function Line({ children, label, onPress, first }) {
@@ -114,7 +115,7 @@ function Confirm({ open, onClose, text, action, icon, onConfirm }) {
     <Sheet open={open} onClose={onClose}>
       <Hint center>{text}</Hint>
       <SheetRow icon={icon} danger label={action} onPress={onConfirm} />
-      <SheetRow center label="Annulla" onPress={onClose} />
+      <SheetRow center label={t("Annulla")} onPress={onClose} />
     </Sheet>
   );
 }
@@ -130,15 +131,15 @@ function ChatInfo({ thread }) {
   const [note, flash] = useFlash();
   const person = personOf(thread, PEOPLE, CONTACTS);
   const status = thread.live
-    ? (prefs.activity === false ? "" : thread.online ? "online" : seenText(thread.other))
-    : (prefs.activity === false ? "" : "visto di recente");
+    ? (prefs.activity === false ? "" : thread.online ? t("online") : seenText(thread.other))
+    : (prefs.activity === false ? "" : t("visto di recente"));
   const handle = person?.handle ? `@${String(person.handle).replace(/^@/, "")}` : "";
   const media = (thread.messages || []).filter((message) => message.kind === "image" && !message.unsent).map((message) => message.image).reverse();
   const voices = (thread.messages || []).filter((message) => message.kind === "audio" && !message.unsent).reverse();
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <SubHead title="Info" />
+      <SubHead title={t("Info")} />
       <ScrollView style={{ backgroundColor: theme.page }} contentContainerStyle={{ paddingBottom: 30 }}>
         <Hero
           face={<Face src={thread.src} name={thread.name} size={96} online={thread.online && prefs.activity !== false} dot={18} ring={3} />}
@@ -146,32 +147,32 @@ function ChatInfo({ thread }) {
           meta={status}
           metaBlue={thread.online}
           actions={[
-            { label: "Chiama", icon: Phone, run: () => placeCall(live, thread, "voice") },
-            { label: "Video", icon: Video, run: () => placeCall(live, thread, "video") },
-            { label: flags.muted ? "Riattiva" : "Silenzia", icon: flags.muted ? BellOff : Bell, on: flags.muted, run: () => store.setDmFlag(thread.id, "muted", !flags.muted) },
-            { label: "Cerca", icon: Search, weight: "bold", run: () => toSearch(thread) },
+            { label: t("Chiama"), icon: Phone, run: () => placeCall(live, thread, "voice") },
+            { label: t("Video"), icon: Video, run: () => placeCall(live, thread, "video") },
+            { label: flags.muted ? t("Riattiva") : t("Silenzia"), icon: flags.muted ? BellOff : Bell, on: flags.muted, run: () => store.setDmFlag(thread.id, "muted", !flags.muted) },
+            { label: t("Cerca"), icon: Search, weight: "bold", run: () => toSearch(thread) },
           ]}
         />
         <View style={{ marginTop: 10, backgroundColor: theme.bg }}>
-          {person?.bio ? <Line first label="Bio"><T size={15} style={{ lineHeight: 21 }}>{person.bio}</T></Line> : null}
-          {handle ? <Line first={!person?.bio} label="Nome utente" onPress={() => { Clipboard.setStringAsync(handle).catch(() => {}); flash("Nome utente copiato"); }}><T size={15} color={theme.blue}>{handle}</T></Line> : null}
-          {person?.craft ? <Line label="Mestiere"><T size={15}>{person.craft}{person.city ? ` · ${person.city}` : ""}</T></Line> : null}
-          {person && !person.live ? <Line onPress={() => router.push(`/person/${person.handle}`)}><T size={15} color={theme.blue}>Visualizza profilo</T></Line> : null}
+          {person?.bio ? <Line first label={t("Bio")}><T size={15} style={{ lineHeight: 21 }}>{person.bio}</T></Line> : null}
+          {handle ? <Line first={!person?.bio} label={t("Nome utente")} onPress={() => { Clipboard.setStringAsync(handle).catch(() => {}); flash(t("Nome utente copiato")); }}><T size={15} color={theme.blue}>{handle}</T></Line> : null}
+          {person?.craft ? <Line label={t("Mestiere")}><T size={15}>{person.craft}{person.city ? ` · ${person.city}` : ""}</T></Line> : null}
+          {person && !person.live ? <Line onPress={() => router.push(`/person/${person.handle}`)}><T size={15} color={theme.blue}>{t("Visualizza profilo")}</T></Line> : null}
         </View>
         <ChatPrefs id={thread.id} />
-        <Tabs tabs={[["media", "Media"], ["voice", "Vocali"]]} tab={tab} setTab={setTab} />
-        <MediaGrid media={media} voices={voices} tab={tab} voiceLabel={(message) => (message.from === "me" ? "Tu" : thread.name)} />
+        <Tabs tabs={[["media", t("Media")], ["voice", t("Vocali")]]} tab={tab} setTab={setTab} />
+        <MediaGrid media={media} voices={voices} tab={tab} voiceLabel={(message) => (message.from === "me" ? t("Tu") : thread.name)} />
         <View style={{ marginTop: 10, backgroundColor: theme.bg }}>
-          <Line first onPress={() => { store.setDmFlag(thread.id, "archivedAt", flags.archivedAt ? null : Date.now()); flash(flags.archivedAt ? "Riportata nelle chat" : "Chat archiviata"); }}>
-            <View style={styles.plain}><Archive size={20} color={theme.blue} /><T size={15} weight="500" color={theme.blue}>{flags.archivedAt ? "Ripristina chat" : "Archivia chat"}</T></View>
+          <Line first onPress={() => { store.setDmFlag(thread.id, "archivedAt", flags.archivedAt ? null : Date.now()); flash(flags.archivedAt ? t("Riportata nelle chat") : t("Chat archiviata")); }}>
+            <View style={styles.plain}><Archive size={20} color={theme.blue} /><T size={15} weight="500" color={theme.blue}>{flags.archivedAt ? t("Ripristina chat") : t("Archivia chat")}</T></View>
           </Line>
           {!thread.live ? (
             <Line onPress={() => setConfirm("clear")}>
-              <View style={styles.plain}><Eraser size={20} color={theme.red} /><T size={15} weight="500" color={theme.red}>Svuota cronologia</T></View>
+              <View style={styles.plain}><Eraser size={20} color={theme.red} /><T size={15} weight="500" color={theme.red}>{t("Svuota cronologia")}</T></View>
             </Line>
           ) : null}
           <Line onPress={() => setConfirm("delete")}>
-            <View style={styles.plain}><Trash size={20} color={theme.red} /><T size={15} weight="500" color={theme.red}>Elimina chat</T></View>
+            <View style={styles.plain}><Trash size={20} color={theme.red} /><T size={15} weight="500" color={theme.red}>{t("Elimina chat")}</T></View>
           </Line>
         </View>
       </ScrollView>
@@ -179,14 +180,14 @@ function ChatInfo({ thread }) {
       <Confirm
         open={Boolean(confirm)}
         onClose={() => setConfirm(null)}
-        text={confirm === "clear" ? `Svuotare tutti i messaggi con ${thread.name}? Non si può annullare.` : `Eliminare la chat con ${thread.name}?`}
+        text={confirm === "clear" ? t("Svuotare tutti i messaggi con {name}? Non si può annullare.", { name: thread.name }) : t("Eliminare la chat con {name}?", { name: thread.name })}
         icon={confirm === "clear" ? Eraser : Trash}
-        action={confirm === "clear" ? "Svuota cronologia" : "Elimina chat"}
+        action={confirm === "clear" ? t("Svuota cronologia") : t("Elimina chat")}
         onConfirm={() => {
           if (confirm === "clear") {
             store.updateChat(thread.id, { messages: [], preview: "", unread: false, cleared: true });
             setConfirm(null);
-            flash("Cronologia svuotata");
+            flash(t("Cronologia svuotata"));
             return;
           }
           setConfirm(null);
@@ -225,7 +226,7 @@ function GroupInfo({ thread }) {
   const [note, flash] = useFlash();
   const flags = store.dmFlags?.[thread.id] || {};
   const muted = Boolean(flags.muted);
-  const members = thread.live ? thread.conv.members : [{ name: store.profile?.name || "Tu", src: store.profile?.src || AVATAR, me: true }, ...(thread.members || [])];
+  const members = thread.live ? thread.conv.members : [{ name: store.profile?.name || t("Tu"), src: store.profile?.src || AVATAR, me: true }, ...(thread.members || [])];
   const online = thread.live ? members.filter((member) => member.online).length : 0;
   const inGroup = new Set(members.map((member) => member.handle || member.name));
   const candidates = thread.live
@@ -243,7 +244,7 @@ function GroupInfo({ thread }) {
     if (Object.keys(patch).length) {
       if (thread.live) live.updateGroup(thread.id, patch);
       else store.updateChat(thread.id, { ...(patch.title ? { name: patch.title } : {}), ...(patch.about != null ? { about: patch.about } : {}), ...(patch.photo != null ? { photo: patch.photo } : {}) });
-      flash("Salvato");
+      flash(t("Salvato"));
     }
     setEditing(false);
   }
@@ -256,12 +257,12 @@ function GroupInfo({ thread }) {
       const added = CONTACTS.filter((person) => list.includes(person.name));
       store.updateChat(thread.id, {
         members: [...(thread.members || []), ...added],
-        messages: [...(thread.messages || []), { from: "system", text: `Hai aggiunto ${added.map((person) => person.name.split(" ")[0]).join(", ")}.` }],
+        messages: [...(thread.messages || []), { from: "system", text: t("Hai aggiunto {who}.", { who: added.map((person) => person.name.split(" ")[0]).join(", ") }) }],
       });
     }
     setToAdd(new Set());
     setAdding(false);
-    flash("Membri aggiunti");
+    flash(t("Membri aggiunti"));
   }
 
   function remove(member) {
@@ -271,27 +272,27 @@ function GroupInfo({ thread }) {
   }
 
   const right = owner ? (
-    editing ? <HeadAction title="Salva" disabled={!title.trim()} onPress={save} /> : <HeadAction title="Modifica" onPress={() => { setTitle(thread.name); setAbout(thread.about || ""); setPhoto(thread.photo || ""); setEditing(true); }} />
+    editing ? <HeadAction title={t("Salva")} disabled={!title.trim()} onPress={save} /> : <HeadAction title={t("Modifica")} onPress={() => { setTitle(thread.name); setAbout(thread.about || ""); setPhoto(thread.photo || ""); setEditing(true); }} />
   ) : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <SubHead title={editing ? "Modifica gruppo" : "Info gruppo"} right={right} backIcon={editing ? Close : undefined} onBack={editing ? () => setEditing(false) : undefined} />
+      <SubHead title={editing ? t("Modifica gruppo") : t("Info gruppo")} right={right} backIcon={editing ? Close : undefined} onBack={editing ? () => setEditing(false) : undefined} />
       <ScrollView style={{ backgroundColor: theme.page }} contentContainerStyle={{ paddingBottom: 30 }} keyboardShouldPersistTaps="handled">
         {editing ? (
           <View style={{ paddingTop: 6, paddingBottom: 10, backgroundColor: theme.bg }}>
-            <Pressable accessibilityLabel="Cambia foto" onPress={async () => { tap(); const next = await pickGroupPhoto(); if (next) setPhoto(next); }} style={{ alignSelf: "center", marginTop: 10, marginBottom: 12 }}>
+            <Pressable accessibilityLabel={t("Cambia foto")} onPress={async () => { tap(); const next = await pickGroupPhoto(); if (next) setPhoto(next); }} style={{ alignSelf: "center", marginTop: 10, marginBottom: 12 }}>
               <GroupAvatar photo={photo} title={title || thread.name} size={96} />
               <View style={[styles.badgeCam, { backgroundColor: theme.blue, borderColor: theme.bg }]}><Camera size={12} weight="fill" color="#fff" /></View>
             </Pressable>
             <ToneRow photo={photo} title={title} onPick={setPhoto} />
             <View style={styles.field}>
-              <T size={13} weight="600" color={theme.blue}>Nome</T>
-              <TextInput value={title} maxLength={40} onChangeText={setTitle} accessibilityLabel="Nome del gruppo" style={[styles.input, { backgroundColor: theme.fill, color: theme.text }]} />
+              <T size={13} weight="600" color={theme.blue}>{t("Nome")}</T>
+              <TextInput value={title} maxLength={40} onChangeText={setTitle} accessibilityLabel={t("Nome del gruppo")} style={[styles.input, { backgroundColor: theme.fill, color: theme.text }]} />
             </View>
             <View style={styles.field}>
-              <T size={13} weight="600" color={theme.blue}>Descrizione</T>
-              <TextInput value={about} maxLength={255} multiline onChangeText={setAbout} placeholder="Di cosa parla questo gruppo?" placeholderTextColor={theme.text2} style={[styles.input, { backgroundColor: theme.fill, color: theme.text, minHeight: 72, textAlignVertical: "top" }]} />
+              <T size={13} weight="600" color={theme.blue}>{t("Descrizione")}</T>
+              <TextInput value={about} maxLength={255} multiline onChangeText={setAbout} placeholder={t("Di cosa parla questo gruppo?")} placeholderTextColor={theme.text2} style={[styles.input, { backgroundColor: theme.fill, color: theme.text, minHeight: 72, textAlignVertical: "top" }]} />
             </View>
           </View>
         ) : (
@@ -299,21 +300,21 @@ function GroupInfo({ thread }) {
             <Hero
               face={<GroupAvatar photo={thread.photo} title={thread.name} size={96} />}
               title={thread.name}
-              meta={`${members.length} membri${thread.live ? `, ${online} online` : ""}`}
+              meta={thread.live ? t("{n} membri, {online} online", { n: members.length, online }) : t("{n} membri", { n: members.length })}
               actions={[
-                { label: "Chiama", icon: Phone, run: () => placeCall(live, thread, "voice") },
-                { label: "Video", icon: Video, run: () => placeCall(live, thread, "video") },
-                { label: muted ? "Riattiva" : "Silenzia", icon: muted ? BellOff : Bell, on: muted, run: () => store.setDmFlag(thread.id, "muted", !muted) },
-                { label: "Cerca", icon: Search, weight: "bold", run: () => toSearch(thread) },
+                { label: t("Chiama"), icon: Phone, run: () => placeCall(live, thread, "voice") },
+                { label: t("Video"), icon: Video, run: () => placeCall(live, thread, "video") },
+                { label: muted ? t("Riattiva") : t("Silenzia"), icon: muted ? BellOff : Bell, on: muted, run: () => store.setDmFlag(thread.id, "muted", !muted) },
+                { label: t("Cerca"), icon: Search, weight: "bold", run: () => toSearch(thread) },
               ]}
             />
             <View style={{ marginTop: 10, backgroundColor: theme.bg }}>
               {thread.about ? (
-                <Line first label="Descrizione"><T size={15} style={{ lineHeight: 21 }}>{thread.about}</T></Line>
+                <Line first label={t("Descrizione")}><T size={15} style={{ lineHeight: 21 }}>{thread.about}</T></Line>
               ) : owner ? (
-                <Line first onPress={() => setEditing(true)}><T size={15} color={theme.blue}>Aggiungi una descrizione</T></Line>
+                <Line first onPress={() => setEditing(true)}><T size={15} color={theme.blue}>{t("Aggiungi una descrizione")}</T></Line>
               ) : null}
-              <Line first={!thread.about && !owner} label="Link di invito · tocca per copiare" onPress={() => { Clipboard.setStringAsync(`https://${link}`).catch(() => {}); flash("Link di invito copiato"); }}>
+              <Line first={!thread.about && !owner} label={t("Link di invito · tocca per copiare")} onPress={() => { Clipboard.setStringAsync(`https://${link}`).catch(() => {}); flash(t("Link di invito copiato")); }}>
                 <T size={15} color={theme.blue}>{link}</T>
               </Line>
             </View>
@@ -322,22 +323,22 @@ function GroupInfo({ thread }) {
         {!editing ? (
           <>
             <ChatPrefs id={thread.id} />
-            <Tabs tabs={[["members", "Membri"], ["media", "Media"], ["voice", "Vocali"]]} tab={tab} setTab={setTab} />
+            <Tabs tabs={[["members", t("Membri")], ["media", t("Media")], ["voice", t("Vocali")]]} tab={tab} setTab={setTab} />
             {tab === "members" ? (
               <View style={{ backgroundColor: theme.bg }}>
                 {owner ? (
                   <Pressable onPress={() => { tap(); setAdding((value) => !value); }} style={({ pressed }) => [styles.add, pressed && { backgroundColor: theme.fill }]}>
                     <View style={[styles.addIcon, { backgroundColor: theme.dark ? "#0a2236" : "#e3f2fe" }]}><UserPlus size={20} weight="bold" color={theme.blue} /></View>
-                    <T size={15} weight="600" color={theme.blue}>Aggiungi membri</T>
+                    <T size={15} weight="600" color={theme.blue}>{t("Aggiungi membri")}</T>
                   </Pressable>
                 ) : null}
                 {adding ? (
                   <View style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.line, paddingBottom: 8 }}>
                     {candidates.length ? candidates.map((person) => (
                       <CheckRow key={person.key} on={toAdd.has(person.key)} src={person.src} name={person.name} meta={person.meta} onPress={() => setToAdd((prev) => { const next = new Set(prev); if (next.has(person.key)) next.delete(person.key); else next.add(person.key); return next; })} />
-                    )) : <Hint>Ci sono già tutti.</Hint>}
+                    )) : <Hint>{t("Ci sono già tutti.")}</Hint>}
                     {toAdd.size ? (
-                      <Pressable onPress={() => { tap(); addPicked(); }} style={[styles.addGo, { backgroundColor: theme.blue }]}><T size={14} weight="600" color="#fff">{`Aggiungi ${toAdd.size}`}</T></Pressable>
+                      <Pressable onPress={() => { tap(); addPicked(); }} style={[styles.addGo, { backgroundColor: theme.blue }]}><T size={14} weight="600" color="#fff">{t("Aggiungi {n}", { n: toAdd.size })}</T></Pressable>
                     ) : null}
                   </View>
                 ) : null}
@@ -348,25 +349,25 @@ function GroupInfo({ thread }) {
                     <View key={member.handle || member.name} style={styles.member}>
                       <Face src={member.src} name={member.name} size={46} online={member.online} dot={13} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <T size={15} weight="600" lines={1}>{isMe ? `${member.name} (tu)` : member.name}</T>
-                        <T size={13.5} lines={1} color={member.online ? theme.blue : theme.text2}>{thread.live ? (member.online ? "online" : seenText(member)) : (member.meta || "")}</T>
+                        <T size={15} weight="600" lines={1}>{isMe ? t("{name} (tu)", { name: member.name }) : member.name}</T>
+                        <T size={13.5} lines={1} color={member.online ? theme.blue : theme.text2}>{thread.live ? (member.online ? t("online") : seenText(member)) : (member.meta || "")}</T>
                       </View>
-                      {isOwner ? <T size={12.5} weight="600" color={theme.blue}>proprietario</T> : owner && !isMe ? (
-                        <Pressable accessibilityLabel={`Rimuovi ${member.name}`} onPress={() => remove(member)} hitSlop={8} style={{ padding: 8 }}><UserMinus size={18} color={theme.text3} /></Pressable>
+                      {isOwner ? <T size={12.5} weight="600" color={theme.blue}>{t("proprietario")}</T> : owner && !isMe ? (
+                        <Pressable accessibilityLabel={t("Rimuovi {name}", { name: member.name })} onPress={() => remove(member)} hitSlop={8} style={{ padding: 8 }}><UserMinus size={18} color={theme.text3} /></Pressable>
                       ) : null}
                     </View>
                   );
                 })}
               </View>
             ) : (
-              <MediaGrid media={media} voices={voices} tab={tab} voiceLabel={(message) => message.senderName || (message.from === "me" ? "Tu" : "")} />
+              <MediaGrid media={media} voices={voices} tab={tab} voiceLabel={(message) => message.senderName || (message.from === "me" ? t("Tu") : "")} />
             )}
             <View style={{ marginTop: 10, backgroundColor: theme.bg }}>
               {thread.live ? (
                 <Line first onPress={() => setConfirmLeave(true)}>
-                  <View style={styles.plain}><LogOut size={20} color={theme.red} /><T size={15} weight="500" color={theme.red}>Esci dal gruppo</T></View>
+                  <View style={styles.plain}><LogOut size={20} color={theme.red} /><T size={15} weight="500" color={theme.red}>{t("Esci dal gruppo")}</T></View>
                 </Line>
-              ) : <Hint style={{ marginVertical: 12 }}>Gruppo demo: salvato solo su questo dispositivo.</Hint>}
+              ) : <Hint style={{ marginVertical: 12 }}>{t("Gruppo demo: salvato solo su questo dispositivo.")}</Hint>}
             </View>
           </>
         ) : null}
@@ -375,9 +376,9 @@ function GroupInfo({ thread }) {
       <Confirm
         open={confirmLeave}
         onClose={() => setConfirmLeave(false)}
-        text="Uscire dal gruppo? Non riceverai più i suoi messaggi."
+        text={t("Uscire dal gruppo? Non riceverai più i suoi messaggi.")}
         icon={LogOut}
-        action="Esci dal gruppo"
+        action={t("Esci dal gruppo")}
         onConfirm={() => { setConfirmLeave(false); live.leaveGroup(thread.id); router.dismissTo("/messages"); }}
       />
     </View>

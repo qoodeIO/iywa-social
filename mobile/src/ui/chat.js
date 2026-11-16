@@ -14,6 +14,7 @@ import { groupToneOf, initialsOf, toneOf, VOICE_WAVE, WALLPAPERS } from "../live
 import { playableUri } from "../live/media";
 import { Bell, ChevronLeft, ChevronRight, ClearIcon, ImageIcon, Pause, Pin, Play, Search } from "./chatIcons";
 import { T, tap } from "./kit";
+import { t } from "../lib/i18n";
 
 export const ONLINE = "#1cd14f";
 export const MINE = ["#b13cf2", "#7b3df5", "#2f74f5"];
@@ -137,7 +138,7 @@ export function VoiceBubble({ message, color = "#fff", knob = "rgba(255,255,255,
   }, [on, message.audio, seconds]);
 
   return (
-    <Pressable onPress={toggle} accessibilityRole="button" accessibilityLabel={on ? "Metti in pausa il vocale" : "Ascolta il vocale"} style={styles.voice}>
+    <Pressable onPress={toggle} accessibilityRole="button" accessibilityLabel={on ? t("Metti in pausa il vocale") : t("Ascolta il vocale")} style={styles.voice}>
       <View style={[styles.voiceKnob, { backgroundColor: knob }]}>
         {on ? <Pause size={14} weight="fill" color={color} /> : <Play size={14} weight="fill" color={color} />}
       </View>
@@ -312,7 +313,7 @@ export function SubHead({ title, meta, onBack, right, backIcon: BackIcon = Chevr
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: theme.bg }}>
       <View style={styles.subHead}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Indietro" hitSlop={8} onPress={() => { tap(); (onBack || (() => (router.canGoBack() ? router.back() : router.replace("/messages"))))(); }} style={({ pressed }) => [styles.roundIcon, pressed && { backgroundColor: theme.fill, transform: [{ scale: 0.88 }] }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Indietro")} hitSlop={8} onPress={() => { tap(); (onBack || (() => (router.canGoBack() ? router.back() : router.replace("/messages"))))(); }} style={({ pressed }) => [styles.roundIcon, pressed && { backgroundColor: theme.fill, transform: [{ scale: 0.88 }] }]}>
           <BackIcon size={25} weight="bold" color={theme.text} />
         </Pressable>
         <View style={{ flex: 1, minWidth: 0, paddingLeft: 8 }}>
@@ -334,7 +335,7 @@ export function HeadAction({ title, onPress, disabled }) {
   );
 }
 
-export function SearchField({ value, onChangeText, placeholder = "Cerca", autoFocus, style, onSubmit, height = 36 }) {
+export function SearchField({ value, onChangeText, placeholder = t("Cerca"), autoFocus, style, onSubmit, height = 36 }) {
   const theme = useChatTheme();
   return (
     <View style={[{ height, borderRadius: 10, backgroundColor: theme.fill, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10 }, style]}>
@@ -387,12 +388,12 @@ export function ChatPrefs({ id }) {
   const chevStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${chev.value}deg` }] }));
   return (
     <View style={{ marginTop: 10, backgroundColor: theme.bg }}>
-      <ToggleCell first on={!flags.muted} icon={Bell} tone="red" label="Notifiche" onPress={() => store.setDmFlag(id, "muted", !flags.muted)} />
-      <ToggleCell on={Boolean(flags.pinned)} icon={Pin} tone="green" label="Fissa la chat" onPress={() => store.setDmFlag(id, "pinned", !flags.pinned)} />
+      <ToggleCell first on={!flags.muted} icon={Bell} tone="red" label={t("Notifiche")} onPress={() => store.setDmFlag(id, "muted", !flags.muted)} />
+      <ToggleCell on={Boolean(flags.pinned)} icon={Pin} tone="green" label={t("Fissa la chat")} onPress={() => store.setDmFlag(id, "pinned", !flags.pinned)} />
       <Pressable onPress={() => { tap(); setWalls((value) => !value); }} style={({ pressed }) => [styles.cell, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line, minHeight: 48 }, pressed && { backgroundColor: theme.fill }]}>
         <View style={[styles.ico, { backgroundColor: TONES.blue }]}><ImageIcon size={17} weight="fill" color="#fff" /></View>
-        <T size={15.5} weight="500" style={{ flex: 1 }}>Sfondo della chat</T>
-        <T size={14.5} color={theme.text2}>{WALLPAPERS.find((item) => item.id === wall)?.it}</T>
+        <T size={15.5} weight="500" style={{ flex: 1 }}>{t("Sfondo della chat")}</T>
+        <T size={14.5} color={theme.text2}>{t(WALLPAPERS.find((item) => item.id === wall)?.it || "")}</T>
         <Animated.View style={chevStyle}><ChevronRight size={15} weight="bold" color={theme.text3} /></Animated.View>
       </Pressable>
       {walls ? (
@@ -406,7 +407,7 @@ export function ChatPrefs({ id }) {
                   <View style={[styles.wallBubble, { left: 8, top: "30%", width: "50%", backgroundColor: "#fff" }]} />
                   <LinearGradient colors={[MINE[0], MINE[2]]} style={[styles.wallBubble, { right: 8, top: "55%", width: "46%" }]} />
                 </View>
-                <T size={12.5} weight={on ? "600" : "400"} color={on ? theme.blue : theme.text2}>{item.it}</T>
+                <T size={12.5} weight={on ? "600" : "400"} color={on ? theme.blue : theme.text2}>{t(item.it)}</T>
               </Pressable>
             );
           })}

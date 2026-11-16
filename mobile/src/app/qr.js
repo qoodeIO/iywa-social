@@ -12,6 +12,7 @@ import { useStore } from "../lib/store";
 import { ArrowUpRight, Copy, X } from "../ui/icons-profile";
 import { T, tap } from "../ui/kit";
 import { useToast } from "../ui/profile-kit";
+import { t } from "../lib/i18n";
 
 const TONES = [["#7c3aed", "#ff2d55"], ["#ff8a00", "#ff2d55"], ["#0095f6", "#34c759"], ["#111111", "#3a3a3c"]];
 
@@ -39,9 +40,9 @@ export default function QrScreen() {
       <LinearGradient colors={[a, b]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={StyleSheet.absoluteFill} />
       <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
       <View style={[styles.top, { top: insets.top + 8 }]}>
-        <Pressable accessibilityLabel="Chiudi" hitSlop={8} onPress={() => router.back()} style={styles.close}><X size={22} weight="bold" color="#fff" /></Pressable>
+        <Pressable accessibilityLabel={t("Chiudi")} hitSlop={8} onPress={() => router.back()} style={styles.close}><X size={22} weight="bold" color="#fff" /></Pressable>
         <Pressable onPress={() => { tap(); setTone((value) => (value + 1) % TONES.length); }} style={styles.tone}>
-          <T size={13} weight="700" color="#fff">Colore</T>
+          <T size={13} weight="700" color="#fff">{t("Colore")}</T>
         </Pressable>
         <View style={{ width: 36 }} />
       </View>
@@ -61,11 +62,11 @@ export default function QrScreen() {
         <View style={styles.actions}>
           <Pressable onPress={() => { tap(); Share.share({ message: url, url, title: `@${handle}` }).catch(() => {}); }} style={({ pressed }) => [styles.action, { transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
             <ArrowUpRight size={22} color="#111" />
-            <T size={12.5} weight="600" color="#111">Condividi profilo</T>
+            <T size={12.5} weight="600" color="#111">{t("Condividi profilo")}</T>
           </Pressable>
-          <Pressable onPress={() => { tap(); Clipboard.setStringAsync(url).catch(() => {}); say("Link copiato"); }} style={({ pressed }) => [styles.action, { transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
+          <Pressable onPress={() => { tap(); Clipboard.setStringAsync(url).catch(() => {}); say(t("Link copiato")); }} style={({ pressed }) => [styles.action, { transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
             <Copy size={22} color="#111" />
-            <T size={12.5} weight="600" color="#111">Copia link</T>
+            <T size={12.5} weight="600" color="#111">{t("Copia link")}</T>
           </Pressable>
         </View>
       </View>

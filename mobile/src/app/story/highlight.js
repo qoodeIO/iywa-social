@@ -7,6 +7,7 @@ import { Camera } from "../../ui/icons";
 import { Empty, Header, T, tap } from "../../ui/kit";
 import { StoryMedia } from "../../ui/story";
 import { frameCover } from "../../lib/stories";
+import { t } from "../../lib/i18n";
 
 // New highlight: pick your stories, then name it and choose the cover (web HighlightNew).
 export default function HighlightNew() {
@@ -16,7 +17,7 @@ export default function HighlightNew() {
   const stories = (store.myStories || []).slice().reverse();
   const [picked, setPicked] = useState([]);
   const [step, setStep] = useState("pick");
-  const [name, setName] = useState("In evidenza");
+  const [name, setName] = useState(t("In evidenza"));
   const [cover, setCover] = useState(null);
   const chosen = stories.filter((item) => picked.includes(item.id));
   const coverItem = stories.find((item) => item.id === (cover || picked[0]));
@@ -57,11 +58,11 @@ export default function HighlightNew() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Header
-        title={step === "pick" ? "Seleziona storie" : "Nome"}
+        title={step === "pick" ? t("Seleziona storie") : t("Nome")}
         onBack={step === "name" ? () => setStep("pick") : undefined}
         right={(
           <Pressable hitSlop={8} disabled={disabled} onPress={next} style={{ paddingHorizontal: 8 }}>
-            <T size={16} weight="700" color={theme.blue} style={{ opacity: disabled ? 0.4 : 1 }}>{step === "pick" ? "Avanti" : "Fine"}</T>
+            <T size={16} weight="700" color={theme.blue} style={{ opacity: disabled ? 0.4 : 1 }}>{step === "pick" ? t("Avanti") : t("Fine")}</T>
           </Pressable>
         )}
       />
@@ -92,7 +93,7 @@ export default function HighlightNew() {
             }}
           />
         ) : (
-          <Empty icon={Camera} title="Nessuna storia ancora" text="Pubblica una storia e potrai metterla in evidenza." />
+          <Empty icon={Camera} title={t("Nessuna storia ancora")} text={t("Pubblica una storia e potrai metterla in evidenza.")} />
         )
       ) : (
         <ScrollView contentContainerStyle={{ alignItems: "center", paddingTop: 28, paddingHorizontal: INSET, gap: 14 }} keyboardShouldPersistTaps="handled">
@@ -106,11 +107,11 @@ export default function HighlightNew() {
             maxLength={16}
             autoFocus
             onChangeText={setName}
-            accessibilityLabel="Nome highlight"
+            accessibilityLabel={t("Nome highlight")}
             selectionColor={theme.blue}
             style={{ minWidth: 200, textAlign: "center", fontSize: 18, fontWeight: "600", color: theme.text, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.line }}
           />
-          <T size={13} color={theme.text2}>Scegli la copertina</T>
+          <T size={13} color={theme.text2}>{t("Scegli la copertina")}</T>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 4 }}>
             {chosen.map((item) => {
               const on = (cover || picked[0]) === item.id;

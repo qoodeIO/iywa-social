@@ -4,6 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
+import { t } from "../lib/i18n";
 import { payApi, payBase } from "../lib/pay";
 import { Bag, Bell, Check, Directions, PriceTag, Warn } from "../ui/icons-profile";
 import { Header, T, tap } from "../ui/kit";
@@ -59,20 +60,20 @@ export default function Payments() {
   const state = !config ? "loading" : !handle ? "nouser" : config.offline ? "offline" : !config.enabled ? "server" : ready ? "ready" : status?.connected ? "pending" : "none";
   const fee = config?.feePercent ?? 5;
   const title = {
-    ready: "Pagamenti attivi",
-    pending: "Completa la verifica su Stripe",
-    none: "Vendi direttamente nell'app",
-    server: "Stripe non è configurato sul server",
-    nouser: "Prima collegati al Direct",
-    offline: "Server non raggiungibile",
-    loading: "Controllo…",
+    ready: t("Pagamenti attivi"),
+    pending: t("Completa la verifica su Stripe"),
+    none: t("Vendi direttamente nell'app"),
+    server: t("Stripe non è configurato sul server"),
+    nouser: t("Prima collegati al Direct"),
+    offline: t("Server non raggiungibile"),
+    loading: t("Controllo…"),
   }[state];
   const text = {
-    ready: "Chi compra paga con carta, Apple Pay o Google Pay. I soldi arrivano sul tuo account Stripe.",
-    pending: "Stripe ha bisogno di qualche dato prima di poterti pagare.",
-    none: "Collega il tuo account Stripe: i pagamenti arrivano lì e poi sul tuo conto in banca.",
-    server: "Aggiungi STRIPE_SECRET_KEY al server (calls/.dev.vars) per attivare i pagamenti.",
-    offline: payBase() ? "Il server live ora non risponde." : "Il server live di Space non è ancora collegato a questa app (EXPO_PUBLIC_HUB_URL).",
+    ready: t("Chi compra paga con carta, Apple Pay o Google Pay. I soldi arrivano sul tuo account Stripe."),
+    pending: t("Stripe ha bisogno di qualche dato prima di poterti pagare."),
+    none: t("Collega il tuo account Stripe: i pagamenti arrivano lì e poi sul tuo conto in banca."),
+    server: t("Aggiungi STRIPE_SECRET_KEY al server (calls/.dev.vars) per attivare i pagamenti."),
+    offline: payBase() ? t("Il server live ora non risponde.") : t("Il server live di Space non è ancora collegato a questa app (EXPO_PUBLIC_HUB_URL)."),
     nouser: "",
     loading: "",
   }[state];
@@ -80,7 +81,7 @@ export default function Payments() {
 
   return (
     <View style={{ flex: 1, backgroundColor: st.bg }}>
-      <Header title="Pagamenti" />
+      <Header title={t("Pagamenti")} />
       <ScrollView contentContainerStyle={{ paddingTop: 12, paddingBottom: insets.bottom + 30 }}>
         <View style={[styles.card, { backgroundColor: st.card, padding: 14 }]}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
@@ -90,20 +91,20 @@ export default function Payments() {
               {text ? <T size={13} color={theme.text2} style={{ lineHeight: 18 }}>{text}</T> : null}
             </View>
           </View>
-          {config?.testMode ? <View style={styles.test}><T size={11.5} weight="700" color="#ff9f0a">Modalità test</T></View> : null}
+          {config?.testMode ? <View style={styles.test}><T size={11.5} weight="700" color="#ff9f0a">{t("Modalità test")}</T></View> : null}
           {state === "none" || state === "pending" ? (
             <Pressable disabled={busy} onPress={() => { tap(); onboard(); }} style={({ pressed }) => [styles.go, { backgroundColor: theme.blue, opacity: busy ? 0.6 : pressed ? 0.8 : 1 }]}>
-              {busy ? <ActivityIndicator color="#fff" /> : <T size={15} weight="600" color="#fff">{state === "none" ? "Collega Stripe" : "Continua su Stripe"}</T>}
+              {busy ? <ActivityIndicator color="#fff" /> : <T size={15} weight="600" color="#fff">{state === "none" ? t("Collega Stripe") : t("Continua su Stripe")}</T>}
             </Pressable>
           ) : null}
           {state === "ready" ? (
             <Pressable disabled={busy} onPress={() => { tap(); dashboard(); }} style={({ pressed }) => [styles.go, { backgroundColor: theme.btn, opacity: pressed ? 0.8 : 1 }]}>
-              <T size={15} weight="600">Apri dashboard Stripe</T>
+              <T size={15} weight="600">{t("Apri dashboard Stripe")}</T>
             </Pressable>
           ) : null}
           {state === "offline" || state === "server" ? (
             <Pressable onPress={() => { tap(); setConfig(null); load(); }} style={({ pressed }) => [styles.go, { backgroundColor: theme.btn, opacity: pressed ? 0.8 : 1 }]}>
-              <T size={15} weight="600">Riprova</T>
+              <T size={15} weight="600">{t("Riprova")}</T>
             </Pressable>
           ) : null}
           {error ? (
@@ -113,13 +114,13 @@ export default function Payments() {
             </View>
           ) : null}
         </View>
-        <T size={12.5} weight="500" color={theme.text2} style={styles.cap}>COME FUNZIONA</T>
+        <T size={12.5} weight="500" color={theme.text2} style={styles.cap}>{t("COME FUNZIONA")}</T>
         <View style={[styles.card, { backgroundColor: st.card }]}>
           {[
-            [Bag, "#0a84ff", "“Acquista ora” sui tuoi prodotti", "Pagamento sicuro con Stripe, con indirizzo di spedizione."],
-            [Directions, "#34c759", "Pagato sul tuo account", "Stripe versa automaticamente sul tuo conto."],
-            [PriceTag, "#8e8e93", `Commissione Space: ${fee}%`, "Più le commissioni carta di Stripe. Nessun costo mensile."],
-            [Bell, "#ff9500", "Avvisi d'ordine in tempo reale", "Ricevi una notifica appena qualcuno compra."],
+            [Bag, "#0a84ff", t("“Acquista ora” sui tuoi prodotti"), t("Pagamento sicuro con Stripe, con indirizzo di spedizione.")],
+            [Directions, "#34c759", t("Pagato sul tuo account"), t("Stripe versa automaticamente sul tuo conto.")],
+            [PriceTag, "#8e8e93", t("Commissione Space: {fee}%", { fee }), t("Più le commissioni carta di Stripe. Nessun costo mensile.")],
+            [Bell, "#ff9500", t("Avvisi d'ordine in tempo reale"), t("Ricevi una notifica appena qualcuno compra.")],
           ].map(([Icon, color, head, sub], index) => (
             <View key={head} style={styles.row}>
               {index ? <View style={[styles.sep, { backgroundColor: theme.line }]} /> : null}
@@ -131,7 +132,7 @@ export default function Payments() {
             </View>
           ))}
         </View>
-        <T size={12.5} color={theme.text2} style={{ marginTop: 10, marginHorizontal: 30, lineHeight: 17 }}>I prodotti con foto caricate dal telefono si sincronizzano senza foto: per ora usa foto dal web.</T>
+        <T size={12.5} color={theme.text2} style={{ marginTop: 10, marginHorizontal: 30, lineHeight: 17 }}>{t("I prodotti con foto caricate dal telefono si sincronizzano senza foto: per ora usa foto dal web.")}</T>
       </ScrollView>
     </View>
   );

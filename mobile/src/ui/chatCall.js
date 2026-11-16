@@ -17,6 +17,7 @@ import { useStore } from "../lib/store";
 import { Face, GroupAvatar, useChatTheme } from "./chat";
 import { Mic, MicOff, Minimize, Phone, PhoneOff, SwitchCamera, Video, VideoOff, Volume } from "./chatIcons";
 import { T, tap } from "./kit";
+import { t } from "../lib/i18n";
 
 // Mount once in the root layout, inside StoreProvider.
 export function LiveRoot({ children }) {
@@ -86,7 +87,7 @@ function Notice({ code }) {
   const insets = useSafeAreaInsets();
   return (
     <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(180)} pointerEvents="none" style={[styles.notice, { top: insets.top + 48 }]}>
-      <T size={13} weight="600" color="#fff" style={{ textAlign: "center" }}>{CALL_NOTICES[code] || CALL_NOTICES.failed}</T>
+      <T size={13} weight="600" color="#fff" style={{ textAlign: "center" }}>{t(CALL_NOTICES[code] || CALL_NOTICES.failed)}</T>
     </Animated.View>
   );
 }
@@ -141,7 +142,7 @@ function CallLayer() {
     const caller = live.people[incoming.from] || convOf(incoming.convId)?.members.find((m) => m.handle === incoming.from);
     const group = convOf(incoming.convId)?.kind === "group";
     return (
-      <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, styles.incoming, { paddingTop: insets.top + 72, paddingBottom: insets.bottom + 48 }]} accessibilityViewIsModal accessibilityLabel="Chiamata in arrivo">
+      <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, styles.incoming, { paddingTop: insets.top + 72, paddingBottom: insets.bottom + 48 }]} accessibilityViewIsModal accessibilityLabel={t("Chiamata in arrivo")}>
         <StatusBar style="light" />
         <Backdrop src={caller?.src || head.src} name={caller?.name || head.name} />
         <View style={styles.incomingCard}>
@@ -152,17 +153,17 @@ function CallLayer() {
           <T size={26} weight="700" color="#fff" style={{ letterSpacing: -0.8, textAlign: "center" }}>{group ? head.name : (caller?.name || head.name)}</T>
           <T size={15} color="rgba(255,255,255,0.78)">
             {group ? `${caller?.name?.split(" ")[0] || ""} · ` : ""}
-            {incoming.video ? "Videochiamata in arrivo" : "Chiamata in arrivo"}
+            {incoming.video ? t("Videochiamata in arrivo") : t("Chiamata in arrivo")}
           </T>
         </View>
         <View style={styles.incomingActions}>
           <Pressable accessibilityRole="button" onPress={() => { tap("medium"); live.calls.decline(); }} style={styles.incomingBtn}>
             <View style={[styles.bigRound, { backgroundColor: "#ff3b30" }]}><PhoneOff size={28} weight="fill" color="#fff" /></View>
-            <T size={13} weight="600" color="#fff">Rifiuta</T>
+            <T size={13} weight="600" color="#fff">{t("Rifiuta")}</T>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={() => { tap("medium"); live.calls.accept(); }} style={styles.incomingBtn}>
             <Bounce><View style={[styles.bigRound, { backgroundColor: "#34c759" }]}>{incoming.video ? <Video size={28} weight="fill" color="#fff" /> : <Phone size={28} weight="fill" color="#fff" />}</View></Bounce>
-            <T size={13} weight="600" color="#fff">Rispondi</T>
+            <T size={13} weight="600" color="#fff">{t("Rispondi")}</T>
           </Pressable>
         </View>
       </Animated.View>
@@ -178,10 +179,10 @@ function CallLayer() {
   });
   const connected = Boolean(call.startedAt) && peers.length > 0;
   const status = call.phase === "joining"
-    ? "Connessione…"
+    ? t("Connessione…")
     : connected
-      ? (peers.some((peer) => peer.state === "reconnecting" || peer.state === "disconnected") ? "Riconnessione…" : callStamp(elapsed))
-      : call.demo || !peers.length ? "Squilla…" : "Connessione…";
+      ? (peers.some((peer) => peer.state === "reconnecting" || peer.state === "disconnected") ? t("Riconnessione…") : callStamp(elapsed))
+      : call.demo || !peers.length ? t("Squilla…") : t("Connessione…");
   const anyVideo = call.cam || peers.some((peer) => peer.video);
 
   if (call.minimized) {
@@ -193,7 +194,7 @@ function CallLayer() {
             <T size={13.5} weight="700" color="#04140a" lines={1} style={{ flex: 1 }}>{head.name}</T>
             <T size={13.5} weight="700" color="#04140a" style={{ fontVariant: ["tabular-nums"] }}>{status}</T>
           </Pressable>
-          <Pressable accessibilityLabel="Termina" onPress={() => { tap("medium"); live.calls.hangup(); }} style={styles.pillEnd}>
+          <Pressable accessibilityLabel={t("Termina")} onPress={() => { tap("medium"); live.calls.hangup(); }} style={styles.pillEnd}>
             <PhoneOff size={16} weight="fill" color="#fff" />
           </Pressable>
         </Animated.View>
@@ -236,7 +237,7 @@ function CallLayer() {
             ) : <Face src={faces[0]?.src} name={faces[0]?.name} size={128} />}
           </View>
           {peers.length === 1 && peers[0].mic === false ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 16 }}><MicOff size={14} weight="bold" color="rgba(255,255,255,0.72)" /><T size={14} color="rgba(255,255,255,0.72)">Microfono spento</T></View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 16 }}><MicOff size={14} weight="bold" color="rgba(255,255,255,0.72)" /><T size={14} color="rgba(255,255,255,0.72)">{t("Microfono spento")}</T></View>
           ) : null}
           {peers.length > 1 ? <T size={14} color="rgba(255,255,255,0.72)" style={{ marginTop: 16 }}>{peers.map((peer) => peer.name.split(" ")[0]).join(", ")}</T> : null}
         </View>
@@ -245,23 +246,23 @@ function CallLayer() {
         <T size={24} weight="700" color="#fff" lines={1} style={{ letterSpacing: -0.7, maxWidth: "76%" }}>{head.name}</T>
         <T size={14} color="rgba(255,255,255,0.86)" style={{ fontVariant: ["tabular-nums"] }}>{status}</T>
       </LinearGradient>
-      <Pressable accessibilityLabel="Riduci" onPress={() => { tap(); live.calls.minimize(true); }} style={[styles.min, { top: insets.top + 6 }]}>
+      <Pressable accessibilityLabel={t("Riduci")} onPress={() => { tap(); live.calls.minimize(true); }} style={[styles.min, { top: insets.top + 6 }]}>
         <Minimize size={17} weight="bold" color="#fff" />
       </Pressable>
       {call.cam && call.local ? (
         <View style={[styles.self, { bottom: 150 + insets.bottom }]}>
           <RTCView streamURL={call.local.toURL()} key={`self-${call.localV}`} style={StyleSheet.absoluteFill} objectFit="cover" mirror={call.facing === "user"} zOrder={1} />
-          <Pressable accessibilityLabel="Gira fotocamera" onPress={() => { tap(); live.calls.flip(); }} style={styles.flip}>
+          <Pressable accessibilityLabel={t("Gira fotocamera")} onPress={() => { tap(); live.calls.flip(); }} style={styles.flip}>
             <SwitchCamera size={14} weight="bold" color="#fff" />
           </Pressable>
         </View>
       ) : null}
       <View style={[styles.controls, { bottom: 28 + insets.bottom }]}>
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-        <ControlButton icon={call.mic ? Mic : MicOff} label="Muto" on={!call.mic} onPress={() => live.calls.toggleMic()} />
-        <ControlButton icon={Volume} label="Audio" on={speaker} onPress={() => { const next = !speaker; setSpeaker(next); routeAudio(next); }} />
-        <ControlButton icon={call.cam ? Video : VideoOff} label="Camera" on={call.cam} onPress={() => live.calls.toggleCam()} />
-        <ControlButton icon={PhoneOff} label="Fine" end onPress={() => live.calls.hangup()} />
+        <ControlButton icon={call.mic ? Mic : MicOff} label={t("Muto")} on={!call.mic} onPress={() => live.calls.toggleMic()} />
+        <ControlButton icon={Volume} label={t("Audio")} on={speaker} onPress={() => { const next = !speaker; setSpeaker(next); routeAudio(next); }} />
+        <ControlButton icon={call.cam ? Video : VideoOff} label={t("Camera")} on={call.cam} onPress={() => live.calls.toggleCam()} />
+        <ControlButton icon={PhoneOff} label={t("Fine")} end onPress={() => live.calls.hangup()} />
       </View>
       {notice}
     </Animated.View>
@@ -276,7 +277,7 @@ function LiveToast() {
   if (!toast || live.call?.phase !== "idle" && !live.call?.minimized) return null;
   const message = toast.message;
   const group = toast.conv?.kind === "group";
-  const text = message.kind === "image" ? "📷 Foto" : message.kind === "audio" ? "🎤 Messaggio vocale" : message.text;
+  const text = message.kind === "image" ? `📷 ${t("Foto")}` : message.kind === "audio" ? `🎤 ${t("Messaggio vocale")}` : message.text;
   return (
     <Animated.View key={toast.id} entering={SlideInUp.springify().damping(20)} exiting={FadeOut.duration(160)} style={[styles.toast, { top: insets.top + 4, backgroundColor: theme.dark ? "rgba(38,38,38,0.96)" : "#fff" }]}>
       <Pressable

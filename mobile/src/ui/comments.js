@@ -10,6 +10,7 @@ import { T, tap } from "./kit";
 import { MentionSuggest, Rich, openPerson } from "./feed";
 import { canReach, faceOf, textHidden } from "./feedData";
 import { commentPost } from "./feedEcho";
+import { t } from "../lib/i18n";
 
 export const EMOJI = ["❤️", "🙌", "🔥", "👏", "😢", "😍", "😮", "😂"];
 
@@ -23,8 +24,8 @@ export function useCommentLines(post) {
   const me = store.profile;
   const mine = store.postComments?.[post.id];
   return useMemo(() => [
-    ...(post.thread || []).map((note, i) => ({ ...note, id: `t-${i}`, time: `${i + 2} h` })),
-    ...(mine || []).map((text, i) => ({ id: `m-${i}`, name: me.name, text, mine: true, time: "ora" })),
+    ...(post.thread || []).map((note, i) => ({ ...note, id: `t-${i}`, time: t("{n} h", { n: i + 2 }) })),
+    ...(mine || []).map((text, i) => ({ id: `m-${i}`, name: me.name, text, mine: true, time: t("ora") })),
   ].filter((note) => !textHidden(store.prefs, note.text)), [post.thread, mine, me.name, store.prefs]);
 }
 
@@ -35,7 +36,7 @@ export function CaptionRow({ post }) {
       <Image source={{ uri: post.src || post.avatar || faceOf(post.name) }} style={styles.face} transition={120} />
       <View style={{ flex: 1 }}>
         <Rich text={post.text} prefix={<T size={14} weight="600">{post.name} </T>} />
-        {post.time ? <T size={12.5} color={theme.text2} style={{ marginTop: 3 }}>{post.time === "Now" ? "Adesso" : post.time}</T> : null}
+        {post.time ? <T size={12.5} color={theme.text2} style={{ marginTop: 3 }}>{post.time === "Now" ? t("Adesso") : typeof post.time === "string" ? t(post.time) : post.time}</T> : null}
       </View>
     </View>
   );
@@ -58,13 +59,13 @@ export function CommentRow({ post, note, onReply }) {
           <T size={12} color={theme.text2}>{note.time}</T>
         </View>
         <Rich text={note.text} />
-        {restricted ? <T size={12} color={theme.text2}>Solo tu</T> : null}
+        {restricted ? <T size={12} color={theme.text2}>{t("Solo tu")}</T> : null}
         <View style={styles.tools}>
-          {on ? <T size={12.5} weight="600" color={theme.text2}>1 Mi piace</T> : null}
-          <Pressable hitSlop={6} onPress={() => onReply(note)}><T size={12.5} weight="600" color={theme.text2}>Rispondi</T></Pressable>
+          {on ? <T size={12.5} weight="600" color={theme.text2}>{t("1 Mi piace")}</T> : null}
+          <Pressable hitSlop={6} onPress={() => onReply(note)}><T size={12.5} weight="600" color={theme.text2}>{t("Rispondi")}</T></Pressable>
         </View>
       </View>
-      <Pressable accessibilityLabel="Mi piace al commento" hitSlop={10} onPress={() => { tap(); store.toggleCommentLike(key); }} style={styles.like}>
+      <Pressable accessibilityLabel={t("Mi piace al commento")} hitSlop={10} onPress={() => { tap(); store.toggleCommentLike(key); }} style={styles.like}>
         <Heart size={15} weight={on ? "fill" : "regular"} color={on ? theme.red : theme.text2} />
       </Pressable>
     </View>
@@ -79,7 +80,7 @@ export function CommentComposer({ post, draft, setDraft, inputRef, onSent, botto
   if (locked) {
     return (
       <View style={[styles.foot, { borderTopColor: theme.line, paddingBottom: bottom + 14 }]}>
-        <T size={13} color={theme.text2} style={{ textAlign: "center", paddingTop: 4 }}>I commenti sono disattivati.</T>
+        <T size={13} color={theme.text2} style={{ textAlign: "center", paddingTop: 4 }}>{t("I commenti sono disattivati.")}</T>
       </View>
     );
   }
@@ -108,16 +109,16 @@ export function CommentComposer({ post, draft, setDraft, inputRef, onSent, botto
           ref={inputRef}
           value={draft}
           onChangeText={setDraft}
-          placeholder={`Commenta per ${first}…`}
+          placeholder={t("Commenta per {name}…", { name: first })}
           placeholderTextColor={theme.text2}
-          accessibilityLabel="Aggiungi un commento"
+          accessibilityLabel={t("Aggiungi un commento")}
           returnKeyType="send"
           onSubmitEditing={send}
           blurOnSubmit={false}
           style={[styles.input, { color: theme.text, borderColor: theme.line }]}
         />
         {draft.trim() ? (
-          <Pressable hitSlop={8} onPress={send}><T size={15} weight="700" color={theme.blue}>Pubblica</T></Pressable>
+          <Pressable hitSlop={8} onPress={send}><T size={15} weight="700" color={theme.blue}>{t("Pubblica")}</T></Pressable>
         ) : null}
       </View>
     </View>
@@ -148,7 +149,7 @@ export function useKeyboardPad(under = 0) {
 
 export function NoComments() {
   const theme = useTheme();
-  return <T size={14} color={theme.text2} style={{ textAlign: "center", paddingVertical: 28 }}>Ancora nessun commento. Inizia tu.</T>;
+  return <T size={14} color={theme.text2} style={{ textAlign: "center", paddingVertical: 28 }}>{t("Ancora nessun commento. Inizia tu.")}</T>;
 }
 
 export const styles = StyleSheet.create({

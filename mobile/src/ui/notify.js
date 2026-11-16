@@ -13,6 +13,7 @@ import { ReplyGlyph, UserPlusGlyph } from "./feedIcons";
 import { T, tap } from "./kit";
 import { openPost } from "./feed";
 import { onToast } from "./feedEcho";
+import { t } from "../lib/i18n";
 
 export const NOTE_KINDS = {
   like: { icon: Heart, tone: "#ff3040" },
@@ -91,7 +92,7 @@ export function FeedOverlay() {
                 <T size={12} weight="600" color={theme.text2} style={{ letterSpacing: 0.5 }}>SPACE</T>
                 <T size={14} lines={2} style={{ lineHeight: 18 }}><T size={14} weight="700">{banner.name}</T> {banner.text}</T>
               </View>
-              <T size={12} color={theme.text2} style={{ alignSelf: "flex-start" }}>ora</T>
+              <T size={12} color={theme.text2} style={{ alignSelf: "flex-start" }}>{t("ora")}</T>
             </BlurView>
           </Pressable>
         </Animated.View>

@@ -7,11 +7,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../theme";
 import { Avatar, Sheet, T, tap } from "./kit";
 import { Carousel, Heart, MessageCircle, Play, Send, SquarePlay } from "./icons-profile";
+import { t } from "../lib/i18n";
 
 const W = Dimensions.get("window").width;
 
 // Bottom action sheet: icon rows, a red row for destructive actions, "Annulla" at the end.
-export function ActionSheet({ open, onClose, items = [], hint, cancel = "Annulla" }) {
+export function ActionSheet({ open, onClose, items = [], hint, cancel }) {
   const theme = useTheme();
   return (
     <Sheet open={open} onClose={onClose}>
@@ -28,7 +29,7 @@ export function ActionSheet({ open, onClose, items = [], hint, cancel = "Annulla
         </Pressable>
       ))}
       <Pressable onPress={onClose} style={({ pressed }) => [styles.sheetRow, { justifyContent: "center", backgroundColor: pressed ? theme.fill : "transparent" }]}>
-        <T size={15} color={theme.text2}>{cancel}</T>
+        <T size={15} color={theme.text2}>{cancel ?? t("Annulla")}</T>
       </Pressable>
     </Sheet>
   );
@@ -130,7 +131,7 @@ export const ExploreTile = memo(function ExploreTile({ post, width, height, onOp
   const reel = post.kind === "reel";
   return (
     <Pressable
-      accessibilityLabel={`${reel ? "Reel" : "Post"}, ${post.name}`}
+      accessibilityLabel={reel ? t("Reel, {name}", { name: post.name }) : t("Post, {name}", { name: post.name })}
       onPress={() => onOpen(post)}
       onLongPress={() => { tap("medium"); onPeek?.(post); }}
       onPressOut={() => onPeek?.(null)}
@@ -200,7 +201,7 @@ export function PeekCard({ post }) {
           <Heart size={24} color={theme.text} />
           <MessageCircle size={24} color={theme.text} />
           <Send size={24} color={theme.text} />
-          <T size={13} weight="600" style={{ marginLeft: "auto" }}>{post.likes ? `${post.likes} Mi piace` : ""}</T>
+          <T size={13} weight="600" style={{ marginLeft: "auto" }}>{post.likes ? t("{n} Mi piace", { n: post.likes }) : ""}</T>
         </View>
       </Animated.View>
     </View>

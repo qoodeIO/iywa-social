@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { INSET, useTheme } from "../theme";
+import { LANGS, t, tk } from "../lib/i18n";
 import {
   Archive, At, Bell, BellOff, Bookmark, Box, Brush, Chart, ChatDots, ChatText, Check, ChevronRight, Download, Eye, EyeOff,
   Globe, Hand, Help, Info, Lock, PriceTag, Settings, Sparkle, Star, Store, TextT, Timer, User, Users,
@@ -8,49 +9,49 @@ import { T, Toggle, tap } from "./kit";
 
 // The same groups and rows as "Impostazioni e privacy" in the web app.
 export const SETTING_GROUPS = [
-  { title: "Il tuo account", rows: [
-    { id: "edit", label: "Modifica profilo", meta: "Nome, handle, bio" },
-    { id: "login", label: "Account", meta: "Su questo telefono" },
+  { title: tk("Il tuo account"), rows: [
+    { id: "edit", label: tk("Modifica profilo"), meta: tk("Nome, handle, bio") },
+    { id: "login", label: tk("Account"), meta: tk("Su questo telefono") },
   ] },
-  { title: "Come usi Space", rows: [
-    { id: "saved", label: "Salvati", meta: "Post e reel" },
-    { id: "archive", label: "Archivio", meta: "Storie e post nascosti" },
-    { id: "activity", label: "La tua attività", meta: "Tempo, like, ricerche" },
-    { id: "notifications", label: "Notifiche", meta: "Like, commenti, follow" },
-    { id: "time", label: "Tempo di utilizzo", meta: "Limite giornaliero" },
+  { title: tk("Come usi Space"), rows: [
+    { id: "saved", label: tk("Salvati"), meta: tk("Post e reel") },
+    { id: "archive", label: tk("Archivio"), meta: tk("Storie e post nascosti") },
+    { id: "activity", label: tk("La tua attività"), meta: tk("Tempo, like, ricerche") },
+    { id: "notifications", label: tk("Notifiche"), meta: tk("Like, commenti, follow") },
+    { id: "time", label: tk("Tempo di utilizzo"), meta: tk("Limite giornaliero") },
   ] },
-  { title: "Chi può vedere i tuoi contenuti", rows: [
-    { id: "privacy", label: "Privacy dell'account", meta: "Pubblico o privato" },
-    { id: "close", label: "Amici più stretti", meta: "Storie solo per loro" },
-    { id: "blocked", label: "Bloccati", meta: "Chi non può trovarti" },
+  { title: tk("Chi può vedere i tuoi contenuti"), rows: [
+    { id: "privacy", label: tk("Privacy dell'account"), meta: tk("Pubblico o privato") },
+    { id: "close", label: tk("Amici più stretti"), meta: tk("Storie solo per loro") },
+    { id: "blocked", label: tk("Bloccati"), meta: tk("Chi non può trovarti") },
   ] },
-  { title: "Come gli altri interagiscono con te", rows: [
-    { id: "messages", label: "Messaggi e risposte alle storie", meta: "Chi può scriverti" },
-    { id: "tags", label: "Tag e menzioni", meta: "Chi può taggarti" },
-    { id: "comments", label: "Commenti", meta: "Chi può commentare" },
-    { id: "words", label: "Parole nascoste", meta: "Filtra commenti e richieste" },
-    { id: "restricted", label: "Limitati", meta: "Commenti che vedi solo tu" },
+  { title: tk("Come gli altri interagiscono con te"), rows: [
+    { id: "messages", label: tk("Messaggi e risposte alle storie"), meta: tk("Chi può scriverti") },
+    { id: "tags", label: tk("Tag e menzioni"), meta: tk("Chi può taggarti") },
+    { id: "comments", label: tk("Commenti"), meta: tk("Chi può commentare") },
+    { id: "words", label: tk("Parole nascoste"), meta: tk("Filtra commenti e richieste") },
+    { id: "restricted", label: tk("Limitati"), meta: tk("Commenti che vedi solo tu") },
   ] },
-  { title: "Cosa vedi", rows: [
-    { id: "muted", label: "Account silenziati", meta: "Nascondi i loro post" },
-    { id: "content", label: "Preferenze sui contenuti", meta: "Contenuti sensibili, suggerimenti" },
+  { title: tk("Cosa vedi"), rows: [
+    { id: "muted", label: tk("Account silenziati"), meta: tk("Nascondi i loro post") },
+    { id: "content", label: tk("Preferenze sui contenuti"), meta: tk("Contenuti sensibili, suggerimenti") },
   ] },
-  { title: "App e media", rows: [
-    { id: "theme", label: "Aspetto", meta: "Chiaro, scuro o automatico" },
-    { id: "language", label: "Lingua", meta: "Lingua dell'app" },
-    { id: "accessibility", label: "Accessibilità", meta: "Sottotitoli e testo alternativo" },
-    { id: "data", label: "Uso dei dati", meta: "Risparmio dati" },
+  { title: tk("App e media"), rows: [
+    { id: "theme", label: tk("Aspetto"), meta: tk("Chiaro, scuro o automatico") },
+    { id: "language", label: tk("Lingua"), meta: tk("Lingua dell'app") },
+    { id: "accessibility", label: tk("Accessibilità"), meta: tk("Sottotitoli e testo alternativo") },
+    { id: "data", label: tk("Uso dei dati"), meta: tk("Risparmio dati") },
   ] },
-  { title: "Per i professionisti", rows: [
-    { id: "account-type", label: "Tipo di account e shop", meta: "Personale, creator o azienda" },
-    { id: "payments", label: "Pagamenti", meta: "Vendite e versamenti" },
-    { id: "orders", label: "Ordini", meta: "Acquisti e vendite" },
+  { title: tk("Per i professionisti"), rows: [
+    { id: "account-type", label: tk("Tipo di account e shop"), meta: tk("Personale, creator o azienda") },
+    { id: "payments", label: tk("Pagamenti"), meta: tk("Vendite e versamenti") },
+    { id: "orders", label: tk("Ordini"), meta: tk("Acquisti e vendite") },
   ] },
-  { title: "Info e assistenza", rows: [
-    { id: "help", label: "Assistenza", meta: "Risposte" },
-    { id: "privacy-policy", label: "Privacy Policy", meta: "Come Space tratta i tuoi dati" },
-    { id: "terms", label: "Termini di utilizzo", meta: "Le regole dell'anteprima" },
-    { id: "about", label: "Informazioni", meta: "Versione dell'app" },
+  { title: tk("Info e assistenza"), rows: [
+    { id: "help", label: tk("Assistenza"), meta: tk("Risposte") },
+    { id: "privacy-policy", label: tk("Privacy Policy"), meta: tk("Come Space tratta i tuoi dati") },
+    { id: "terms", label: tk("Termini di utilizzo"), meta: tk("Le regole dell'anteprima") },
+    { id: "about", label: tk("Informazioni"), meta: tk("Versione dell'app") },
   ] },
 ];
 
@@ -90,22 +91,22 @@ export function settingValue(id, store) {
   const prefs = store.prefs;
   const count = (list) => (list?.length ? String(list.length) : "");
   switch (id) {
-    case "privacy": return prefs.private ? "Privato" : "Pubblico";
+    case "privacy": return prefs.private ? t("Privato") : t("Pubblico");
     case "notifications": {
       const on = Object.values(prefs.notes || {}).filter(Boolean).length;
-      return on ? `${on} attive` : "Spente";
+      return on ? t("{n} attive", { n: on }) : t("Spente");
     }
-    case "time": return prefs.timeLimit === "off" ? "Spento" : prefs.timeLimit === "60" ? "1 h" : `${prefs.timeLimit} min`;
+    case "time": return prefs.timeLimit === "off" ? t("Spento") : prefs.timeLimit === "60" ? t("1 h") : t("{n} min", { n: prefs.timeLimit });
     case "close": return count(prefs.closeFriends);
     case "blocked": return count(prefs.blocked);
     case "muted": return count(prefs.muted);
     case "restricted": return count(prefs.restricted);
     case "words": return count(prefs.hiddenWords);
     case "saved": return count(store.saves);
-    case "data": return prefs.dataSaver ? "Attivo" : "Spento";
-    case "theme": return prefs.appearance === "light" ? "Chiaro" : prefs.appearance === "dark" ? "Scuro" : "Automatico";
-    case "language": return "Italiano";
-    case "account-type": return store.accountType === "creator" ? "Creator" : store.accountType === "business" ? "Azienda" : "Personale";
+    case "data": return prefs.dataSaver ? t("Attivo") : t("Spento");
+    case "theme": return prefs.appearance === "light" ? t("Chiaro") : prefs.appearance === "dark" ? t("Scuro") : t("Automatico");
+    case "language": return LANGS.find((lang) => lang.id === store.language)?.label || "";
+    case "account-type": return store.accountType === "creator" ? t("Creator") : store.accountType === "business" ? t("Azienda") : t("Personale");
     case "orders": return count(store.orders);
     default: return "";
   }

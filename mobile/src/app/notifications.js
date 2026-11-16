@@ -9,8 +9,9 @@ import { NOTE_KINDS, openNote, openPersonByName } from "../ui/notify";
 import { Empty, Header, T, tap } from "../ui/kit";
 import { Rich } from "../ui/feed";
 import { findPost, noteAgo, personHidden } from "../ui/feedData";
+import { t, tk } from "../lib/i18n";
 
-const FILTERS = [["all", "Tutte"], ["mention", "Menzioni"], ["comment", "Commenti"], ["like", "Mi piace"], ["follow", "Follow"], ["tag", "Tag"]];
+const FILTERS = [["all", tk("Tutte")], ["mention", tk("Menzioni")], ["comment", tk("Commenti")], ["like", tk("Mi piace")], ["follow", tk("Follow")], ["tag", tk("Tag")]];
 
 // Web NotesScreen: filters, follow requests, New / Today / This week / Earlier, suggestions.
 export default function Notifications() {
@@ -28,16 +29,16 @@ export default function Notifications() {
   const list = all.filter((note) => filter === "all" || note.type === filter || (filter === "comment" && note.type === "reply"));
   const now = Date.now();
   const sections = [
-    ["Nuove", list.filter((note) => unreadIds.has(note.id))],
-    ["Oggi", list.filter((note) => !unreadIds.has(note.id) && now - note.at < 86_400_000)],
-    ["Questa settimana", list.filter((note) => !unreadIds.has(note.id) && now - note.at >= 86_400_000 && now - note.at < 7 * 86_400_000)],
-    ["Precedenti", list.filter((note) => !unreadIds.has(note.id) && now - note.at >= 7 * 86_400_000)],
+    [t("Nuove"), list.filter((note) => unreadIds.has(note.id))],
+    [t("Oggi"), list.filter((note) => !unreadIds.has(note.id) && now - note.at < 86_400_000)],
+    [t("Questa settimana"), list.filter((note) => !unreadIds.has(note.id) && now - note.at >= 86_400_000 && now - note.at < 7 * 86_400_000)],
+    [t("Precedenti"), list.filter((note) => !unreadIds.has(note.id) && now - note.at >= 7 * 86_400_000)],
   ].filter(([, data]) => data.length).map(([title, data]) => ({ title, data }));
   const suggestions = MEET.filter((person) => !store.follows.includes(person.name)).slice(0, 4);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <Header title="Notifiche" />
+      <Header title={t("Notifiche")} />
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
           {FILTERS.map(([id, label]) => {
@@ -45,7 +46,7 @@ export default function Notifications() {
             const count = id === "all" ? 0 : all.filter((note) => unreadIds.has(note.id) && (note.type === id || (id === "comment" && note.type === "reply"))).length;
             return (
               <Pressable key={id} onPress={() => { tap(); setFilter(id); }} style={({ pressed }) => [styles.filter, { backgroundColor: on ? theme.text : "transparent", borderColor: on ? theme.text : theme.line, transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-                <T size={14} weight="600" color={on ? theme.bg : theme.text}>{label}</T>
+                <T size={14} weight="600" color={on ? theme.bg : theme.text}>{t(label)}</T>
                 {count ? <View style={styles.filterCount}><T size={10.5} weight="700" color="#fff">{count}</T></View> : null}
               </Pressable>
             );
@@ -64,8 +65,8 @@ export default function Notifications() {
               <Image source={{ uri: PEOPLE[1].src }} style={[styles.stackFace, { borderColor: theme.bg, left: 12, top: 10 }]} />
             </View>
             <View style={{ flex: 1 }}>
-              <T size={14} weight="600">Richieste di follow</T>
-              <T size={14} color={theme.text2}>Nico Serra e altri 2</T>
+              <T size={14} weight="600">{t("Richieste di follow")}</T>
+              <T size={14} color={theme.text2}>{t("{name} e altri {n}", { name: "Nico Serra", n: 2 })}</T>
             </View>
             <View style={[styles.blueDot, { backgroundColor: theme.blue }]} />
             <ChevronRight size={16} color={theme.text3} />
@@ -74,16 +75,16 @@ export default function Notifications() {
         renderSectionHeader={({ section }) => <T size={16} weight="700" style={styles.group}>{section.title}</T>}
         renderSectionFooter={() => <View style={[styles.groupEnd, { backgroundColor: theme.line }]} />}
         renderItem={({ item, index }) => <NoteRow note={item} fresh={unreadIds.has(item.id)} following={store.follows.includes(item.name)} onFollow={store.toggleFollow} index={index} />}
-        ListEmptyComponent={<Empty icon={Bell} title="Ancora niente qui" text="Quando qualcuno ti menziona o ti tagga, lo vedrai qui." />}
+        ListEmptyComponent={<Empty icon={Bell} title={t("Ancora niente qui")} text={t("Quando qualcuno ti menziona o ti tagga, lo vedrai qui.")} />}
         ListFooterComponent={filter === "all" && suggestions.length ? (
           <View style={{ paddingBottom: 20 }}>
-            <T size={16} weight="700" style={styles.group}>Suggeriti per te</T>
+            <T size={16} weight="700" style={styles.group}>{t("Suggeriti per te")}</T>
             {suggestions.map((person) => (
               <View key={person.name} style={styles.row}>
                 <Pressable onPress={() => openPersonByName(person.name)}><Image source={{ uri: person.src }} style={styles.face} transition={120} /></Pressable>
                 <T size={14} style={{ flex: 1 }} lines={2}><T size={14} weight="600">{person.name}</T> <T size={14} color={theme.text2}>{person.meta}</T></T>
                 <Pressable onPress={() => { tap(); store.toggleFollow(person.name); }} style={({ pressed }) => [styles.smallBtn, { backgroundColor: theme.blue, opacity: pressed ? 0.75 : 1 }]}>
-                  <T size={14} weight="600" color="#fff">Segui</T>
+                  <T size={14} weight="600" color="#fff">{t("Segui")}</T>
                 </Pressable>
               </View>
             ))}
@@ -111,12 +112,12 @@ const NoteRow = memo(function NoteRow({ note, fresh, following, onFollow }) {
         <View style={[styles.kind, { backgroundColor: kind.tone, borderColor: theme.bg }]}><Icon size={10} weight="fill" color="#fff" /></View>
       </Pressable>
       <Pressable style={{ flex: 1 }} onPress={() => openNote(note)}>
-        <Rich text={note.text} prefix={<T size={14} weight="600">{note.name} </T>} />
+        <Rich text={t(note.text)} prefix={<T size={14} weight="600">{note.name} </T>} />
         <T size={13} color={theme.text2} style={{ marginTop: 1 }}>{noteAgo(note.at)}</T>
       </Pressable>
       {note.type === "follow" ? (
         <Pressable onPress={() => { tap(); onFollow(note.name); }} style={({ pressed }) => [styles.smallBtn, { backgroundColor: following ? theme.btn : theme.blue, opacity: pressed ? 0.75 : 1 }]}>
-          <T size={14} weight="600" color={following ? theme.text : "#fff"}>{following ? "Segui già" : "Ricambia"}</T>
+          <T size={14} weight="600" color={following ? theme.text : "#fff"}>{following ? t("Segui già") : t("Ricambia")}</T>
         </Pressable>
       ) : thumb ? (
         <Pressable onPress={() => openNote(note)}><Image source={{ uri: thumb }} style={styles.thumb} transition={120} recyclingKey={thumb} /></Pressable>

@@ -9,6 +9,7 @@ import { Empty, Header } from "../../ui/kit";
 import { ImageIcon } from "../../ui/icons";
 import { PostCard } from "../../ui/feed";
 import { findPost } from "../../ui/feedData";
+import { t } from "../../lib/i18n";
 import { CaptionRow, CommentComposer, CommentRow, NoComments, useCommentLines, useComposerState, useKeyboardPad } from "../../ui/comments";
 
 export default function PostScreen() {
@@ -19,8 +20,8 @@ export default function PostScreen() {
   if (!post) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.bg }}>
-        <Header title="Post" border />
-        <Empty icon={ImageIcon} title="Post non disponibile" text="Potrebbe essere stato eliminato." />
+        <Header title={t("Post")} border />
+        <Empty icon={ImageIcon} title={t("Post non disponibile")} text={t("Potrebbe essere stato eliminato.")} />
       </View>
     );
   }
@@ -43,7 +44,7 @@ function PostPage({ post }) {
 
   return (
     <Animated.View style={[{ flex: 1, backgroundColor: theme.bg }, pad]}>
-      <Header title="Post" subtitle={String(post.handle || "").replace(/^@/, "")} border />
+      <Header title={t("Post")} subtitle={String(post.handle || "").replace(/^@/, "")} border />
       <ScrollView ref={scrollRef} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <PostCard post={post} onOpen={() => {}} />
         {post.text ? <CaptionRow post={post} /> : null}

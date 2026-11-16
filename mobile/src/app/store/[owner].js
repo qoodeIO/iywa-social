@@ -4,12 +4,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
+import { localeTag, t, tk } from "../../lib/i18n";
 import { FREE_SHIPPING, SHIPPING_FEE, SORTS, ago, euro, sellerRating, sortRefs, storeOf, storeRefs } from "../../data";
 import { Bolt, Clock, MapPin, Phone, Return, ShieldCheck, Truck } from "../../ui/icons";
 import { Avatar, Btn, Chip, Header, Name, Stars, T, tap } from "../../ui/kit";
 import { CartButton, Collage, Grid, RatingSummary, SellerBadges, productHref } from "../../ui/market";
 
-const DAYS = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+const DAYS = [tk("Dom"), tk("Lun"), tk("Mar"), tk("Mer"), tk("Gio"), tk("Ven"), tk("Sab")];
 
 export default function StoreScreen() {
   const theme = useTheme();
@@ -21,7 +22,7 @@ export default function StoreScreen() {
   const [sort, setSort] = useState("relevance");
   const [stars, setStars] = useState(0);
   const [limit, setLimit] = useState(8);
-  if (!shop) return <View style={{ flex: 1, backgroundColor: theme.bg }}><Header title="Bottega" /></View>;
+  if (!shop) return <View style={{ flex: 1, backgroundColor: theme.bg }}><Header title={t("Bottega")} /></View>;
 
   const rating = sellerRating(shop, store.reviews, store.profile);
   const following = store.follows.includes(shop.owner);
@@ -36,7 +37,7 @@ export default function StoreScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <Header title={shop.title} subtitle="Bottega" right={<CartButton />} />
+      <Header title={shop.title} subtitle={t("Bottega")} right={<CartButton />} />
       <ScrollView stickyHeaderIndices={[1]} contentContainerStyle={{ paddingBottom: 30 }}>
         <View>
           <Collage images={shop.products.map((product) => product.images[0])} height={150} />
@@ -47,25 +48,25 @@ export default function StoreScreen() {
             <Pressable onPress={() => setTab("reviews")} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}>
               <Stars value={rating.avg} size={13} />
               <T size={14} weight="700">{rating.avg.toFixed(1)}</T>
-              <T size={13.5} color={theme.text2} style={{ textDecorationLine: "underline" }}>{rating.count} recensioni</T>
+              <T size={13.5} color={theme.text2} style={{ textDecorationLine: "underline" }}>{rating.count === 1 ? t("1 recensione") : t("{n} recensioni", { n: rating.count })}</T>
             </Pressable>
             <View style={{ flexDirection: "row", gap: 28, marginVertical: 14 }}>
-              {shop.sales ? <Stat value={shop.sales.toLocaleString("it-IT")} label="vendite" /> : null}
-              <Stat value={shop.products.length} label="prodotti" />
-              {shop.since ? <Stat value={shop.since} label="su Space dal" /> : null}
+              {shop.sales ? <Stat value={shop.sales.toLocaleString(localeTag())} label={t("vendite")} /> : null}
+              <Stat value={shop.products.length} label={t("prodotti")} />
+              {shop.since ? <Stat value={shop.since} label={t("su Space dal")} /> : null}
             </View>
             <SellerBadges shop={shop} rating={rating} />
             <View style={{ flexDirection: "row", gap: 6, alignSelf: "stretch", marginTop: 14 }}>
-              <Btn title={following ? "Segui già" : "Segui"} kind={following ? "gray" : "primary"} flex={1} onPress={() => store.toggleFollow(shop.owner)} />
-              <Btn title="Messaggio" flex={1} onPress={message} />
-              <Btn title="Profilo" flex={1} onPress={() => router.push(`/person/${shop.handle}`)} />
+              <Btn title={following ? t("Segui già") : t("Segui")} kind={following ? "gray" : "primary"} flex={1} onPress={() => store.toggleFollow(shop.owner)} />
+              <Btn title={t("Messaggio")} flex={1} onPress={message} />
+              <Btn title={t("Profilo")} flex={1} onPress={() => router.push(`/person/${shop.handle}`)} />
             </View>
           </View>
         </View>
 
         <View style={{ backgroundColor: theme.bg }}>
         <View style={[styles.tabs, { borderBottomColor: theme.line }]}>
-          {[["products", "Prodotti"], ["reviews", "Recensioni"], ["about", "Info"]].map(([id, label]) => (
+          {[["products", t("Prodotti")], ["reviews", t("Recensioni")], ["about", t("Info")]].map(([id, label]) => (
             <Pressable key={id} style={styles.tab} onPress={() => { tap(); setTab(id); }}>
               <T size={14.5} weight="600" color={tab === id ? theme.text : theme.text2}>{label}</T>
               {tab === id ? <View style={[styles.tabBar, { backgroundColor: theme.text }]} /> : null}
@@ -77,12 +78,12 @@ export default function StoreScreen() {
         {tab === "products" ? (
           <View style={{ paddingTop: 12 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: INSET }}>
-              {["all", ...cats].map((item) => <Chip key={item} title={item === "all" ? "Tutti" : item} on={cat === item} onPress={() => setCat(item)} />)}
+              {["all", ...cats].map((item) => <Chip key={item} title={item === "all" ? t("Tutti") : item} on={cat === item} onPress={() => setCat(item)} />)}
             </ScrollView>
             <View style={styles.listHead}>
-              <T size={17} weight="700">{refs.length} {refs.length === 1 ? "prodotto" : "prodotti"}</T>
+              <T size={17} weight="700">{refs.length === 1 ? t("1 prodotto") : t("{n} prodotti", { n: refs.length })}</T>
               <Pressable onPress={() => { const index = SORTS.findIndex(([id]) => id === sort); setSort(SORTS[(index + 1) % SORTS.length][0]); tap(); }} style={[styles.sort, { borderColor: theme.line }]}>
-                <T size={13} weight="600">{SORTS.find(([id]) => id === sort)[1]}</T>
+                <T size={13} weight="600">{t(SORTS.find(([id]) => id === sort)[1])}</T>
               </Pressable>
             </View>
             <Grid refs={refs} showShop={false} />
@@ -93,7 +94,7 @@ export default function StoreScreen() {
           <View style={{ paddingHorizontal: INSET, paddingTop: 12 }}>
             <RatingSummary avg={rating.avg} count={rating.count} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 10 }}>
-              {[0, 5, 4, 3].map((value) => <Chip key={value} title={value ? `${value} ★` : "Tutte"} on={stars === value} onPress={() => { setStars(value); setLimit(8); }} />)}
+              {[0, 5, 4, 3].map((value) => <Chip key={value} title={value ? `${value} ★` : t("Tutte")} on={stars === value} onPress={() => { setStars(value); setLimit(8); }} />)}
             </ScrollView>
             {reviews.slice(0, limit).map((review) => (
               <View key={`${review.ref.key}-${review.id}`} style={[styles.review, { borderTopColor: theme.line }]}>
@@ -106,14 +107,14 @@ export default function StoreScreen() {
                   <T size={14} style={{ lineHeight: 19 }}>{review.text}</T>
                   <Pressable onPress={() => router.push(productHref(review.ref))} style={[styles.bought, { backgroundColor: theme.fill }]}>
                     {review.product.images[0] ? <Image source={{ uri: review.product.images[0] }} style={styles.boughtImg} /> : null}
-                    <T size={12.5} color={theme.text2} lines={1} style={{ flexShrink: 1 }}>Ha acquistato <T size={12.5} weight="600">{review.product.name}</T></T>
+                    <T size={12.5} color={theme.text2} lines={1} style={{ flexShrink: 1 }}>{t("Ha acquistato")} <T size={12.5} weight="600">{review.product.name}</T></T>
                   </Pressable>
                   <T size={12} color={theme.text2}>{ago(review.at)}</T>
                 </View>
               </View>
             ))}
-            {!reviews.length ? <T color={theme.text2} style={{ paddingVertical: 20, textAlign: "center" }}>Ancora nessuna recensione con queste stelle.</T> : null}
-            {reviews.length > limit ? <Pressable onPress={() => setLimit((v) => v + 12)} style={{ paddingVertical: 10 }}><T size={14} weight="600" color={theme.text2}>Mostra altre</T></Pressable> : null}
+            {!reviews.length ? <T color={theme.text2} style={{ paddingVertical: 20, textAlign: "center" }}>{t("Ancora nessuna recensione con queste stelle.")}</T> : null}
+            {reviews.length > limit ? <Pressable onPress={() => setLimit((v) => v + 12)} style={{ paddingVertical: 10 }}><T size={14} weight="600" color={theme.text2}>{t("Mostra altre")}</T></Pressable> : null}
           </View>
         ) : null}
 
@@ -129,17 +130,17 @@ export default function StoreScreen() {
             {shop.hours ? (
               <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
                 <Clock size={16} color={theme.text} />
-                <T size={14} color={theme.text2}>{shop.hours.days.map((d) => DAYS[d]).join(", ")} · {shop.hours.open}–{shop.hours.close}</T>
+                <T size={14} color={theme.text2}>{shop.hours.days.map((d) => t(DAYS[d])).join(", ")} · {shop.hours.open}–{shop.hours.close}</T>
               </View>
             ) : null}
-            {shop.phone ? <Btn title="Chiama" icon={Phone} onPress={() => Linking.openURL(`tel:${shop.phone.replace(/\s/g, "")}`)} style={{ alignSelf: "flex-start" }} /> : null}
-            <T size={15} weight="700" style={{ marginTop: 8 }}>Condizioni della bottega</T>
+            {shop.phone ? <Btn title={t("Chiama")} icon={Phone} onPress={() => Linking.openURL(`tel:${shop.phone.replace(/\s/g, "")}`)} style={{ alignSelf: "flex-start" }} /> : null}
+            <T size={15} weight="700" style={{ marginTop: 8 }}>{t("Condizioni della bottega")}</T>
             <View style={{ borderRadius: 12, backgroundColor: theme.fill }}>
               {[
-                [Truck, "Spedizione", `Spedisce in ${shop.shipsIn} giorni lavorativi. ${euro(SHIPPING_FEE)}, gratis sopra ${euro(FREE_SHIPPING)}.`],
-                [Return, "Resi", shop.returns ? `Accettati entro ${shop.returns} giorni dalla consegna. I pezzi su ordinazione non si possono rendere.` : "Non accettati: prodotti freschi fatti in giornata."],
-                [ShieldCheck, "Pagamenti", "Ordini nel Direct e paghi dopo la conferma della bottega."],
-                ...(shop.responds ? [[Bolt, "Risposte", `Di solito risponde ${shop.responds}.`]] : []),
+                [Truck, t("Spedizione"), t("Spedisce in {days} giorni lavorativi. {fee}, gratis sopra {free}.", { days: shop.shipsIn, fee: euro(SHIPPING_FEE), free: euro(FREE_SHIPPING) })],
+                [Return, t("Resi"), shop.returns ? t("Accettati entro {days} giorni dalla consegna. I pezzi su ordinazione non si possono rendere.", { days: shop.returns }) : t("Non accettati: prodotti freschi fatti in giornata.")],
+                [ShieldCheck, t("Pagamenti"), t("Ordini nel Direct e paghi dopo la conferma della bottega.")],
+                ...(shop.responds ? [[Bolt, t("Risposte"), t("Di solito risponde {when}.", { when: shop.responds })]] : []),
               ].map(([Icon, title, text], index) => (
                 <View key={title} style={[styles.policy, index ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line } : null]}>
                   <Icon size={20} weight="fill" color={theme.text} />

@@ -12,6 +12,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Stack, router, useIsFocused } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../lib/store";
+import { t } from "../lib/i18n";
 import { AVATAR, WORKS } from "../data";
 import { tap } from "../ui/kit";
 import { DarkSheet, FilterLayer, REEL_LENGTHS, REEL_RECORD_SPEEDS, ReelPlayer, STORY_FILTERS, STORY_MUSIC, Toast, clockLabel, openReel, useToast } from "../ui/reels-kit";
@@ -90,11 +91,11 @@ export default function ReelCamera() {
 
   async function startClip() {
     if (left <= 0.3) {
-      note("Il reel è completo");
+      note(t("Il reel è completo"));
       return;
     }
     if (!camOn || !ready || !cam.current) {
-      note("Fotocamera non disponibile: aggiungi clip dalla galleria");
+      note(t("Fotocamera non disponibile: aggiungi clip dalla galleria"));
       return;
     }
     const rate = speed;
@@ -112,7 +113,7 @@ export default function ReelCamera() {
         setClips((prev) => [...prev, { type: "video", src, duration: seconds, rate }]);
       }
     } catch {
-      note("Registrazione non supportata qui");
+      note(t("Registrazione non supportata qui"));
     } finally {
       liveStart.value = 0;
       setRecording(0);
@@ -156,7 +157,7 @@ export default function ReelCamera() {
 
   function addPhotoClip(src) {
     if (left < 1) {
-      note("Il reel è completo");
+      note(t("Il reel è completo"));
       return;
     }
     tap();
@@ -203,7 +204,7 @@ export default function ReelCamera() {
       caption: text,
       text,
       music,
-      audio: music ? music.title : "Audio originale",
+      audio: music ? music.title : t("Audio originale"),
       length: clockLabel(total),
       name: store.profile.name,
       handle: store.profile.handle,
@@ -218,7 +219,7 @@ export default function ReelCamera() {
     };
     store.publish(item);
     if (alsoStory) {
-      store.publish({ id: `made-${Date.now()}-s`, kind: "story", image: poster, text: "", stickers: [], time: "Now", at: Date.now(), mine: true, src: avatar, avatar, name: "Tu", filter });
+      store.publish({ id: `made-${Date.now()}-s`, kind: "story", image: poster, text: "", stickers: [], time: "Now", at: Date.now(), mine: true, src: avatar, avatar, name: t("Tu"), filter });
     }
     openReel();
   }
@@ -249,12 +250,12 @@ export default function ReelCamera() {
   const thumb = clips.find((item) => item.type === "image")?.src || WORKS[0].src;
 
   const musicTray = (
-    <DarkSheet tray open={sheet === "music"} title="Musica" onClose={() => setSheet(null)} bottomPad={insets.bottom + 14}>
+    <DarkSheet tray open={sheet === "music"} title={t("Musica")} onClose={() => setSheet(null)} bottomPad={insets.bottom + 14}>
       <ScrollView contentContainerStyle={styles.trayBody} showsVerticalScrollIndicator={false}>
         {music ? (
           <TrayRow onPress={() => { setMusic(null); setSheet(null); }}>
             <X size={18} color="#fff" />
-            <Text style={styles.trayStrong}>Togli la musica</Text>
+            <Text style={styles.trayStrong}>{t("Togli la musica")}</Text>
           </TrayRow>
         ) : null}
         {STORY_MUSIC.map((song) => (
@@ -276,13 +277,13 @@ export default function ReelCamera() {
             <ReelPlayer clips={clips} active={focused} paused={sheet === "caption"} muted={false} filter={filter} poster={clips[0]?.src} />
           </Animated.View>
         </GestureDetector>
-        {filterHint ? <FilterName key={filterHint} label={filterNow.label} /> : null}
+        {filterHint ? <FilterName key={filterHint} label={t(filterNow.label)} /> : null}
         <Scrim />
         <View style={[styles.top, { top: insets.top + 8 }]}>
-          <GlassBtn icon={ChevronLeft} label="Indietro" onPress={() => { setStage("capture"); setSheet(null); }} />
+          <GlassBtn icon={ChevronLeft} label={t("Indietro")} onPress={() => { setStage("capture"); setSheet(null); }} />
           <View style={styles.tools}>
-            <GlassBtn icon={Music} label="Musica" onPress={() => setSheet("music")} />
-            <GlassBtn icon={Sparkle} label="Filtri" on={sheet === "filters"} onPress={() => setSheet(sheet === "filters" ? null : "filters")} />
+            <GlassBtn icon={Music} label={t("Musica")} onPress={() => setSheet("music")} />
+            <GlassBtn icon={Sparkle} label={t("Filtri")} on={sheet === "filters"} onPress={() => setSheet(sheet === "filters" ? null : "filters")} />
           </View>
         </View>
         {music ? (
@@ -304,13 +305,13 @@ export default function ReelCamera() {
                       <Image source={{ uri: thumb }} style={StyleSheet.absoluteFill} contentFit="cover" />
                       <FilterLayer id={item.id} />
                     </View>
-                    <Text style={styles.filterLabel}>{item.label}</Text>
+                    <Text style={styles.filterLabel}>{t(item.label)}</Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
             <Pressable hitSlop={8} onPress={() => setSheet(null)} style={styles.done}>
-              <Text style={styles.doneText}>Fine</Text>
+              <Text style={styles.doneText}>{t("Fine")}</Text>
             </Pressable>
           </Animated.View>
         ) : (
@@ -322,9 +323,9 @@ export default function ReelCamera() {
                 maxLength={2200}
                 value={caption}
                 onChangeText={setCaption}
-                placeholder="Scrivi una didascalia… #hashtag @menzione"
+                placeholder={t("Scrivi una didascalia… #hashtag @menzione")}
                 placeholderTextColor="rgba(255,255,255,0.55)"
-                accessibilityLabel="Didascalia"
+                accessibilityLabel={t("Didascalia")}
                 keyboardAppearance="dark"
                 onFocus={() => setSheet("caption")}
                 onBlur={() => setSheet(null)}
@@ -332,7 +333,7 @@ export default function ReelCamera() {
               />
               {clips.some((item) => item.type === "image") ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.covers} keyboardShouldPersistTaps="handled">
-                  <Text style={styles.coversLabel}>Copertina</Text>
+                  <Text style={styles.coversLabel}>{t("Copertina")}</Text>
                   {clips.map((item, i) => (item.type === "image" ? (
                     <Pressable key={i} onPress={() => { tap(); setCover(i); }} style={[styles.cover, cover === i ? styles.coverOn : null]}>
                       <Image source={{ uri: item.src }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -341,11 +342,11 @@ export default function ReelCamera() {
                 </ScrollView>
               ) : null}
               <Pressable accessibilityRole="switch" accessibilityState={{ checked: alsoStory }} onPress={() => { tap(); setAlsoStory((value) => !value); }} style={styles.toggleRow}>
-                <Text style={styles.toggleText}>Condividi anche nella storia</Text>
+                <Text style={styles.toggleText}>{t("Condividi anche nella storia")}</Text>
                 <Switch on={alsoStory} />
               </Pressable>
               <Pressable onPress={publish} style={({ pressed }) => [styles.share, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
-                <Text style={styles.shareText}>Condividi reel</Text>
+                <Text style={styles.shareText}>{t("Condividi reel")}</Text>
               </Pressable>
             </View>
           </KeyboardAvoidingView>
@@ -382,8 +383,8 @@ export default function ReelCamera() {
           <Pressable onPress={() => { if (camPerm && !camPerm.granted && camPerm.canAskAgain) requestCam(); }} style={styles.nocamIcon}>
             <Camera size={28} color="#fff" />
           </Pressable>
-          <Text style={styles.nocamTitle}>Fotocamera non disponibile</Text>
-          <Text style={styles.nocamText}>Aggiungi foto o video per creare il reel</Text>
+          <Text style={styles.nocamTitle}>{t("Fotocamera non disponibile")}</Text>
+          <Text style={styles.nocamText}>{t("Aggiungi foto o video per creare il reel")}</Text>
           <View style={styles.demo}>
             {WORKS.map((work) => (
               <Pressable key={work.src} accessibilityLabel={work.caption} onPress={() => addPhotoClip(work.src)} style={({ pressed }) => [styles.demoTile, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
@@ -398,7 +399,7 @@ export default function ReelCamera() {
       <Scrim />
       {countdown ? <Count key={countdown} value={countdown} /> : null}
 
-      <View style={[styles.segments, { top: insets.top + 4 }]} accessibilityLabel={`${Math.round(used)} di ${limit} secondi`}>
+      <View style={[styles.segments, { top: insets.top + 4 }]} accessibilityLabel={t("{used} di {limit} secondi", { used: Math.round(used), limit })}>
         {clips.map((item, i) => {
           const width = ((item.duration / (item.rate || 1)) / limit) * 100;
           const style = { left: `${offset}%`, width: `${width}%` };
@@ -409,19 +410,19 @@ export default function ReelCamera() {
       </View>
 
       <View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.top, { top: insets.top + 16, opacity: chromeHidden ? 0 : 1 }]}>
-        <GlassBtn icon={X} label="Chiudi" onPress={close} />
+        <GlassBtn icon={X} label={t("Chiudi")} onPress={close} />
         <Pressable onPress={() => { tap(); setSheet("music"); }} style={styles.musicPill}>
           <Music size={15} color="#fff" />
-          <Text numberOfLines={1} style={styles.musicText}>{music ? music.title : "Aggiungi musica"}</Text>
+          <Text numberOfLines={1} style={styles.musicText}>{music ? music.title : t("Aggiungi musica")}</Text>
         </Pressable>
         <Text style={styles.left}>{clockLabel(left)}</Text>
       </View>
 
       <View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.rail, { top: insets.top + 72, opacity: chromeHidden ? 0 : 1 }]}>
-        <RailBtn label="Durata" onPress={() => setLimit((value) => REEL_LENGTHS[(REEL_LENGTHS.indexOf(value) + 1) % REEL_LENGTHS.length])}>
+        <RailBtn label={t("Durata")} onPress={() => setLimit((value) => REEL_LENGTHS[(REEL_LENGTHS.indexOf(value) + 1) % REEL_LENGTHS.length])}>
           <Text style={styles.len}>{limit}</Text>
         </RailBtn>
-        <RailBtn label="Velocità" on={speed !== 1} onPress={() => setSpeedOpen((value) => !value)}>
+        <RailBtn label={t("Velocità")} on={speed !== 1} onPress={() => setSpeedOpen((value) => !value)}>
           <Text style={[styles.len, { color: speed !== 1 ? "#111" : "#fff" }]}>{speed}×</Text>
         </RailBtn>
         {speedOpen ? (
@@ -433,18 +434,18 @@ export default function ReelCamera() {
             ))}
           </Animated.View>
         ) : null}
-        <RailBtn label="Timer" on={Boolean(timer)} badge={timer || null} onPress={() => setTimer((value) => (value === 0 ? 3 : value === 3 ? 10 : 0))}>
+        <RailBtn label={t("Timer")} on={Boolean(timer)} badge={timer || null} onPress={() => setTimer((value) => (value === 0 ? 3 : value === 3 ? 10 : 0))}>
           <Timer size={21} color={timer ? "#111" : "#fff"} />
         </RailBtn>
       </View>
 
       <Text pointerEvents="none" style={[styles.tip, { bottom: 140 + insets.bottom }]}>
-        {recording ? "Tocca per fermare" : clips.length ? `${clips.length} clip · tocca per aggiungerne` : "Tocca per registrare una clip"}
+        {recording ? t("Tocca per fermare") : clips.length ? (clips.length === 1 ? t("1 clip · tocca per aggiungerne") : t("{n} clip · tocca per aggiungerne", { n: clips.length })) : t("Tocca per registrare una clip")}
       </Text>
 
       <View style={[styles.bottom, { bottom: 40 + insets.bottom }]}>
         <View style={styles.side}>
-          <Pressable accessibilityLabel="Galleria" pointerEvents={chromeHidden ? "none" : "auto"} onPress={fromLibrary} style={({ pressed }) => [styles.roll, { opacity: chromeHidden ? 0 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+          <Pressable accessibilityLabel={t("Galleria")} pointerEvents={chromeHidden ? "none" : "auto"} onPress={fromLibrary} style={({ pressed }) => [styles.roll, { opacity: chromeHidden ? 0 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
             <Image source={{ uri: WORKS[clips.length % WORKS.length].src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
           </Pressable>
         </View>
@@ -452,9 +453,9 @@ export default function ReelCamera() {
         <View style={[styles.side, styles.right, { opacity: chromeHidden ? 0 : 1 }]} pointerEvents={chromeHidden ? "none" : "box-none"}>
           {clips.length && !recording ? (
             <>
-              <GlassBtn icon={Undo} label="Elimina ultima clip" onPress={removeLast} />
+              <GlassBtn icon={Undo} label={t("Elimina ultima clip")} onPress={removeLast} />
               <Animated.View entering={FadeIn.duration(260)}>
-                <Pressable accessibilityLabel="Avanti" onPress={() => { tap(); setStage("edit"); setSheet(null); setSpeedOpen(false); }} style={({ pressed }) => [styles.next, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+                <Pressable accessibilityLabel={t("Avanti")} onPress={() => { tap(); setStage("edit"); setSheet(null); setSpeedOpen(false); }} style={({ pressed }) => [styles.next, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
                   <ChevronRight size={22} weight="bold" color="#111" />
                 </Pressable>
               </Animated.View>
@@ -519,7 +520,7 @@ function FlipBtn({ spinning, onPress }) {
   }, [spinning, turn]);
   const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value}deg` }] }));
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Gira fotocamera" hitSlop={4} onPress={() => { tap(); onPress(); }} style={({ pressed }) => [styles.glass, { transform: [{ scale: pressed ? 0.86 : 1 }] }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={t("Gira fotocamera")} hitSlop={4} onPress={() => { tap(); onPress(); }} style={({ pressed }) => [styles.glass, { transform: [{ scale: pressed ? 0.86 : 1 }] }]}>
       <Animated.View style={style}><SwitchCamera size={22} color="#fff" /></Animated.View>
     </Pressable>
   );
@@ -542,7 +543,7 @@ function Shutter({ recording, onPress }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={recording ? "Ferma" : "Registra"}
+      accessibilityLabel={recording ? t("Ferma") : t("Registra")}
       onPress={onPress}
       onPressIn={() => { pressed.value = withTiming(1, { duration: 120 }); }}
       onPressOut={() => { pressed.value = withTiming(0, { duration: 160 }); }}

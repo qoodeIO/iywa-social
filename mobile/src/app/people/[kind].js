@@ -10,6 +10,7 @@ import { CONTACTS, DIRECTORY, MEET, openPersonByName } from "../../lib/profile-d
 import { Search } from "../../ui/icons-profile";
 import { Btn, Header, T } from "../../ui/kit";
 import { SlideTabs } from "../../ui/profile-kit";
+import { t } from "../../lib/i18n";
 
 // Your followers and the people you follow (web PeopleScreen).
 export default function People() {
@@ -36,17 +37,17 @@ export default function People() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <Header title={String(store.profile.handle).replace(/^@/, "")} />
-      <SlideTabs tabs={[{ key: "followers", label: "Follower" }, { key: "following", label: "Seguiti" }]} active={tab} onChange={setTab} height={44} size={14.5} />
+      <SlideTabs tabs={[{ key: "followers", label: t("Follower") }, { key: "following", label: t("Seguiti") }]} active={tab} onChange={setTab} height={44} size={14.5} />
       <View style={[styles.search, { backgroundColor: theme.fill }]}>
         <Search size={16} color={theme.text2} />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Cerca" placeholderTextColor={theme.text2} accessibilityLabel="Cerca persone" autoCorrect={false} autoCapitalize="none" style={{ flex: 1, height: "100%", color: theme.text, fontSize: 15 }} />
+        <TextInput value={query} onChangeText={setQuery} placeholder={t("Cerca")} placeholderTextColor={theme.text2} accessibilityLabel={t("Cerca persone")} autoCorrect={false} autoCapitalize="none" style={{ flex: 1, height: "100%", color: theme.text, fontSize: 15 }} />
       </View>
       <FlashList
         data={list}
         keyExtractor={(person) => person.name}
         extraData={[store.follows, tab]}
         keyboardDismissMode="on-drag"
-        ListEmptyComponent={<T size={14} color={theme.text2} style={{ textAlign: "center", padding: 28 }}>Nessuno qui.</T>}
+        ListEmptyComponent={<T size={14} color={theme.text2} style={{ textAlign: "center", padding: 28 }}>{t("Nessuno qui.")}</T>}
         renderItem={({ item: person }) => {
           const on = store.follows.includes(person.name);
           return (
@@ -59,7 +60,7 @@ export default function People() {
                 </View>
               </Pressable>
               <Btn
-                title={on ? "Segui già" : tab === 0 ? "Ricambia" : "Segui"}
+                title={on ? t("Segui già") : tab === 0 ? t("Ricambia") : t("Segui")}
                 kind={on ? "gray" : "primary"}
                 height={30}
                 style={{ paddingHorizontal: 16 }}

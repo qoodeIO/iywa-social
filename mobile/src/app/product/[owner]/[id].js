@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { INSET, useTheme } from "../../../theme";
 import { useStore } from "../../../lib/store";
+import { t } from "../../../lib/i18n";
 import { allStores, ago, euro, findProduct, hashOf, productRef, reviewsFor, shopTopicOf, stockLabel, storeOf, storeRefs } from "../../../data";
 import { Bag, Bookmark, Box, Check, Heart, Send, Star } from "../../../ui/icons";
 import { Avatar, Btn, Chip, Header, Rating, Section, Stars, T, tap } from "../../../ui/kit";
@@ -42,7 +43,7 @@ export default function ProductScreen() {
   }, [product, owner, shop, mine]);
 
   if (!product) {
-    return <View style={{ flex: 1, backgroundColor: theme.bg }}><Header title="Prodotto" /><T style={{ padding: INSET }}>Prodotto non trovato.</T></View>;
+    return <View style={{ flex: 1, backgroundColor: theme.bg }}><Header title={t("Prodotto")} /><T style={{ padding: INSET }}>{t("Prodotto non trovato.")}</T></View>;
   }
 
   const stock = stockLabel(product);
@@ -62,16 +63,16 @@ export default function ProductScreen() {
     const person = { name: owner, src: shop?.src };
     const chatId = store.ensureChat(person);
     const what = `${qty > 1 ? `${qty} × ` : ""}${product.name}${variant ? ` (${variant})` : ""}`;
-    store.sendMessage(chatId, { kind: "image", image: product.images[0], text: `Ciao! Mi interessa: ${what} · ${euro(product.price * qty)}. È disponibile?` });
-    setTimeout(() => store.receiveMessage(chatId, product.service ? "Certo! Ti tengo il posto, ci vediamo in bottega 🙂" : "Certo, è disponibile! Ti mando i dettagli per pagamento e spedizione 🙂"), 3500);
+    store.sendMessage(chatId, { kind: "image", image: product.images[0], text: t("Ciao! Mi interessa: {what} · {price}. È disponibile?", { what, price: euro(product.price * qty) }) });
+    setTimeout(() => store.receiveMessage(chatId, product.service ? t("Certo! Ti tengo il posto, ci vediamo in bottega 🙂") : t("Certo, è disponibile! Ti mando i dettagli per pagamento e spedizione 🙂")), 3500);
     router.push(`/chat/${chatId}`);
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <Header
-        title={shop?.title || "Il tuo shop"}
-        subtitle="Shop"
+        title={shop?.title || t("Il tuo shop")}
+        subtitle={t("Shop")}
         right={(
           <>
             {!mine ? (
@@ -106,11 +107,11 @@ export default function ProductScreen() {
           </View>
           <T size={22} weight="700" style={{ marginTop: 6, letterSpacing: -0.5 }}>{product.name}</T>
           {!mine ? <View style={{ marginTop: 4 }}><Rating avg={rating.avg} count={rating.count} size={13} /></View> : null}
-          <T size={22} weight="700" style={{ marginTop: 6 }}>{euro(product.price)}{product.service ? <T size={14} color={theme.text2}> a persona</T> : null}</T>
+          <T size={22} weight="700" style={{ marginTop: 6 }}>{euro(product.price)}{product.service ? <T size={14} color={theme.text2}>{" "}{t("a persona")}</T> : null}</T>
 
           {product.variants?.length ? (
             <>
-              <T size={15} weight="600" style={{ marginTop: 18, marginBottom: 8 }}>{product.service ? "Scegli quando" : "Scegli"}</T>
+              <T size={15} weight="600" style={{ marginTop: 18, marginBottom: 8 }}>{product.service ? t("Scegli quando") : t("Scegli")}</T>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {product.variants.map((item) => <Chip key={item} title={item} on={variant === item} onPress={() => setVariant(item)} />)}
               </View>
@@ -119,7 +120,7 @@ export default function ProductScreen() {
 
           {!soldOut && !mine ? (
             <View style={styles.qtyRow}>
-              <T size={15} weight="600">{product.service ? "Persone" : "Quantità"}</T>
+              <T size={15} weight="600">{product.service ? t("Persone") : t("Quantità")}</T>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                 <Pressable disabled={qty <= 1} onPress={() => { tap(); setQty((v) => Math.max(1, v - 1)); }} style={[styles.qtyBtn, { backgroundColor: theme.btn, opacity: qty <= 1 ? 0.4 : 1 }]}><T size={18} weight="600">−</T></Pressable>
                 <T size={16} weight="700">{qty}</T>
@@ -132,8 +133,8 @@ export default function ProductScreen() {
 
           {product.description ? <T size={15} style={{ marginTop: 16, lineHeight: 21 }}>{product.description}</T> : null}
           <View style={{ marginTop: 10 }}>
-            {product.materials ? <Spec icon={Box} label="Materiali" value={product.materials} /> : null}
-            {product.size ? <Spec icon={Bookmark} label={product.service ? "Dettagli" : "Misure"} value={product.size} /> : null}
+            {product.materials ? <Spec icon={Box} label={t("Materiali")} value={product.materials} /> : null}
+            {product.size ? <Spec icon={Bookmark} label={product.service ? t("Dettagli") : t("Misure")} value={product.size} /> : null}
           </View>
 
           {shop ? <SellerCard shop={shop} /> : null}
@@ -142,14 +143,14 @@ export default function ProductScreen() {
         </View>
 
         {more.length ? (
-          <Section title={mine ? "Altri tuoi prodotti" : "Altro da questa bottega"}>
+          <Section title={mine ? t("Altri tuoi prodotti") : t("Altro da questa bottega")}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: INSET }}>
               {more.map((item) => <MarketCard key={item.id} refValue={productRef(item, owner)} width={142} showShop={false} />)}
             </ScrollView>
           </Section>
         ) : null}
         {similar.length ? (
-          <Section title="Ti potrebbe piacere">
+          <Section title={t("Ti potrebbe piacere")}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: INSET }}>
               {similar.map((item) => <MarketCard key={item.key} refValue={item} width={142} />)}
             </ScrollView>
@@ -159,12 +160,12 @@ export default function ProductScreen() {
 
       <View style={[styles.foot, { borderTopColor: theme.line, backgroundColor: theme.bg }]}>
         {mine ? (
-          <Btn title="Modifica prodotto" height={44} flex={1} onPress={() => router.push(`/product-edit/${product.id}`)} />
+          <Btn title={t("Modifica prodotto")} height={44} flex={1} onPress={() => router.push(`/product-edit/${product.id}`)} />
         ) : (
           <>
             <Btn icon={Send} height={44} onPress={ask} style={{ paddingHorizontal: 14 }} />
-            <Btn title={added ? "Aggiunto" : "Al carrello"} icon={added ? Check : Bag} kind={added ? "done" : "gray"} height={44} size={14.5} flex={1} disabled={soldOut} onPress={add} />
-            <Btn title={soldOut ? "Esaurito" : "Compra"} kind="primary" height={44} size={14.5} flex={1} disabled={soldOut} onPress={() => { store.addToCart(ref, qty, variant); router.push("/shop/cart"); }} />
+            <Btn title={added ? t("Aggiunto") : t("Al carrello")} icon={added ? Check : Bag} kind={added ? "done" : "gray"} height={44} size={14.5} flex={1} disabled={soldOut} onPress={add} />
+            <Btn title={soldOut ? t("Esaurito") : t("Compra")} kind="primary" height={44} size={14.5} flex={1} disabled={soldOut} onPress={() => { store.addToCart(ref, qty, variant); router.push("/shop/cart"); }} />
           </>
         )}
       </View>
@@ -194,7 +195,7 @@ function Reviews({ refKey, rating }) {
   const [all, setAll] = useState(false);
   return (
     <View style={{ marginTop: 22 }}>
-      <T size={17} weight="700" style={{ marginBottom: 6 }}>Recensioni</T>
+      <T size={17} weight="700" style={{ marginBottom: 6 }}>{t("Recensioni")}</T>
       <RatingSummary avg={rating.avg} count={rating.count} />
       {writing ? (
         <View style={[styles.form, { backgroundColor: theme.fill }]}>
@@ -203,14 +204,14 @@ function Reviews({ refKey, rating }) {
               <Pressable key={value} hitSlop={4} onPress={() => { tap(); setStars(value); }}><Star size={30} weight={value <= stars ? "fill" : "regular"} color={value <= stars ? theme.star : theme.text3} /></Pressable>
             ))}
           </View>
-          <TextInput value={text} onChangeText={setText} placeholder="Cosa ti è piaciuto?" placeholderTextColor={theme.text2} multiline maxLength={300} style={[styles.input, { backgroundColor: theme.bg, color: theme.text }]} />
+          <TextInput value={text} onChangeText={setText} placeholder={t("Cosa ti è piaciuto?")} placeholderTextColor={theme.text2} multiline maxLength={300} style={[styles.input, { backgroundColor: theme.bg, color: theme.text }]} />
           <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
-            <Btn title="Annulla" onPress={() => setWriting(false)} />
-            <Btn title="Pubblica" kind="primary" disabled={!text.trim()} onPress={() => { store.addReview(refKey, { stars, text: text.trim() }); setText(""); setWriting(false); }} />
+            <Btn title={t("Annulla")} onPress={() => setWriting(false)} />
+            <Btn title={t("Pubblica")} kind="primary" disabled={!text.trim()} onPress={() => { store.addReview(refKey, { stars, text: text.trim() }); setText(""); setWriting(false); }} />
           </View>
         </View>
       ) : (
-        <Btn title="Scrivi una recensione" onPress={() => setWriting(true)} style={{ marginVertical: 8 }} />
+        <Btn title={t("Scrivi una recensione")} onPress={() => setWriting(true)} style={{ marginVertical: 8 }} />
       )}
       {(all ? rating.list : rating.list.slice(0, 3)).map((review) => (
         <View key={review.id} style={[styles.review, { borderTopColor: theme.line }]}>
@@ -225,7 +226,7 @@ function Reviews({ refKey, rating }) {
           </View>
         </View>
       ))}
-      {rating.list.length > 3 && !all ? <Pressable onPress={() => setAll(true)} style={{ paddingVertical: 8 }}><T size={14} weight="600" color={theme.text2}>Mostra tutte ({rating.list.length})</T></Pressable> : null}
+      {rating.list.length > 3 && !all ? <Pressable onPress={() => setAll(true)} style={{ paddingVertical: 8 }}><T size={14} weight="600" color={theme.text2}>{t("Mostra tutte ({n})", { n: rating.list.length })}</T></Pressable> : null}
     </View>
   );
 }

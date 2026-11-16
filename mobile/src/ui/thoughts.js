@@ -11,6 +11,7 @@ import { TIME, agoLabel, fullStamp, openPersonByName } from "../lib/profile-data
 import { Check, Feather, Heart, ImageIcon, LinkIcon, MessageCircle, MoreHorizontal, Plus, Poll, Quote, Repost, Send, Trash, UserMinus, UserPlus, Verified } from "./icons-profile";
 import { T, tap } from "./kit";
 import { ActionSheet, IgEmpty } from "./profile-kit";
+import { localeTag, t } from "../lib/i18n";
 
 const W = Dimensions.get("window").width;
 
@@ -138,7 +139,7 @@ export function ThoughtPoll({ thought }) {
         );
       })}
       <T size={13} color={theme.text3}>
-        {total.toLocaleString("it-IT")} voti · {ended ? "Concluso" : left > TIME.DAY ? `${Math.ceil(left / TIME.DAY)} giorni rimasti` : `${Math.ceil(left / TIME.HOUR)} ore rimaste`}
+        {t("{n} voti", { n: total.toLocaleString(localeTag()) })} · {ended ? t("Concluso") : left > TIME.DAY ? t("{n} giorni rimasti", { n: Math.ceil(left / TIME.DAY) }) : t("{n} ore rimaste", { n: Math.ceil(left / TIME.HOUR) })}
       </T>
     </View>
   );
@@ -186,7 +187,7 @@ export function ThoughtMedia({ images, onZoom }) {
 export function QuotedThought({ thought, onOpen }) {
   const theme = useTheme();
   if (!thought) {
-    return <View style={[styles.quote, { borderColor: theme.line }]}><T size={13.5} color={theme.text2}>Questo pensiero non è più disponibile.</T></View>;
+    return <View style={[styles.quote, { borderColor: theme.line }]}><T size={13.5} color={theme.text2}>{t("Questo pensiero non è più disponibile.")}</T></View>;
   }
   return (
     <Pressable onPress={() => onOpen?.(thought)} style={({ pressed }) => [styles.quote, { borderColor: theme.line, backgroundColor: pressed ? theme.fill : "transparent" }]}>
@@ -279,7 +280,7 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
           <Pressable onPress={goPerson} accessibilityLabel={thought.name}>
             <Image source={{ uri: thought.src || AVATAR }} recyclingKey={thought.src} style={[styles.face, { backgroundColor: theme.fill }]} contentFit="cover" transition={120} />
             {!thought.mine && !follows && !lineUp ? (
-              <Pressable accessibilityLabel="Segui" hitSlop={6} onPress={() => { tap(); store.toggleFollow(thought.name); }} style={[styles.follow, { backgroundColor: theme.text, borderColor: theme.bg }]}>
+              <Pressable accessibilityLabel={t("Segui")} hitSlop={6} onPress={() => { tap(); store.toggleFollow(thought.name); }} style={[styles.follow, { backgroundColor: theme.text, borderColor: theme.bg }]}>
                 <Plus size={10} weight="bold" color={theme.bg} />
               </Pressable>
             ) : null}
@@ -293,28 +294,28 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
               {thought.verified ? <Verified size={14} weight="fill" color={theme.blue} /> : null}
             </Pressable>
             {!big ? <T size={14} color={theme.text3}>{agoLabel(thought.created)}</T> : null}
-            <Pressable accessibilityLabel="Altro" hitSlop={8} onPress={() => setMenu("more")} style={styles.more}><MoreHorizontal size={18} weight="bold" color={theme.text2} /></Pressable>
+            <Pressable accessibilityLabel={t("Altro")} hitSlop={8} onPress={() => setMenu("more")} style={styles.more}><MoreHorizontal size={18} weight="bold" color={theme.text2} /></Pressable>
           </View>
-          {thought.replyTo ? <T size={13} color={theme.text2} style={{ marginTop: 1 }}>In risposta a <T size={13} color={theme.blue}>@{thought.replyTo}</T></T> : null}
+          {thought.replyTo ? <T size={13} color={theme.text2} style={{ marginTop: 1 }}>{t("In risposta a")}{" "}<T size={13} color={theme.blue}>@{thought.replyTo}</T></T> : null}
           {thought.text ? <RichText text={thought.text} size={big ? 17 : 15} style={{ marginTop: big ? 6 : 2 }} /> : null}
           <ThoughtMedia images={thought.images} onZoom={setZoom} />
           {thought.poll ? <ThoughtPoll thought={thought} /> : null}
           {thought.quote ? <QuotedThought thought={byId.get(thought.quote)} onOpen={(item) => router.push(`/thought/${item.id}`)} /> : null}
           {big ? <T size={13} color={theme.text3} style={{ marginTop: 12 }}>{fullStamp(thought.created)}</T> : null}
           <View style={styles.actions}>
-            <Pressable accessibilityLabel="Mi piace" onPress={like} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+            <Pressable accessibilityLabel={t("Mi piace")} onPress={like} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <Animated.View style={{ transform: [{ scale: heart }] }}><Heart size={20} weight={liked ? "fill" : "regular"} color={liked ? theme.red : theme.text} /></Animated.View>
               {showCounts && likes ? <T size={13.5} weight="500" color={liked ? theme.red : theme.text2}>{compact(likes)}</T> : null}
             </Pressable>
-            <Pressable accessibilityLabel="Rispondi" onPress={() => composeThought({ reply: thought.id })} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+            <Pressable accessibilityLabel={t("Rispondi")} onPress={() => composeThought({ reply: thought.id })} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <MessageCircle size={20} color={theme.text} />
               {replies ? <T size={13.5} weight="500" color={theme.text2}>{compact(replies)}</T> : null}
             </Pressable>
-            <Pressable accessibilityLabel="Ripubblica" onPress={() => setMenu("repost")} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+            <Pressable accessibilityLabel={t("Ripubblica")} onPress={() => setMenu("repost")} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <Repost size={20} color={reposted ? "#00ba7c" : theme.text} weight={reposted ? "bold" : "regular"} />
               {reposts ? <T size={13.5} weight="500" color={reposted ? "#00ba7c" : theme.text2}>{compact(reposts)}</T> : null}
             </Pressable>
-            <Pressable accessibilityLabel="Condividi" onPress={() => Share.share({ message: `${thought.handle}: ${thought.text || ""}\nhttps://space.app/t/${thought.id}` }).catch(() => {})} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+            <Pressable accessibilityLabel={t("Condividi")} onPress={() => Share.share({ message: `${thought.handle}: ${thought.text || ""}\nhttps://space.app/t/${thought.id}` }).catch(() => {})} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <Send size={20} color={theme.text} />
             </Pressable>
           </View>
@@ -327,17 +328,17 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
         open={menu === "repost"}
         onClose={() => setMenu(null)}
         items={[
-          { icon: Repost, label: reposted ? "Rimuovi ripubblicazione" : "Ripubblica", danger: reposted, onPress: () => { store.toggleThoughtRepost(thought.id); setMenu(null); } },
-          { icon: Quote, label: "Cita", onPress: () => { setMenu(null); composeThought({ quote: thought.id }); } },
+          { icon: Repost, label: reposted ? t("Rimuovi ripubblicazione") : t("Ripubblica"), danger: reposted, onPress: () => { store.toggleThoughtRepost(thought.id); setMenu(null); } },
+          { icon: Quote, label: t("Cita"), onPress: () => { setMenu(null); composeThought({ quote: thought.id }); } },
         ]}
       />
       <ActionSheet
         open={menu === "more"}
         onClose={() => setMenu(null)}
         items={[
-          { icon: LinkIcon, label: "Copia link", onPress: () => { Clipboard.setStringAsync(`https://space.app/t/${thought.id}`).catch(() => {}); setMenu(null); } },
-          !thought.mine ? { icon: follows ? UserMinus : UserPlus, label: follows ? `Non seguire più ${thought.handle}` : `Segui ${thought.handle}`, onPress: () => { store.toggleFollow(thought.name); setMenu(null); } } : null,
-          thought.mine ? { icon: Trash, label: "Elimina", danger: true, onPress: () => { store.deleteThought(thought.id); setMenu(null); onDeleted?.(thought.id); } } : null,
+          { icon: LinkIcon, label: t("Copia link"), onPress: () => { Clipboard.setStringAsync(`https://space.app/t/${thought.id}`).catch(() => {}); setMenu(null); } },
+          !thought.mine ? { icon: follows ? UserMinus : UserPlus, label: follows ? t("Non seguire più {handle}", { handle: thought.handle }) : t("Segui {handle}", { handle: thought.handle }), onPress: () => { store.toggleFollow(thought.name); setMenu(null); } } : null,
+          thought.mine ? { icon: Trash, label: t("Elimina"), danger: true, onPress: () => { store.deleteThought(thought.id); setMenu(null); onDeleted?.(thought.id); } } : null,
         ]}
       />
       <Modal visible={Boolean(zoom)} transparent animationType="fade" onRequestClose={() => setZoom(null)} statusBarTranslucent>
@@ -365,7 +366,7 @@ export const ThoughtEntry = memo(function ThoughtEntry({ thought, repostedBy }) 
           {chain.length > 1 ? (
             <Pressable onPress={() => router.push(`/thought/${thought.id}`)} style={[styles.moreThread, { borderBottomColor: theme.line }]}>
               <View style={styles.dots}>{[0, 1, 2].map((i) => <View key={i} style={[styles.dot, { backgroundColor: theme.text3 }]} />)}</View>
-              <T size={14} weight="600" color={theme.blue}>Mostra il thread ({chain.length - 1} in più)</T>
+              <T size={14} weight="600" color={theme.blue}>{t("Mostra il thread ({n} in più)", { n: chain.length - 1 })}</T>
             </Pressable>
           ) : null}
         </>
@@ -390,14 +391,14 @@ export function ThoughtList({ name, mine, emptyAction }) {
   const rows = thoughtRows(store, { name, mine });
   if (!rows.length) {
     return (
-      <IgEmpty icon={Feather} title={mine ? "Condividi il tuo primo pensiero" : "Ancora nessun pensiero"} text={mine ? "Una frase, una domanda, un sondaggio." : null}>
+      <IgEmpty icon={Feather} title={mine ? t("Condividi il tuo primo pensiero") : t("Ancora nessun pensiero")} text={mine ? t("Una frase, una domanda, un sondaggio.") : null}>
         {emptyAction}
       </IgEmpty>
     );
   }
   return (
     <View>
-      {rows.map((row) => <ThoughtEntry key={row.key} thought={row.thought} repostedBy={row.repost ? "Hai ripubblicato" : undefined} />)}
+      {rows.map((row) => <ThoughtEntry key={row.key} thought={row.thought} repostedBy={row.repost ? t("Hai ripubblicato") : undefined} />)}
     </View>
   );
 }
@@ -408,7 +409,7 @@ export function ComposePrompt({ onCompose }) {
   return (
     <Pressable onPress={() => { tap(); (onCompose || (() => composeThought()))(); }} style={({ pressed }) => [styles.prompt, { borderBottomColor: theme.line, backgroundColor: pressed ? theme.fill : "transparent" }]}>
       <Image source={{ uri: store.profile.src || AVATAR }} style={{ width: 36, height: 36, borderRadius: 18 }} />
-      <T size={15} color={theme.text2} style={{ flex: 1 }}>Cosa c'è di nuovo?</T>
+      <T size={15} color={theme.text2} style={{ flex: 1 }}>{t("Cosa c'è di nuovo?")}</T>
       <ImageIcon size={21} color={theme.text3} />
       <Poll size={21} color={theme.text3} />
     </Pressable>

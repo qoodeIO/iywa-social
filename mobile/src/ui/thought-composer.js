@@ -16,14 +16,15 @@ import { T, tap } from "./kit";
 import { ActionSheet } from "./profile-kit";
 import { QuotedThought, buildThoughts } from "./thoughts";
 import { keepAll } from "../lib/media-store";
+import { t, tk } from "../lib/i18n";
 
 const LIMIT = 500;
 const DRAFT_KEY = "space-thought-draft";
 const AUDIENCES = ["everyone", "follow", "mention"];
 const AUDIENCE_LABEL = {
-  everyone: "Tutti possono rispondere",
-  follow: "Rispondono i profili che segui",
-  mention: "Rispondono solo i profili menzionati",
+  everyone: tk("Tutti possono rispondere"),
+  follow: tk("Rispondono i profili che segui"),
+  mention: tk("Rispondono solo i profili menzionati"),
 };
 
 function CounterRing({ used }) {
@@ -194,8 +195,8 @@ export default function ThoughtComposer({ replyId, quoteId }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.bar, { borderBottomColor: theme.line }]}>
-        <Pressable onPress={cancel} hitSlop={8} style={{ flex: 1 }}><T size={15.5}>Annulla</T></Pressable>
-        <T size={16} weight="700">{replyTo ? "Rispondi" : quote ? "Cita" : "Nuovo pensiero"}</T>
+        <Pressable onPress={cancel} hitSlop={8} style={{ flex: 1 }}><T size={15.5}>{t("Annulla")}</T></Pressable>
+        <T size={16} weight="700">{replyTo ? t("Rispondi") : quote ? t("Cita") : t("Nuovo pensiero")}</T>
         <View style={{ flex: 1 }} />
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: 8, paddingBottom: 20 }}>
@@ -223,7 +224,7 @@ export default function ThoughtComposer({ replyId, quoteId }) {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={styles.head}>
                   <T size={14.5} weight="700">{myHandle}</T>
-                  {index > 0 ? <Pressable accessibilityLabel="Rimuovi" hitSlop={8} style={{ marginLeft: "auto" }} onPress={() => removePart(index)}><X size={14} weight="bold" color={theme.text2} /></Pressable> : null}
+                  {index > 0 ? <Pressable accessibilityLabel={t("Rimuovi")} hitSlop={8} style={{ marginLeft: "auto" }} onPress={() => removePart(index)}><X size={14} weight="bold" color={theme.text2} /></Pressable> : null}
                 </View>
                 <TextInput
                   ref={(node) => { areas.current[index] = node; }}
@@ -233,9 +234,9 @@ export default function ThoughtComposer({ replyId, quoteId }) {
                   onChangeText={(value) => onType(index, value)}
                   onSelectionChange={(event) => { caret.current[index] = event.nativeEvent.selection.start; }}
                   onFocus={() => setActive(index)}
-                  placeholder={index === 0 ? (replyTo ? `Rispondi a ${replyTo.handle}…` : "Cosa c'è di nuovo?") : "Aggiungi altro…"}
+                  placeholder={index === 0 ? (replyTo ? t("Rispondi a {handle}…", { handle: replyTo.handle }) : t("Cosa c'è di nuovo?")) : t("Aggiungi altro…")}
                   placeholderTextColor={theme.text3}
-                  accessibilityLabel="Testo del pensiero"
+                  accessibilityLabel={t("Testo del pensiero")}
                   style={{ color: theme.text, fontSize: 15.5, lineHeight: 22, minHeight: 24, marginTop: 2, padding: 0 }}
                 />
                 {mention && mention.index === index && people.length ? (
@@ -256,7 +257,7 @@ export default function ThoughtComposer({ replyId, quoteId }) {
                     {part.images.map((src, at) => (
                       <View key={`${at}-${String(src).slice(-16)}`} style={[styles.image, part.images.length === 1 ? { width: 230, height: 260 } : null]}>
                         <Image source={{ uri: src }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                        <Pressable accessibilityLabel="Rimuovi foto" onPress={() => update(index, { images: part.images.filter((_, i) => i !== at) })} style={styles.imageX}><X size={12} weight="bold" color="#fff" /></Pressable>
+                        <Pressable accessibilityLabel={t("Rimuovi foto")} onPress={() => update(index, { images: part.images.filter((_, i) => i !== at) })} style={styles.imageX}><X size={12} weight="bold" color="#fff" /></Pressable>
                       </View>
                     ))}
                   </ScrollView>
@@ -268,47 +269,47 @@ export default function ThoughtComposer({ replyId, quoteId }) {
                         <TextInput
                           value={option}
                           maxLength={40}
-                          placeholder={at < 2 ? `Opzione ${at + 1}` : "Facoltativa"}
+                          placeholder={at < 2 ? t("Opzione {n}", { n: at + 1 }) : t("Facoltativa")}
                           placeholderTextColor={theme.text3}
                           onChangeText={(value) => setPoll((prev) => ({ ...prev, options: prev.options.map((item, i) => (i === at ? value : item)) }))}
                           style={{ flex: 1, height: "100%", color: theme.text, fontSize: 14.5 }}
                         />
-                        {at >= 2 ? <Pressable accessibilityLabel="Rimuovi opzione" hitSlop={6} style={{ width: 26, height: 26, alignItems: "center", justifyContent: "center" }} onPress={() => setPoll((prev) => ({ ...prev, options: prev.options.filter((_, i) => i !== at) }))}><X size={14} weight="bold" color={theme.text2} /></Pressable> : null}
+                        {at >= 2 ? <Pressable accessibilityLabel={t("Rimuovi opzione")} hitSlop={6} style={{ width: 26, height: 26, alignItems: "center", justifyContent: "center" }} onPress={() => setPoll((prev) => ({ ...prev, options: prev.options.filter((_, i) => i !== at) }))}><X size={14} weight="bold" color={theme.text2} /></Pressable> : null}
                       </View>
                     ))}
                     {poll.options.length < 4 ? (
                       <Pressable onPress={() => setPoll((prev) => ({ ...prev, options: [...prev.options, ""] }))} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 36, paddingHorizontal: 4 }}>
-                        <Plus size={15} weight="bold" color={theme.blue} /><T size={14} weight="600" color={theme.blue}>Aggiungi opzione</T>
+                        <Plus size={15} weight="bold" color={theme.blue} /><T size={14} weight="600" color={theme.blue}>{t("Aggiungi opzione")}</T>
                       </Pressable>
                     ) : null}
                     <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-                      <T size={13} color={theme.text2}>Termina tra</T>
+                      <T size={13} color={theme.text2}>{t("Termina tra")}</T>
                       {[1, 3, 7].map((days) => {
                         const sel = poll.days === days;
                         return (
                           <Pressable key={days} onPress={() => setPoll((prev) => ({ ...prev, days }))} style={[styles.dayChip, { borderColor: sel ? theme.text : theme.line, backgroundColor: sel ? theme.text : "transparent" }]}>
-                            <T size={13} weight="600" color={sel ? theme.bg : theme.text}>{days === 1 ? "1 giorno" : `${days} giorni`}</T>
+                            <T size={13} weight="600" color={sel ? theme.bg : theme.text}>{days === 1 ? t("1 giorno") : t("{n} giorni", { n: days })}</T>
                           </Pressable>
                         );
                       })}
-                      <Pressable onPress={() => setPoll(null)} style={{ paddingHorizontal: 4 }}><T size={13} weight="600" color={theme.red}>Rimuovi sondaggio</T></Pressable>
+                      <Pressable onPress={() => setPoll(null)} style={{ paddingHorizontal: 4 }}><T size={13} weight="600" color={theme.red}>{t("Rimuovi sondaggio")}</T></Pressable>
                     </View>
                   </View>
                 ) : null}
                 {index === 0 && quote ? <QuotedThought thought={quote} /> : null}
                 {on ? (
                   <View style={styles.tools}>
-                    <Tool label="Aggiungi foto" icon={ImageIcon} pressed={tray} disabled={part.images.length >= 4} onPress={() => setTray((value) => !value)} />
-                    <Tool label="Menziona" icon={AtSign} onPress={() => insert("@")} />
-                    <Tool label="Hashtag" icon={Hash} onPress={() => insert("#")} />
-                    {index === 0 && !replyTo ? <Tool label="Sondaggio" icon={Poll} pressed={Boolean(poll)} disabled={part.images.length > 0} onPress={() => setPoll((prev) => (prev ? null : { options: ["", ""], days: 1 }))} /> : null}
+                    <Tool label={t("Aggiungi foto")} icon={ImageIcon} pressed={tray} disabled={part.images.length >= 4} onPress={() => setTray((value) => !value)} />
+                    <Tool label={t("Menziona")} icon={AtSign} onPress={() => insert("@")} />
+                    <Tool label={t("Hashtag")} icon={Hash} onPress={() => insert("#")} />
+                    {index === 0 && !replyTo ? <Tool label={t("Sondaggio")} icon={Poll} pressed={Boolean(poll)} disabled={part.images.length > 0} onPress={() => setPoll((prev) => (prev ? null : { options: ["", ""], days: 1 }))} /> : null}
                     <CounterRing used={part.text.length} />
                   </View>
                 ) : null}
                 {on && tray ? (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginRight: -INSET, marginTop: 4, marginBottom: 6 }} contentContainerStyle={{ gap: 6, paddingRight: INSET }}>
                     <Pressable onPress={fromDevice} style={[styles.trayItem, { backgroundColor: theme.fill, alignItems: "center", justifyContent: "center", gap: 4 }]}>
-                      <ImageIcon size={22} color={theme.text} /><T size={11.5} weight="600">Libreria</T>
+                      <ImageIcon size={22} color={theme.text} /><T size={11.5} weight="600">{t("Libreria")}</T>
                     </Pressable>
                     {DEMO_GALLERY.slice(0, 10).map((src) => (
                       <Pressable key={src} onPress={() => { addImages([src]); setTray(false); }} style={({ pressed }) => [styles.trayItem, { backgroundColor: theme.fill, opacity: pressed ? 0.8 : 1 }]}>
@@ -324,26 +325,26 @@ export default function ThoughtComposer({ replyId, quoteId }) {
         {!replyTo && (lastPart.text.trim() || lastPart.images.length) && parts.length < 10 ? (
           <Pressable onPress={addPart} style={styles.add}>
             <View style={{ width: 40, alignItems: "center" }}><Image source={{ uri: me }} style={{ width: 22, height: 22, borderRadius: 11, opacity: 0.6 }} /></View>
-            <T size={14.5} color={theme.text3}>Aggiungi al thread</T>
+            <T size={14.5} color={theme.text3}>{t("Aggiungi al thread")}</T>
           </Pressable>
         ) : null}
       </ScrollView>
       <View style={[styles.foot, { borderTopColor: theme.line, backgroundColor: theme.bg, paddingBottom: 14 + (Platform.OS === "ios" ? 0 : insets.bottom) }]}>
         <Pressable style={styles.audience} onPress={() => { tap(); setAudience((value) => AUDIENCES[(AUDIENCES.indexOf(value) + 1) % AUDIENCES.length]); }}>
           <AudienceIcon size={16} color={theme.text2} />
-          <T size={13.5} color={theme.text2} lines={1} style={{ flexShrink: 1 }}>{AUDIENCE_LABEL[audience]}</T>
+          <T size={13.5} color={theme.text2} lines={1} style={{ flexShrink: 1 }}>{t(AUDIENCE_LABEL[audience])}</T>
         </Pressable>
         <Pressable disabled={!ready} onPress={publish} style={({ pressed }) => [styles.post, { backgroundColor: theme.text, opacity: ready ? (pressed ? 0.8 : 1) : 0.35 }]}>
-          <T size={15} weight="700" color={theme.bg}>{replyTo ? "Rispondi" : "Pubblica"}</T>
+          <T size={15} weight="700" color={theme.bg}>{replyTo ? t("Rispondi") : t("Pubblica")}</T>
         </Pressable>
       </View>
       <ActionSheet
         open={leaving}
         onClose={() => setLeaving(false)}
-        cancel="Continua a scrivere"
+        cancel={t("Continua a scrivere")}
         items={[
-          { icon: Feather, label: "Salva bozza", onPress: () => close(true) },
-          { icon: Trash, label: "Elimina", danger: true, onPress: () => close(false) },
+          { icon: Feather, label: t("Salva bozza"), onPress: () => close(true) },
+          { icon: Trash, label: t("Elimina"), danger: true, onPress: () => close(false) },
         ]}
       />
     </KeyboardAvoidingView>
@@ -363,13 +364,13 @@ function Tool({ icon: Icon, label, pressed, disabled, onPress }) {
 function echo(store, thought) {
   const fans = PEOPLE.filter((person) => !store.prefs.blocked?.includes(person.name));
   const fan = fans[Math.floor(Math.random() * fans.length)];
-  if (fan && store.pushNote) setTimeout(() => store.pushNote({ type: "like", name: fan.name, src: fan.src, text: "ha messo mi piace al tuo pensiero.", target: { kind: "thought", id: thought.id } }), 5000);
+  if (fan && store.pushNote) setTimeout(() => store.pushNote({ type: "like", name: fan.name, src: fan.src, text: t("ha messo mi piace al tuo pensiero."), target: { kind: "thought", id: thought.id } }), 5000);
   const handles = (String(thought.text || "").match(/@[\w.]+/g) || []).map((item) => item.slice(1).replace(/\.$/, ""));
   for (const person of PEOPLE.filter((entry) => handles.includes(entry.handle))) {
     setTimeout(() => {
-      const text = "Ci sono! Grazie per la menzione 🙌";
+      const text = t("Ci sono! Grazie per la menzione 🙌");
       store.addThoughtReply(thought.id, { id: `echo-${Date.now().toString(36)}-${person.handle}`, name: person.name, handle: person.handle, src: person.src, verified: Boolean(person.verified), created: Date.now(), likes: 0, text });
-      store.pushNote?.({ type: "reply", name: person.name, src: person.src, text: `ha risposto al tuo pensiero: “${text}”`, target: { kind: "thought", id: thought.id } });
+      store.pushNote?.({ type: "reply", name: person.name, src: person.src, text: t("ha risposto al tuo pensiero: “{text}”", { text }), target: { kind: "thought", id: thought.id } });
     }, 8000);
   }
 }

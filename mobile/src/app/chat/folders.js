@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { defaultFolders, folderSummary } from "../../live/format";
 import { Hint, SubHead, useChatTheme } from "../../ui/chat";
 import { AddCircle, Folder, Trash } from "../../ui/chatIcons";
@@ -29,53 +30,53 @@ export default function Folders() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <SubHead title="Cartelle chat" />
+      <SubHead title={t("Cartelle chat")} />
       <ScrollView style={{ backgroundColor: theme.page }} contentContainerStyle={{ paddingBottom: 30 }}>
         <View style={styles.hero}>
           <Animated.View entering={ZoomIn.springify().damping(12)}>
             <LinearGradient colors={["#5ec4ff", "#2a7bf2"]} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={styles.heroIcon}><Folder size={40} weight="fill" color="#fff" /></LinearGradient>
           </Animated.View>
-          <T size={14} color={theme.text2} style={{ textAlign: "center", lineHeight: 19.6 }}>Crea cartelle per diversi gruppi di chat e passa rapidamente da una all'altra.</T>
+          <T size={14} color={theme.text2} style={{ textAlign: "center", lineHeight: 19.6 }}>{t("Crea cartelle per diversi gruppi di chat e passa rapidamente da una all'altra.")}</T>
         </View>
-        <Cap>Le mie cartelle</Cap>
+        <Cap>{t("Le mie cartelle")}</Cap>
         <Card>
-          <View style={styles.cell}><Folder size={22} weight="fill" color={theme.blue} /><T size={15.5} weight="500">Tutte le chat</T></View>
+          <View style={styles.cell}><Folder size={22} weight="fill" color={theme.blue} /><T size={15.5} weight="500">{t("Tutte le chat")}</T></View>
           {folders.map((entry) => (
             <View key={entry.id} style={[styles.cell, border]}>
               <Pressable onPress={() => { tap(); router.push({ pathname: "/chat/folder", params: { id: entry.id } }); }} style={({ pressed }) => [styles.cellMain, pressed && { opacity: 0.6 }]}>
                 <Folder size={22} weight="fill" color={theme.blue} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <T size={15.5} weight="500" lines={1}>{entry.name}</T>
+                  <T size={15.5} weight="500" lines={1}>{t(entry.name)}</T>
                   <T size={13} color={theme.text2} lines={1}>{folderSummary(entry)}</T>
                 </View>
               </Pressable>
-              <Pressable accessibilityLabel={`Elimina ${entry.name}`} hitSlop={6} onPress={() => { tap(); store.setDmFolders(folders.filter((item) => item.id !== entry.id)); }} style={styles.del}>
+              <Pressable accessibilityLabel={t("Elimina {name}", { name: t(entry.name) })} hitSlop={6} onPress={() => { tap(); store.setDmFolders(folders.filter((item) => item.id !== entry.id)); }} style={styles.del}>
                 <Trash size={18} color={theme.text3} />
               </Pressable>
             </View>
           ))}
           <Pressable onPress={() => { tap(); router.push("/chat/folder"); }} style={({ pressed }) => [styles.cell, border, pressed && { backgroundColor: theme.fill }]}>
             <AddCircle size={22} weight="fill" color={theme.blue} />
-            <T size={15.5} weight="500" color={theme.blue}>Crea una nuova cartella</T>
+            <T size={15.5} weight="500" color={theme.blue}>{t("Crea una nuova cartella")}</T>
           </Pressable>
         </Card>
         {suggested.length ? (
           <>
-            <Cap>Cartelle suggerite</Cap>
+            <Cap>{t("Cartelle suggerite")}</Cap>
             <Card>
               {suggested.map((entry, index) => (
                 <View key={entry.id} style={[styles.cell, index && border]}>
                   <View style={{ flex: 1, minWidth: 0, paddingVertical: 8 }}>
-                    <T size={15.5} weight="500">{entry.name}</T>
+                    <T size={15.5} weight="500">{t(entry.name)}</T>
                     <T size={13} color={theme.text2} lines={1}>{folderSummary(entry)}</T>
                   </View>
-                  <Pressable onPress={() => { tap(); store.setDmFolders([...folders, entry]); }} style={[styles.add, { backgroundColor: theme.blue }]}><T size={13.5} weight="600" color="#fff">Aggiungi</T></Pressable>
+                  <Pressable onPress={() => { tap(); store.setDmFolders([...folders, entry]); }} style={[styles.add, { backgroundColor: theme.blue }]}><T size={13.5} weight="600" color="#fff">{t("Aggiungi")}</T></Pressable>
                 </View>
               ))}
             </Card>
           </>
         ) : null}
-        <Hint style={{ marginHorizontal: 30 }}>Suggerimento: tieni premuta una cartella per modificarla.</Hint>
+        <Hint style={{ marginHorizontal: 30 }}>{t("Suggerimento: tieni premuta una cartella per modificarla.")}</Hint>
       </ScrollView>
     </View>
   );

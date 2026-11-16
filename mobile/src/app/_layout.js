@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { StoreProvider } from "../lib/store";
+import { StoreProvider, useStore } from "../lib/store";
 import { LiveRoot } from "../ui/chatCall";
 import TabBar from "../ui/TabBar";
 import { FeedOverlay } from "../ui/notify";
@@ -21,8 +21,10 @@ function Shell() {
   // Full-screen call UI sits above the Stack; flip every screen's bar to light while it shows.
   const callFull = Boolean(call && ((call.phase === "idle" && call.incoming) || (call.phase !== "idle" && !call.minimized)));
   const barStyle = callFull || theme.scheme === "dark" ? "light" : "dark";
+  // Changing language redraws every screen with the new strings.
+  const language = useStore().language;
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <View key={language} style={{ flex: 1, backgroundColor: theme.bg }}>
       <StatusBar style={theme.scheme === "dark" ? "light" : "dark"} />
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg }, animation: "default", gestureEnabled: true, statusBarStyle: barStyle, statusBarAnimation: "fade" }}>

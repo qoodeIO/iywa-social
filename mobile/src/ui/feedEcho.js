@@ -1,6 +1,7 @@
 // Demo people react to what you publish, so notifications fill up like a real network
 // (same timings and copy as the web store's publish() and addComment()).
 import { PEOPLE } from "../data";
+import { t } from "../lib/i18n";
 
 const ECHO_LINES = ["Bellissimo 🔥", "Che lavoro pulito!", "Lo voglio vedere dal vivo 😍", "Bravissima, come sempre.", "Questo colore è incredibile."];
 
@@ -23,15 +24,14 @@ export function publishPost(store, item) {
   if (item?.kind !== "post" && item?.kind !== "reel") return;
   const fan = somePerson();
   const critic = somePerson([fan.name]);
-  const what = item.kind === "reel" ? "reel" : "post";
-  later(4000, () => store.pushNote({ type: "like", name: fan.name, src: fan.src, text: `ha messo mi piace al tuo ${what}.`, target: { kind: "post", id: item.id } }));
-  later(10000, () => store.pushNote({ type: "comment", name: critic.name, src: critic.src, text: `ha commentato: “${ECHO_LINES[Math.floor(Math.random() * ECHO_LINES.length)]}”`, target: { kind: "post", id: item.id } }));
+  later(4000, () => store.pushNote({ type: "like", name: fan.name, src: fan.src, text: item.kind === "reel" ? t("ha messo mi piace al tuo reel.") : t("ha messo mi piace al tuo post."), target: { kind: "post", id: item.id } }));
+  later(10000, () => store.pushNote({ type: "comment", name: critic.name, src: critic.src, text: t("ha commentato: “{text}”", { text: ECHO_LINES[Math.floor(Math.random() * ECHO_LINES.length)] }), target: { kind: "post", id: item.id } }));
   for (const name of item.tags || []) {
     const person = PEOPLE.find((entry) => entry.name === name);
-    if (person) later(7000, () => store.pushNote({ type: "like", name: person.name, src: person.src, text: "ha visto che l'hai taggato e ha messo mi piace.", target: { kind: "post", id: item.id } }));
+    if (person) later(7000, () => store.pushNote({ type: "like", name: person.name, src: person.src, text: t("ha visto che l'hai taggato e ha messo mi piace."), target: { kind: "post", id: item.id } }));
   }
   for (const person of mentionedPeople(item.text)) {
-    later(8000, () => store.pushNote({ type: "reply", name: person.name, src: person.src, text: `ha risposto alla tua menzione: “@${me} grazie! ❤️”`, target: { kind: "post", id: item.id } }));
+    later(8000, () => store.pushNote({ type: "reply", name: person.name, src: person.src, text: t("ha risposto alla tua menzione: “@{me} grazie! ❤️”", { me }), target: { kind: "post", id: item.id } }));
   }
 }
 
@@ -41,9 +41,9 @@ export function commentPost(store, id, text) {
   store.addComment(id, clean);
   const me = String(store.profile?.handle || "").replace(/^@/, "");
   const fan = somePerson();
-  later(4500, () => store.pushNote({ type: "like", name: fan.name, src: fan.src, text: `ha messo mi piace al tuo commento: “${clean.slice(0, 60)}”`, target: { kind: "post", id } }));
+  later(4500, () => store.pushNote({ type: "like", name: fan.name, src: fan.src, text: t("ha messo mi piace al tuo commento: “{text}”", { text: clean.slice(0, 60) }), target: { kind: "post", id } }));
   for (const person of mentionedPeople(clean)) {
-    later(7500, () => store.pushNote({ type: "reply", name: person.name, src: person.src, text: `ha risposto al tuo commento: “@${me} assolutamente sì!”`, target: { kind: "post", id } }));
+    later(7500, () => store.pushNote({ type: "reply", name: person.name, src: person.src, text: t("ha risposto al tuo commento: “@{me} assolutamente sì!”", { me }), target: { kind: "post", id } }));
   }
 }
 

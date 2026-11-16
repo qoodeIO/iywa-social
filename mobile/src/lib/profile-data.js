@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { router } from "expo-router";
 import seed from "../data/seed.json";
 import { AVATAR, CHATS, EXPLORE, PEOPLE, PORTRAIT, POSTS, REELS, WORKS, personByName } from "../data";
+import { localeTag, t } from "./i18n";
 
 export const SEARCH_PEOPLE = PEOPLE;
 
@@ -101,17 +102,17 @@ export const TIME = { MIN, HOUR, DAY };
 
 export function agoLabel(ms) {
   const diff = Math.max(0, Date.now() - ms);
-  if (diff < MIN) return "ora";
-  if (diff < HOUR) return `${Math.floor(diff / MIN)} min`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} h`;
-  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)} g`;
-  return new Date(ms).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+  if (diff < MIN) return t("ora");
+  if (diff < HOUR) return t("{n} min", { n: Math.floor(diff / MIN) });
+  if (diff < DAY) return t("{n} h", { n: Math.floor(diff / HOUR) });
+  if (diff < 7 * DAY) return t("{n} g", { n: Math.floor(diff / DAY) });
+  return new Date(ms).toLocaleDateString(localeTag(), { day: "numeric", month: "short" });
 }
 
 export function fullStamp(ms) {
   const date = new Date(ms);
   const clock = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-  return `${clock} · ${date.toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `${clock} · ${date.toLocaleDateString(localeTag(), { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 export function openState(hours) {
@@ -123,20 +124,20 @@ export function openState(hours) {
     return h * 60 + (m || 0);
   };
   const open = hours.days.includes(now.getDay()) && minutes >= toMin(hours.open) && minutes < toMin(hours.close);
-  const names = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
+  const names = [t("dom"), t("lun"), t("mar"), t("mer"), t("gio"), t("ven"), t("sab")];
   let nextDay = null;
   for (let step = minutes < toMin(hours.open) ? 0 : 1; step <= 7; step += 1) {
     const day = (now.getDay() + step) % 7;
     if (hours.days.includes(day)) {
-      nextDay = step === 0 ? "oggi" : step === 1 ? "domani" : names[day];
+      nextDay = step === 0 ? t("oggi") : step === 1 ? t("domani") : names[day];
       break;
     }
   }
-  return open ? { open: true, label: `Aperto · chiude alle ${hours.close}` } : { open: false, label: `Chiuso · apre ${nextDay} alle ${hours.open}` };
+  return open ? { open: true, label: t("Aperto · chiude alle {time}", { time: hours.close }) } : { open: false, label: t("Chiuso · apre {day} alle {time}", { day: nextDay, time: hours.open }) };
 }
 
 export function daysLabel(days) {
-  const names = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+  const names = [t("Dom"), t("Lun"), t("Mar"), t("Mer"), t("Gio"), t("Ven"), t("Sab")];
   const order = [1, 2, 3, 4, 5, 6, 0].filter((day) => days.includes(day));
   if (!order.length) return "";
   return order.length > 2 ? `${names[order[0]]}–${names[order[order.length - 1]]}` : order.map((day) => names[day]).join(", ");
@@ -154,10 +155,10 @@ export function useCountUp(target, ms = 700) {
     let raf = 0;
     const start = Date.now();
     const tick = () => {
-      const t = Math.min(1, (Date.now() - start) / ms);
-      const eased = 1 - (1 - t) ** 3;
+      const progress = Math.min(1, (Date.now() - start) / ms);
+      const eased = 1 - (1 - progress) ** 3;
       setValue(Math.round(end * eased));
-      if (t < 1) raf = requestAnimationFrame(tick);
+      if (progress < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);

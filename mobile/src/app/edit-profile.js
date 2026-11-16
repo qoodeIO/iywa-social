@@ -11,9 +11,10 @@ import { Camera, Check, Checked, ImageIcon, LinkIcon, Trash, Warn, X } from "../
 import { T, tap } from "../ui/kit";
 import { ActionSheet, settingsColors } from "../ui/profile-kit";
 import { keepMedia } from "../lib/media-store";
+import { t, tk } from "../lib/i18n";
 
-const CATEGORIES = ["Ceramista", "Cuoca", "Liutaio", "Sarta", "Designer", "Artista", "Fotografo"];
-const PRONOUNS = ["lei/la", "lui/lo", "loro"];
+const CATEGORIES = [tk("Ceramista"), tk("Cuoca"), tk("Liutaio"), tk("Sarta"), tk("Designer"), tk("Artista"), tk("Fotografo")];
+const PRONOUNS = [tk("lei/la"), tk("lui/lo"), tk("loro")];
 
 // "Modifica profilo", the same flow as the web EditScreen.
 export default function EditProfile() {
@@ -93,27 +94,27 @@ export default function EditProfile() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: st.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.head, { paddingTop: insets.top, backgroundColor: st.bg }]}>
         <View style={styles.headRow}>
-          <Pressable hitSlop={8} onPress={() => (dirty ? setSheet("discard") : router.back())} style={{ width: 80 }}><T size={15.5}>Annulla</T></Pressable>
-          <T size={17} weight="700" style={{ flex: 1, textAlign: "center" }}>Modifica profilo</T>
+          <Pressable hitSlop={8} onPress={() => (dirty ? setSheet("discard") : router.back())} style={{ width: 80 }}><T size={15.5}>{t("Annulla")}</T></Pressable>
+          <T size={17} weight="700" style={{ flex: 1, textAlign: "center" }}>{t("Modifica profilo")}</T>
           <Pressable hitSlop={8} disabled={!valid || !dirty} onPress={save} style={{ width: 80, alignItems: "flex-end" }}>
-            <T size={15.5} weight="700" color={theme.blue} style={{ opacity: !valid || !dirty ? 0.35 : 1 }}>Fine</T>
+            <T size={15.5} weight="700" color={theme.blue} style={{ opacity: !valid || !dirty ? 0.35 : 1 }}>{t("Fine")}</T>
           </Pressable>
         </View>
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingBottom: insets.bottom + 34 }}>
         <View style={{ alignItems: "center", gap: 10, paddingTop: 10, paddingBottom: 4 }}>
-          <Pressable accessibilityLabel="Cambia foto" onPress={() => setSheet("photo")} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
+          <Pressable accessibilityLabel={t("Cambia foto")} onPress={() => setSheet("photo")} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}>
             <Image source={{ uri: form.avatar || AVATAR }} style={styles.face} contentFit="cover" transition={150} />
             <View style={[styles.cam, { backgroundColor: theme.blue, borderColor: st.bg }]}><Camera size={16} weight="fill" color="#fff" /></View>
           </Pressable>
-          <Pressable onPress={() => setSheet("photo")}><T size={15} weight="600" color={theme.blue}>Modifica immagine</T></Pressable>
+          <Pressable onPress={() => setSheet("photo")}><T size={15} weight="600" color={theme.blue}>{t("Modifica immagine")}</T></Pressable>
         </View>
 
-        <Cap>Anteprima</Cap>
+        <Cap>{t("Anteprima")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card, paddingVertical: 14, paddingHorizontal: 16, gap: 3 }]}>
-          <T size={15} weight="700">{form.name.trim() || "Il tuo nome"}{form.pronouns.trim() ? <T size={13} color={theme.text2}> {form.pronouns.trim()}</T> : null}</T>
+          <T size={15} weight="700">{form.name.trim() || t("Il tuo nome")}{form.pronouns.trim() ? <T size={13} color={theme.text2}> {form.pronouns.trim()}</T> : null}</T>
           {form.category.trim() ? <T size={14} color={theme.text2}>{form.category.trim()}</T> : null}
-          {form.bio.trim() ? <T size={14} style={{ marginTop: 2, lineHeight: 20 }}>{form.bio.trim()}</T> : <T size={14} color={theme.text3} style={{ marginTop: 2, fontStyle: "italic" }}>Qui comparirà la tua bio.</T>}
+          {form.bio.trim() ? <T size={14} style={{ marginTop: 2, lineHeight: 20 }}>{form.bio.trim()}</T> : <T size={14} color={theme.text3} style={{ marginTop: 2, fontStyle: "italic" }}>{t("Qui comparirà la tua bio.")}</T>}
           {linkShown ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 }}>
               <LinkIcon size={14} weight="bold" color={theme.blue} />
@@ -122,77 +123,77 @@ export default function EditProfile() {
           ) : null}
         </View>
 
-        <Cap>Profilo pubblico</Cap>
+        <Cap>{t("Profilo pubblico")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card }]}>
-          {field("name", "Nome", { max: 30, first: true })}
-          {field("handle", "Nome utente", { max: 30, prefix: "@", lower: true, state: form.handle.trim() !== original.handle ? (handleOk ? "ok" : "err") : "" })}
-          {field("pronouns", "Pronomi", { max: 12, placeholder: PRONOUNS[0] })}
-          {field("category", "Categoria", { max: 30, placeholder: CATEGORIES[0] })}
+          {field("name", t("Nome"), { max: 30, first: true })}
+          {field("handle", t("Nome utente"), { max: 30, prefix: "@", lower: true, state: form.handle.trim() !== original.handle ? (handleOk ? "ok" : "err") : "" })}
+          {field("pronouns", t("Pronomi"), { max: 12, placeholder: t(PRONOUNS[0]) })}
+          {field("category", t("Categoria"), { max: 30, placeholder: t(CATEGORIES[0]) })}
         </View>
         {!handleOk ? (
           <View style={styles.note}>
             <Warn size={15} weight="fill" color="#ff453a" />
-            <T size={12.5} color="#ff453a" style={{ flex: 1 }}>Nome utente: 2–30 lettere, numeri, punti o trattini bassi.</T>
+            <T size={12.5} color="#ff453a" style={{ flex: 1 }}>{t("Nome utente: 2–30 lettere, numeri, punti o trattini bassi.")}</T>
           </View>
         ) : null}
-        <Chips items={CATEGORIES} value={form.category} st={st} onPick={(item) => setForm((prev) => ({ ...prev, category: prev.category === item ? "" : item }))} />
-        <Chips items={PRONOUNS} value={form.pronouns} st={st} small onPick={(item) => setForm((prev) => ({ ...prev, pronouns: prev.pronouns === item ? "" : item }))} />
+        <Chips items={CATEGORIES.map((item) => t(item))} value={form.category} st={st} onPick={(item) => setForm((prev) => ({ ...prev, category: prev.category === item ? "" : item }))} />
+        <Chips items={PRONOUNS.map((item) => t(item))} value={form.pronouns} st={st} small onPick={(item) => setForm((prev) => ({ ...prev, pronouns: prev.pronouns === item ? "" : item }))} />
 
-        <Cap>Bio</Cap>
+        <Cap>{t("Bio")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 26 }]}>
           <TextInput
             value={form.bio}
             maxLength={150}
             multiline
             onChangeText={set("bio")}
-            placeholder="Racconta il tuo lavoro…"
+            placeholder={t("Racconta il tuo lavoro…")}
             placeholderTextColor={theme.text3}
-            accessibilityLabel="Bio"
+            accessibilityLabel={t("Bio")}
             style={{ minHeight: 88, color: theme.text, fontSize: 15.5, lineHeight: 22, textAlignVertical: "top", padding: 0 }}
           />
           <T size={12.5} color={form.bio.length > 135 ? "#ff9f0a" : theme.text3} style={styles.count}>{150 - form.bio.length}</T>
         </View>
 
-        <Cap>Link</Cap>
+        <Cap>{t("Link")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card }]}>
           <View style={styles.row}>
             <View style={[styles.linkIco, { backgroundColor: "#0a84ff" }]}><LinkIcon size={16} weight="bold" color="#fff" /></View>
             <TextInput
               value={form.link}
               maxLength={120}
-              placeholder="space.app/tuo-nome"
+              placeholder={t("space.app/tuo-nome")}
               placeholderTextColor={theme.text3}
               onChangeText={set("link")}
-              accessibilityLabel="Link"
+              accessibilityLabel={t("Link")}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
               style={{ flex: 1, height: 48, color: theme.text, fontSize: 15.5 }}
             />
             {form.link ? (
-              <Pressable accessibilityLabel="Cancella" hitSlop={8} onPress={() => setForm((prev) => ({ ...prev, link: "" }))} style={[styles.clear, { backgroundColor: theme.text3 }]}>
+              <Pressable accessibilityLabel={t("Cancella")} hitSlop={8} onPress={() => setForm((prev) => ({ ...prev, link: "" }))} style={[styles.clear, { backgroundColor: theme.text3 }]}>
                 <X size={10} weight="bold" color={st.card} />
               </Pressable>
             ) : null}
           </View>
         </View>
-        <View style={styles.note}><T size={12.5} color={theme.text2} style={{ flex: 1, lineHeight: 17 }}>Nome, nome utente, bio e link sono visibili a tutti su Space.</T></View>
+        <View style={styles.note}><T size={12.5} color={theme.text2} style={{ flex: 1, lineHeight: 17 }}>{t("Nome, nome utente, bio e link sono visibili a tutti su Space.")}</T></View>
       </ScrollView>
       <ActionSheet
         open={sheet === "photo"}
         onClose={() => setSheet(null)}
         items={[
-          { icon: ImageIcon, label: "Scegli dalla libreria", onPress: pickPhoto },
-          form.avatar ? { icon: Trash, label: "Rimuovi foto attuale", danger: true, onPress: () => { setForm((prev) => ({ ...prev, avatar: "" })); setSheet(null); } } : null,
+          { icon: ImageIcon, label: t("Scegli dalla libreria"), onPress: pickPhoto },
+          form.avatar ? { icon: Trash, label: t("Rimuovi foto attuale"), danger: true, onPress: () => { setForm((prev) => ({ ...prev, avatar: "" })); setSheet(null); } } : null,
         ]}
       />
       <ActionSheet
         open={sheet === "discard"}
         onClose={() => setSheet(null)}
-        hint="Scartare le modifiche al profilo?"
+        hint={t("Scartare le modifiche al profilo?")}
         items={[
-          { icon: Trash, label: "Scarta modifiche", danger: true, onPress: () => { setSheet(null); router.back(); } },
-          { icon: Check, label: "Salva", disabled: !valid, onPress: () => { setSheet(null); save(); } },
+          { icon: Trash, label: t("Scarta modifiche"), danger: true, onPress: () => { setSheet(null); router.back(); } },
+          { icon: Check, label: t("Salva"), disabled: !valid, onPress: () => { setSheet(null); save(); } },
         ]}
       />
     </KeyboardAvoidingView>

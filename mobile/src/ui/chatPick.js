@@ -6,6 +6,7 @@ import { GROUP_TONES } from "../live/format";
 import { Face, GroupAvatar, useChatTheme } from "./chat";
 import { Check } from "./chatIcons";
 import { T, tap } from "./kit";
+import { t } from "../lib/i18n";
 
 // Pickers shared by new group, group info and folders: colour tones and checkable people rows.
 export function ToneRow({ photo, title, onPick, extra }) {
@@ -15,7 +16,7 @@ export function ToneRow({ photo, title, onPick, extra }) {
       {GROUP_TONES.map((_, index) => {
         const on = photo === `tone:${index}`;
         return (
-          <Pressable key={index} accessibilityLabel={`Colore ${index + 1}`} onPress={() => { tap(); onPick(`tone:${index}`); }} style={({ pressed }) => [{ borderRadius: 22, padding: 2, borderWidth: 2, borderColor: on ? theme.blue : "transparent", transform: [{ scale: pressed ? 0.88 : 1 }] }]}>
+          <Pressable key={index} accessibilityLabel={t("Colore {n}", { n: index + 1 })} onPress={() => { tap(); onPick(`tone:${index}`); }} style={({ pressed }) => [{ borderRadius: 22, padding: 2, borderWidth: 2, borderColor: on ? theme.blue : "transparent", transform: [{ scale: pressed ? 0.88 : 1 }] }]}>
             <GroupAvatar photo={`tone:${index}`} title={title || "?"} size={38} />
           </Pressable>
         );

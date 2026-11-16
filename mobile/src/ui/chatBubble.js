@@ -10,6 +10,7 @@ import { callStamp, onlyEmoji, reactionGroups } from "../live/format";
 import { MINE, VoiceBubble, useChatTheme } from "./chat";
 import { Check, CheckCheck, Clock, Forward, Phone, Reply, Video } from "./chatIcons";
 import { T, tap } from "./kit";
+import { t } from "../lib/i18n";
 
 // Figure spaces reserve room for the time + ticks at the end of the last line (Telegram style).
 const SPACE = " ";
@@ -36,7 +37,7 @@ function Meta({ message, mine, tick, overlay }) {
   const fg = color || theme.text3;
   return (
     <View pointerEvents="none" style={[styles.meta, overlay && styles.metaOverlay]}>
-      {message.edited ? <T size={11} color={fg} style={{ fontStyle: "italic" }}>modificato</T> : null}
+      {message.edited ? <T size={11} color={fg} style={{ fontStyle: "italic" }}>{t("modificato")}</T> : null}
       <T size={11} color={fg}>{message.time || ""}</T>
       {mine ? (
         tick === "pending" ? <Clock size={14} weight="bold" color={fg} />
@@ -51,11 +52,11 @@ export function CallBubble({ message, mine, onCall }) {
   const theme = useChatTheme();
   const video = message.call === "video";
   const missed = !message.duration;
-  const label = video ? "Videochiamata" : "Chiamata vocale";
+  const label = video ? t("Videochiamata") : t("Chiamata vocale");
   const detail = missed
     ? (mine
-      ? (message.reason === "declined" ? "Rifiutata" : message.reason === "busy" ? "Occupato" : message.reason === "cancelled" ? "Annullata" : "Nessuna risposta")
-      : "Persa · Tocca per richiamare")
+      ? (message.reason === "declined" ? t("Rifiutata") : message.reason === "busy" ? t("Occupato") : message.reason === "cancelled" ? t("Annullata") : t("Nessuna risposta"))
+      : t("Persa · Tocca per richiamare"))
     : callStamp(message.duration);
   const Icon = video ? Video : Phone;
   return (
@@ -109,18 +110,18 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
 
   function press() {
     const now = Date.now();
-    const t = taps.current;
-    if (now - t.last < 300) {
-      t.last = 0;
-      clearTimeout(t.timer);
+    const tp = taps.current;
+    if (now - tp.last < 300) {
+      tp.last = 0;
+      clearTimeout(tp.timer);
       tap();
       onReact(mineReacted === "❤️" ? null : "❤️");
       return;
     }
-    t.last = now;
+    tp.last = now;
     if (kind === "image") {
-      clearTimeout(t.timer);
-      t.timer = setTimeout(() => onZoom(message.image), 300);
+      clearTimeout(tp.timer);
+      tp.timer = setTimeout(() => onZoom(message.image), 300);
     }
   }
 
@@ -132,10 +133,11 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
     </T>
   ) : null;
 
+  const [fwdBefore, fwdAfter = ""] = t("Inoltrato da {name}").split("{name}");
   const fwd = message.fwd ? (
     <View style={[styles.fwd, kind === "image" && { paddingTop: 8, paddingHorizontal: 12 }]}>
       <Forward size={13} weight="fill" color={mine ? "#fff" : theme.blue} />
-      <T size={12.5} color={mine ? "#fff" : theme.blue} style={{ opacity: 0.85 }}>Inoltrato da <T size={12.5} weight="700" color={mine ? "#fff" : theme.blue}>{message.fwd.name}</T></T>
+      <T size={12.5} color={mine ? "#fff" : theme.blue} style={{ opacity: 0.85 }}>{fwdBefore}<T size={12.5} weight="700" color={mine ? "#fff" : theme.blue}>{message.fwd.name}</T>{fwdAfter}</T>
     </View>
   ) : null;
 
@@ -194,7 +196,7 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
             <T size={12} color={theme.text2}>{quoteLabel?.(quote, mine)}</T>
           </View>
           <View style={[styles.quoteBox, { borderColor: theme.line }]}>
-            <T size={13.5} color={theme.text2} lines={1}>{quote.text || (quote.kind === "image" ? "Foto" : quote.kind === "audio" ? "Messaggio vocale" : "…")}</T>
+            <T size={13.5} color={theme.text2} lines={1}>{quote.text || (quote.kind === "image" ? t("Foto") : quote.kind === "audio" ? t("Messaggio vocale") : "…")}</T>
           </View>
         </View>
       ) : null}
@@ -229,9 +231,9 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
       ) : null}
       {failed ? (
         <View style={styles.failed}>
-          <T size={12} color={theme.red}>Non inviato</T>
-          <Pressable onPress={onRetry} hitSlop={6}><T size={12} weight="600" color={theme.blue}>Riprova</T></Pressable>
-          <Pressable onPress={onDiscard} hitSlop={6}><T size={12} weight="600" color={theme.blue}>Elimina</T></Pressable>
+          <T size={12} color={theme.red}>{t("Non inviato")}</T>
+          <Pressable onPress={onRetry} hitSlop={6}><T size={12} weight="600" color={theme.blue}>{t("Riprova")}</T></Pressable>
+          <Pressable onPress={onDiscard} hitSlop={6}><T size={12} weight="600" color={theme.blue}>{t("Elimina")}</T></Pressable>
         </View>
       ) : null}
     </View>

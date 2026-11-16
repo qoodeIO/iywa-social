@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { useInboxRules, useThreads } from "../../live/threads";
 import { defaultFolders, isGroupChat } from "../../live/format";
 import { requestFolder } from "../../live/chatBus";
@@ -20,7 +21,7 @@ export default function FolderEdit() {
   const folders = store.dmFolders || defaultFolders();
   const existing = id ? folders.find((entry) => entry.id === id) : null;
   const [draft, setDraft] = useState(() => (existing
-    ? { ...existing, chats: [...(existing.chats || [])] }
+    ? { ...existing, name: t(existing.name), chats: [...(existing.chats || [])] }
     : { id: `f-${Date.now().toString(36)}`, name: "", people: false, groups: false, noMuted: false, noRead: false, chats: [], fresh: true }));
   const [picking, setPicking] = useState(false);
   const patch = (next) => setDraft((prev) => ({ ...prev, ...next }));
@@ -41,39 +42,39 @@ export default function FolderEdit() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <SubHead title={draft.fresh ? "Nuova cartella" : "Modifica cartella"} backIcon={Close} right={<HeadAction title="Salva" disabled={!valid} onPress={save} />} />
+      <SubHead title={draft.fresh ? t("Nuova cartella") : t("Modifica cartella")} backIcon={Close} right={<HeadAction title={t("Salva")} disabled={!valid} onPress={save} />} />
       <ScrollView style={{ backgroundColor: theme.page }} contentContainerStyle={{ paddingBottom: 30 }} keyboardShouldPersistTaps="handled">
-        <Cap>Nome della cartella</Cap>
+        <Cap>{t("Nome della cartella")}</Cap>
         <Card>
-          <TextInput value={draft.name} maxLength={16} autoFocus={draft.fresh} onChangeText={(name) => patch({ name })} placeholder="Nome della cartella" placeholderTextColor={theme.text2} accessibilityLabel="Nome della cartella" style={{ height: 46, paddingHorizontal: 14, color: theme.text, fontSize: 16 }} />
+          <TextInput value={draft.name} maxLength={16} autoFocus={draft.fresh} onChangeText={(name) => patch({ name })} placeholder={t("Nome della cartella")} placeholderTextColor={theme.text2} accessibilityLabel={t("Nome della cartella")} style={{ height: 46, paddingHorizontal: 14, color: theme.text, fontSize: 16 }} />
         </Card>
-        <Cap>Chat incluse</Cap>
+        <Cap>{t("Chat incluse")}</Cap>
         <Card>
-          <ToggleCell first on={draft.people} icon={Users} tone="blue" label="Chat personali" onPress={() => patch({ people: !draft.people })} />
-          <ToggleCell on={draft.groups} icon={Users} tone="green" label="Gruppi" onPress={() => patch({ groups: !draft.groups })} />
+          <ToggleCell first on={draft.people} icon={Users} tone="blue" label={t("Chat personali")} onPress={() => patch({ people: !draft.people })} />
+          <ToggleCell on={draft.groups} icon={Users} tone="green" label={t("Gruppi")} onPress={() => patch({ groups: !draft.groups })} />
           <Pressable onPress={() => { tap(); setPicking((value) => !value); }} style={({ pressed }) => [styles.cell, border, pressed && { backgroundColor: theme.fill }]}>
             <AddCircle size={22} weight="fill" color={theme.blue} />
             <View style={{ flex: 1 }}>
-              <T size={15.5} weight="500" color={theme.blue}>Aggiungi chat</T>
-              {draft.chats.length ? <T size={13} color={theme.text2}>{draft.chats.length} selezionate</T> : null}
+              <T size={15.5} weight="500" color={theme.blue}>{t("Aggiungi chat")}</T>
+              {draft.chats.length ? <T size={13} color={theme.text2}>{t("{n} selezionate", { n: draft.chats.length })}</T> : null}
             </View>
           </Pressable>
           {picking ? alive.map((item) => (
             <View key={item.id} style={border}>
-              <CheckRow on={draft.chats.includes(item.id)} name={item.name} meta={isGroupChat(item) ? "Gruppo" : "Personale"} face={<ThreadFace thread={{ ...item, online: false }} size={46} />} onPress={() => toggleChat(item.id)} />
+              <CheckRow on={draft.chats.includes(item.id)} name={item.name} meta={isGroupChat(item) ? t("Gruppo") : t("Personale")} face={<ThreadFace thread={{ ...item, online: false }} size={46} />} onPress={() => toggleChat(item.id)} />
             </View>
           )) : null}
         </Card>
-        <Cap>Chat escluse</Cap>
+        <Cap>{t("Chat escluse")}</Cap>
         <Card>
-          <ToggleCell first on={draft.noMuted} icon={BellOff} tone="red" label="Silenziate" onPress={() => patch({ noMuted: !draft.noMuted })} />
-          <ToggleCell on={draft.noRead} icon={CheckCheck} iconWeight="bold" tone="teal" label="Lette" onPress={() => patch({ noRead: !draft.noRead })} />
+          <ToggleCell first on={draft.noMuted} icon={BellOff} tone="red" label={t("Silenziate")} onPress={() => patch({ noMuted: !draft.noMuted })} />
+          <ToggleCell on={draft.noRead} icon={CheckCheck} iconWeight="bold" tone="teal" label={t("Lette")} onPress={() => patch({ noRead: !draft.noRead })} />
         </Card>
-        <Hint style={{ marginHorizontal: 30 }}>La cartella mostra le chat incluse, tolte quelle escluse.</Hint>
+        <Hint style={{ marginHorizontal: 30 }}>{t("La cartella mostra le chat incluse, tolte quelle escluse.")}</Hint>
         {!draft.fresh ? (
           <Card>
             <Pressable onPress={() => { tap(); store.setDmFolders(folders.filter((entry) => entry.id !== draft.id)); router.back(); }} style={({ pressed }) => [styles.cell, { justifyContent: "center" }, pressed && { backgroundColor: theme.fill }]}>
-              <T size={15.5} weight="500" color={theme.red}>Elimina cartella</T>
+              <T size={15.5} weight="500" color={theme.red}>{t("Elimina cartella")}</T>
             </Pressable>
           </Card>
         ) : null}

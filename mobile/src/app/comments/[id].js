@@ -7,6 +7,7 @@ import { useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
 import { T } from "../../ui/kit";
 import { findPost } from "../../ui/feedData";
+import { t } from "../../lib/i18n";
 import { CommentComposer, CommentRow, NoComments, useCommentLines, useComposerState, useKeyboardPad } from "../../ui/comments";
 
 // Comments sheet (web CommentsScreen): presented as a native page sheet.
@@ -18,7 +19,7 @@ export default function CommentsSheet() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.scheme === "dark" ? "#1c1c1e" : theme.bg }}>
       <View style={[styles.grab, { backgroundColor: theme.text3 }]} />
-      <T size={16} weight="700" style={[styles.title, { borderBottomColor: theme.line }]}>Commenti</T>
+      <T size={16} weight="700" style={[styles.title, { borderBottomColor: theme.line }]}>{t("Commenti")}</T>
       {post ? <Thread post={post} /> : <NoComments />}
     </View>
   );

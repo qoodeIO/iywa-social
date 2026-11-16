@@ -7,13 +7,14 @@ import { useStore } from "../lib/store";
 import { useLive } from "../live/LiveStore";
 import { House, Reels, Search, Send } from "./icons";
 import { T, tap } from "./kit";
+import { t, tk } from "../lib/i18n";
 
 export const TABS = [
-  { href: "/", icon: House, label: "Home" },
-  { href: "/search", icon: Search, label: "Cerca" },
-  { href: "/reels", icon: Reels, label: "Reel" },
-  { href: "/messages", icon: Send, label: "Messaggi" },
-  { href: "/profile", icon: null, label: "Profilo" },
+  { href: "/", icon: House, label: tk("Home") },
+  { href: "/search", icon: Search, label: tk("Cerca") },
+  { href: "/reels", icon: Reels, label: tk("Reel") },
+  { href: "/messages", icon: Send, label: tk("Messaggi") },
+  { href: "/profile", icon: null, label: tk("Profilo") },
 ];
 
 // Screens that take the whole phone: no tab bar.
@@ -48,7 +49,7 @@ export default function TabBar() {
         const on = current === tab.href;
         const Icon = tab.icon;
         return (
-          <Pressable key={tab.href} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{ selected: on }} style={styles.tab} onPress={() => goTab(tab.href, path)}>
+          <Pressable key={tab.href} accessibilityRole="tab" accessibilityLabel={t(tab.label)} accessibilityState={{ selected: on }} style={styles.tab} onPress={() => goTab(tab.href, path)}>
             {Icon ? (
               <Icon size={27} color={theme.text} weight={on ? "fill" : "regular"} />
             ) : (

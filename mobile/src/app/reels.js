@@ -9,6 +9,7 @@ import * as Linking from "expo-linking";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../lib/store";
+import { t } from "../lib/i18n";
 import { AVATAR, REELS, avatarFor, personByName } from "../data";
 import { tap } from "../ui/kit";
 import ReelSlide from "../ui/reels-slide";
@@ -89,14 +90,14 @@ export default function Reels() {
     else if (kind === "save") {
       const on = s.saves.includes(item.id);
       s.toggleSave(item.id);
-      say(on ? "Rimosso dai salvati" : "Salvato");
+      say(on ? t("Rimosso dai salvati") : t("Salvato"));
     } else if (kind === "follow") s.toggleFollow(item.name);
     else if (kind === "comments") setSheet("comments");
     else if (kind === "share") {
       setSentTo([]);
       setSheet("share");
     } else if (kind === "more") setSheet("more");
-    else if (kind === "audio") say(`♫ ${item.music ? item.music.title : item.audio || "Audio originale"}`);
+    else if (kind === "audio") say(`♫ ${item.music ? item.music.title : (item.audio ? t(item.audio) : t("Audio originale"))}`);
     else if (kind === "mute") {
       setMuted((on) => !on);
       setMuteHint(Date.now());
@@ -196,9 +197,9 @@ export default function Reels() {
           ListEmptyComponent={(
             <View style={[styles.empty, { height }]}>
               <View style={styles.emptyIcon}><SquarePlay size={30} color="#fff" /></View>
-              <Text style={styles.emptyTitle}>{feed === "following" ? "Nessun reel da chi segui" : "Ancora nessun reel"}</Text>
+              <Text style={styles.emptyTitle}>{feed === "following" ? t("Nessun reel da chi segui") : t("Ancora nessun reel")}</Text>
               <Pressable onPress={() => { tap(); openReelCamera(); }} style={({ pressed }) => [styles.primary, { opacity: pressed ? 0.7 : 1 }]}>
-                <Text style={styles.primaryText}>Crea un reel</Text>
+                <Text style={styles.primaryText}>{t("Crea un reel")}</Text>
               </Pressable>
             </View>
           )}
@@ -206,9 +207,9 @@ export default function Reels() {
       ) : null}
 
       <View pointerEvents={headHidden ? "none" : "box-none"} style={[styles.head, { top: insets.top + 4, opacity: headHidden ? 0 : 1 }]}>
-        <Text style={[styles.title, styles.shadow]}>Reels</Text>
+        <Text style={[styles.title, styles.shadow]}>{t("Reels")}</Text>
         <View style={styles.feeds}>
-          {[["foryou", "Per te"], ["following", "Seguiti"]].map(([id, label]) => (
+          {[["foryou", t("Per te")], ["following", t("Seguiti")]].map(([id, label]) => (
             <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: feed === id }} hitSlop={8} onPress={() => { tap(); setFeed(id); }}>
               <Text style={[styles.feedText, styles.shadow, { color: feed === id ? "#fff" : "rgba(255,255,255,0.65)" }]}>{label}</Text>
               {feed === id ? <View style={styles.feedLine} /> : null}
@@ -216,7 +217,7 @@ export default function Reels() {
           ))}
         </View>
         <View style={styles.headRight}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Crea reel" hitSlop={6} onPress={() => { tap(); openReelCamera(); }} style={({ pressed }) => [styles.cam, { opacity: pressed ? 0.6 : 1 }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Crea reel")} hitSlop={6} onPress={() => { tap(); openReelCamera(); }} style={({ pressed }) => [styles.cam, { opacity: pressed ? 0.6 : 1 }]}>
             <Camera size={26} color="#fff" />
           </Pressable>
         </View>
@@ -225,7 +226,7 @@ export default function Reels() {
       {muteHint ? <MuteHint key={muteHint} muted={muted} /> : null}
       <Toast text={toast} bottom={110} />
 
-      <DarkSheet open={sheet === "comments" && Boolean(reel)} clear keyboard height="60%" title="Commenti" onClose={() => setSheet(null)} bottomPad={10}>
+      <DarkSheet open={sheet === "comments" && Boolean(reel)} clear keyboard height="60%" title={t("Commenti")} onClose={() => setSheet(null)} bottomPad={10}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.notes} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {notes.length ? notes.map((item) => {
             const key = `${reel?.id}:${item.id}`;
@@ -234,18 +235,18 @@ export default function Reels() {
               <View key={item.id} style={styles.note}>
                 <Image source={{ uri: item.src || undefined }} style={styles.noteAvatar} contentFit="cover" transition={120} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.noteName}>{item.name}<Text style={styles.noteTime}>{"  "}{item.mine ? "ora" : "2 h"}</Text></Text>
+                  <Text style={styles.noteName}>{item.name}<Text style={styles.noteTime}>{"  "}{item.mine ? t("ora") : t("{n} h", { n: 2 })}</Text></Text>
                   <Text style={styles.noteText}>{item.text}</Text>
                   <Pressable hitSlop={6} onPress={() => setDraft(`@${item.name.split(" ")[0]} `)}>
-                    <Text style={styles.reply}>Rispondi</Text>
+                    <Text style={styles.reply}>{t("Rispondi")}</Text>
                   </Pressable>
                 </View>
-                <Pressable accessibilityLabel="Mi piace al commento" hitSlop={10} onPress={() => { tap(); store.toggleCommentLike?.(key); }} style={{ alignSelf: "center" }}>
+                <Pressable accessibilityLabel={t("Mi piace al commento")} hitSlop={10} onPress={() => { tap(); store.toggleCommentLike?.(key); }} style={{ alignSelf: "center" }}>
                   <Heart size={15} weight={on ? "fill" : "regular"} color={on ? "#ff3040" : "rgba(255,255,255,0.55)"} />
                 </Pressable>
               </View>
             );
-          }) : <Text style={styles.none}>Ancora nessun commento. Inizia tu.</Text>}
+          }) : <Text style={styles.none}>{t("Ancora nessun commento. Inizia tu.")}</Text>}
         </ScrollView>
         <View style={styles.emojiRow}>
           {REEL_EMOJI.map((char) => (
@@ -259,9 +260,9 @@ export default function Reels() {
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder={reel ? `Commenta per ${reel.name.split(" ")[0]}…` : ""}
+            placeholder={reel ? t("Commenta per {name}…", { name: reel.name.split(" ")[0] }) : ""}
             placeholderTextColor="rgba(255,255,255,0.5)"
-            accessibilityLabel="Aggiungi un commento"
+            accessibilityLabel={t("Aggiungi un commento")}
             style={styles.input}
             keyboardAppearance="dark"
             returnKeyType="send"
@@ -270,13 +271,13 @@ export default function Reels() {
           />
           {draft.trim() ? (
             <Pressable hitSlop={8} onPress={postComment}>
-              <Text style={styles.post}>Pubblica</Text>
+              <Text style={styles.post}>{t("Pubblica")}</Text>
             </Pressable>
           ) : null}
         </View>
       </DarkSheet>
 
-      <DarkSheet open={sheet === "share" && Boolean(reel)} title="Condividi" onClose={() => setSheet(null)}>
+      <DarkSheet open={sheet === "share" && Boolean(reel)} title={t("Condividi")} onClose={() => setSheet(null)}>
         {people.length ? (
           <View style={styles.people}>
             {people.map((chat) => {
@@ -292,34 +293,34 @@ export default function Reels() {
               );
             })}
           </View>
-        ) : <Text style={styles.none}>Ancora nessuno a cui inviarlo.</Text>}
+        ) : <Text style={styles.none}>{t("Ancora nessuno a cui inviarlo.")}</Text>}
         <View style={styles.shareRow}>
-          <ShareBtn icon={LinkIcon} label="Copia link" onPress={() => { Clipboard.setStringAsync(link).catch(() => {}); note("Link copiato"); }} />
-          <ShareBtn icon={SquarePlus} label="Aggiungi alla storia" onPress={() => {
-            store.publish({ id: `made-${Date.now()}`, kind: "story", image: reelPoster(reel), text: "", stickers: [{ type: "tag", name: reel.name, x: 50, y: 82, s: 1, r: 0 }], time: "Now", at: Date.now(), mine: true, src: store.profile.src || AVATAR, avatar: store.profile.src || AVATAR, name: "Tu" });
+          <ShareBtn icon={LinkIcon} label={t("Copia link")} onPress={() => { Clipboard.setStringAsync(link).catch(() => {}); note(t("Link copiato")); }} />
+          <ShareBtn icon={SquarePlus} label={t("Aggiungi alla storia")} onPress={() => {
+            store.publish({ id: `made-${Date.now()}`, kind: "story", image: reelPoster(reel), text: "", stickers: [{ type: "tag", name: reel.name, x: 50, y: 82, s: 1, r: 0 }], time: "Now", at: Date.now(), mine: true, src: store.profile.src || AVATAR, avatar: store.profile.src || AVATAR, name: t("Tu") });
             setSheet(null);
-            note("Aggiunto alla tua storia");
+            note(t("Aggiunto alla tua storia"));
           }} />
-          <ShareBtn icon={ArrowUpRight} label="Condividi su…" onPress={() => { Share.share({ title: reel.name, message: `${reel.caption || ""} ${link}`.trim(), url: link }).catch(() => {}); }} />
+          <ShareBtn icon={ArrowUpRight} label={t("Condividi su…")} onPress={() => { Share.share({ title: reel.name, message: `${reel.caption || ""} ${link}`.trim(), url: link }).catch(() => {}); }} />
         </View>
       </DarkSheet>
 
       <DarkSheet open={sheet === "more" && Boolean(reel)} onClose={() => setSheet(null)}>
         <View style={styles.speeds}>
-          <Text style={styles.speedLabel}>Velocità</Text>
+          <Text style={styles.speedLabel}>{t("Velocità")}</Text>
           {REEL_SPEEDS.map((value) => (
             <Pressable key={value} onPress={() => { tap(); setRate(value); }} style={[styles.speed, rate === value ? styles.speedOn : null]}>
               <Text style={[styles.speedText, { color: rate === value ? "#111" : "#fff" }]}>{value}×</Text>
             </Pressable>
           ))}
         </View>
-        <Line icon={Hash} label={captions ? "Nascondi sottotitoli" : "Mostra sottotitoli"} onPress={() => { setCaptions((value) => !value); setSheet(null); }} />
-        <Line icon={Bookmark} label={reel && store.saves.includes(reel.id) ? "Rimuovi dai salvati" : "Salva"} onPress={() => { store.toggleSave(reel.id); setSheet(null); }} />
-        <Line icon={EyeOff} label="Non mi interessa" onPress={() => { setHidden((prev) => [...prev, reel.id]); setSheet(null); note("Ne vedrai meno così"); }} />
+        <Line icon={Hash} label={captions ? t("Nascondi sottotitoli") : t("Mostra sottotitoli")} onPress={() => { setCaptions((value) => !value); setSheet(null); }} />
+        <Line icon={Bookmark} label={reel && store.saves.includes(reel.id) ? t("Rimuovi dai salvati") : t("Salva")} onPress={() => { store.toggleSave(reel.id); setSheet(null); }} />
+        <Line icon={EyeOff} label={t("Non mi interessa")} onPress={() => { setHidden((prev) => [...prev, reel.id]); setSheet(null); note(t("Ne vedrai meno così")); }} />
         {reel?.mine ? (
-          <Line icon={X} warn label="Elimina" onPress={() => { store.dropPost(reel.id); setSheet(null); }} />
+          <Line icon={X} warn label={t("Elimina")} onPress={() => { store.dropPost(reel.id); setSheet(null); }} />
         ) : (
-          <Line icon={Info} warn label="Segnala" onPress={() => { setSheet(null); note("Segnalato"); goNext(); }} />
+          <Line icon={Info} warn label={t("Segnala")} onPress={() => { setSheet(null); note(t("Segnalato")); goNext(); }} />
         )}
       </DarkSheet>
     </View>

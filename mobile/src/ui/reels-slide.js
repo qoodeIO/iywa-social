@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { AVATAR, personByHandle } from "../data";
 import { tap } from "./kit";
+import { t } from "../lib/i18n";
 import { Bookmark, Heart, MessageCircle, MoreHorizontal, Music, Pause, Play, Send, SoundOff, SoundOn } from "./reels-icons";
 import { clockLabel, ReelPlayer, reelClips, tally } from "./reels-kit";
 
@@ -219,7 +220,7 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
   });
 
   const caption = reel.caption || reel.text || "";
-  const music = reel.music ? `${reel.music.title} · ${reel.music.artist}` : `${reel.audio || "Audio originale"} · ${reel.name}`;
+  const music = reel.music ? `${reel.music.title} · ${reel.music.artist}` : `${reel.audio ? t(reel.audio) : t("Audio originale")} · ${reel.name}`;
   const poster = reel.src || reel.image;
   const handle = String(reel.handle || reel.name).replace(/^@/, "");
 
@@ -271,11 +272,11 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
       ) : null}
 
       <Animated.View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.rail, chromeStyle]}>
-        <RailAct icon={Heart} a11y="Mi piace" on={liked} liked={liked} label={showCounts ? tally(reel.likes || "0", liked) : null} onPress={() => { tap(); act("like", reel); }} />
-        <RailAct icon={MessageCircle} a11y="Commenti" label={showCounts ? reel.comments || "0" : null} onPress={() => act("comments", reel)} />
-        <RailAct icon={Send} a11y="Condividi" label={showCounts ? "Invia" : null} onPress={() => act("share", reel)} />
-        <RailAct icon={Bookmark} a11y="Salva" on={saved} onPress={() => { tap(); act("save", reel); }} />
-        <RailAct icon={MoreHorizontal} a11y="Altro" onPress={() => act("more", reel)} />
+        <RailAct icon={Heart} a11y={t("Mi piace")} on={liked} liked={liked} label={showCounts ? tally(reel.likes || "0", liked) : null} onPress={() => { tap(); act("like", reel); }} />
+        <RailAct icon={MessageCircle} a11y={t("Commenti")} label={showCounts ? reel.comments || "0" : null} onPress={() => act("comments", reel)} />
+        <RailAct icon={Send} a11y={t("Condividi")} label={showCounts ? t("Invia") : null} onPress={() => act("share", reel)} />
+        <RailAct icon={Bookmark} a11y={t("Salva")} on={saved} onPress={() => { tap(); act("save", reel); }} />
+        <RailAct icon={MoreHorizontal} a11y={t("Altro")} onPress={() => act("more", reel)} />
         <Disc src={reel.avatar || AVATAR} spinning={active && !paused} label={music} onPress={() => act("audio", reel)} />
       </Animated.View>
 
@@ -287,7 +288,7 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
           </Pressable>
           {!mine ? (
             <Pressable accessibilityRole="button" accessibilityState={{ selected: following }} onPress={() => { tap(); act("follow", reel); }} style={[styles.follow, following ? styles.followOn : null]}>
-              <Text style={styles.followText}>{following ? "Segui già" : "Segui"}</Text>
+              <Text style={styles.followText}>{following ? t("Segui già") : t("Segui")}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -304,7 +305,7 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
       </Animated.View>
 
       <Animated.View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.muteWrap, { top: top + 56 }, chromeStyle]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={muted ? "Attiva audio" : "Silenzia"} hitSlop={8} onPress={() => act("mute", reel)} style={styles.mute}>
+        <Pressable accessibilityRole="button" accessibilityLabel={muted ? t("Attiva audio") : t("Silenzia")} hitSlop={8} onPress={() => act("mute", reel)} style={styles.mute}>
           {muted ? <SoundOff size={16} weight="fill" color="#fff" /> : <SoundOn size={16} weight="fill" color="#fff" />}
         </Pressable>
       </Animated.View>

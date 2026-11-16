@@ -17,12 +17,13 @@ import { takeFolder } from "../live/chatBus";
 import { EmptyState, SheetRow, Spinner, ThreadFace, Toast, useChatTheme, useFlash } from "../ui/chat";
 import { Archive, Bell, BellOff, Check, CheckCheck, ClearIcon, Clock, Close, Folder, ImageIcon, MarkRead, MessageCircle, Mic, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Pin, Search, Sliders, SquarePen, Trash, Users, Verified, Video } from "../ui/chatIcons";
 import { Sheet, T, tap } from "../ui/kit";
+import { t, tk } from "../lib/i18n";
 
 const PREVIEW_ICONS = { image: ImageIcon, mic: Mic, video: Video, phone: Phone };
 const RECENT_CALLS = [
-  { id: "seed-adele", threadId: "t3", call: "video", from: "them", duration: 0, time: "Ieri" },
-  { id: "seed-leo", threadId: "t1", call: "voice", from: "me", duration: 184, time: "Lun" },
-  { id: "seed-marta", threadId: "t2", call: "voice", from: "them", duration: 46, time: "Dom" },
+  { id: "seed-adele", threadId: "t3", call: "video", from: "them", duration: 0, time: tk("Ieri") },
+  { id: "seed-leo", threadId: "t1", call: "voice", from: "me", duration: 184, time: tk("Lun") },
+  { id: "seed-marta", threadId: "t2", call: "voice", from: "them", duration: 46, time: tk("Dom") },
 ];
 const VERIFIED = new Set(PEOPLE.filter((person) => person.verified).map((person) => person.name));
 
@@ -99,7 +100,7 @@ export default function Messages() {
 
   function archiveIds(ids, on) {
     store.setDmFlags(ids, "archivedAt", on ? Date.now() : null);
-    flash(on ? (ids.length > 1 ? `${ids.length} chat archiviate` : "Chat archiviata") : "Riportata nelle chat", 2200);
+    flash(on ? (ids.length > 1 ? t("{n} chat archiviate", { n: ids.length }) : t("Chat archiviata")) : t("Riportata nelle chat"), 2200);
   }
 
   function readIds(ids) {
@@ -120,7 +121,7 @@ export default function Messages() {
     });
   }, []);
 
-  const tabs = [{ id: "all", name: "Tutte" }, ...folders, { id: "calls", name: "Chiamate" }];
+  const tabs = [{ id: "all", name: tk("Tutte") }, ...folders, { id: "calls", name: tk("Chiamate") }];
   const selectedIds = [...(selecting || [])];
   const activeTab = box === "calls" ? "calls" : activeFolder;
 
@@ -178,7 +179,7 @@ export default function Messages() {
           <Pressable onPress={() => { tap(); router.push("/chat/archive"); }} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}>
             <LinearGradient colors={["#b0b6bd", "#7d848c"]} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={styles.archiveFace}><Archive size={21} weight="fill" color="#fff" /></LinearGradient>
             <View style={[styles.body, { borderBottomColor: theme.line }]}>
-              <T size={15.5} weight="600" lines={1}>Chat archiviate</T>
+              <T size={15.5} weight="600" lines={1}>{t("Chat archiviate")}</T>
               <View style={styles.l2}>
                 <T size={14} color={theme.text2} lines={1} style={{ flex: 1 }}>{archived.map((item) => item.name.split(" ")[0]).join(", ")}</T>
                 {archived.some((item) => unreadOf(item)) ? <View style={[styles.badge, { backgroundColor: theme.text3 }]}><T size={12} weight="600" color="#fff">{archived.filter((item) => unreadOf(item)).length}</T></View> : null}
@@ -213,12 +214,12 @@ export default function Messages() {
         return (
           <EmptyState
             icon={needle ? Search : MessageCircle}
-            title={needle ? "Nessun risultato" : activeFolder !== "all" ? "Questa cartella è vuota" : "Nessun messaggio"}
-            text={needle ? "Nessuna chat con questo nome." : activeFolder !== "all" ? "Qui compaiono le chat che rispettano le regole della cartella." : "Inizia una chat con chi segui."}
+            title={needle ? t("Nessun risultato") : activeFolder !== "all" ? t("Questa cartella è vuota") : t("Nessun messaggio")}
+            text={needle ? t("Nessuna chat con questo nome.") : activeFolder !== "all" ? t("Qui compaiono le chat che rispettano le regole della cartella.") : t("Inizia una chat con chi segui.")}
           />
         );
       case "empty-calls":
-        return <EmptyState icon={Phone} title="Ancora nessuna chiamata" />;
+        return <EmptyState icon={Phone} title={t("Ancora nessuna chiamata")} />;
       default:
         return null;
     }
@@ -228,20 +229,20 @@ export default function Messages() {
     <View style={{ flex: 1, backgroundColor: theme.bg, paddingTop: insets.top }}>
       <View style={styles.head}>
         <Pressable onPress={() => { tap(); setSelecting((prev) => (prev ? null : new Set())); }} style={({ pressed }) => [styles.pill, { backgroundColor: selecting ? theme.blue : theme.fill, transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
-          <T size={16} weight={selecting ? "600" : "500"} color={selecting ? "#fff" : theme.text}>{selecting ? "Fine" : "Modifica"}</T>
+          <T size={16} weight={selecting ? "600" : "500"} color={selecting ? "#fff" : theme.text}>{selecting ? t("Fine") : t("Modifica")}</T>
         </Pressable>
         <View style={styles.title} pointerEvents="none">
           {selecting ? (
-            <T size={17} weight="700">{selectedIds.length ? `${selectedIds.length} selezionate` : "Seleziona chat"}</T>
+            <T size={17} weight="700">{selectedIds.length ? t("{n} selezionate", { n: selectedIds.length }) : t("Seleziona chat")}</T>
           ) : connecting ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Spinner color={theme.blue} size={18} /><T size={17} weight="700">Connessione…</T></View>
-          ) : <T size={17} weight="700">Chat</T>}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Spinner color={theme.blue} size={18} /><T size={17} weight="700">{t("Connessione…")}</T></View>
+          ) : <T size={17} weight="700">{t("Chat")}</T>}
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable accessibilityLabel="Nuovo gruppo" onPress={() => { tap(); router.push("/chat/group"); }} style={({ pressed }) => [styles.round, { backgroundColor: theme.fill, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+          <Pressable accessibilityLabel={t("Nuovo gruppo")} onPress={() => { tap(); router.push("/chat/group"); }} style={({ pressed }) => [styles.round, { backgroundColor: theme.fill, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
             <Users size={19} weight="bold" color={theme.text} />
           </Pressable>
-          <Pressable accessibilityLabel="Nuovo messaggio" onPress={() => { tap(); router.push("/chat/new"); }} style={({ pressed }) => [styles.round, { backgroundColor: theme.blue, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+          <Pressable accessibilityLabel={t("Nuovo messaggio")} onPress={() => { tap(); router.push("/chat/new"); }} style={({ pressed }) => [styles.round, { backgroundColor: theme.blue, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
             <SquarePen size={19} weight="bold" color="#fff" />
           </Pressable>
         </View>
@@ -262,14 +263,14 @@ export default function Messages() {
         <View style={[styles.actions, { borderTopColor: theme.line }]}>
           <BlurView intensity={60} tint={theme.dark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
           {[
-            { label: "Leggi", icon: MarkRead, run: () => { readIds(selectedIds); setSelecting(null); } },
-            { label: "Archivia", icon: Archive, run: () => { archiveIds(selectedIds, true); setSelecting(null); } },
-            { label: "Silenzia", icon: BellOff, run: () => { store.setDmFlags(selectedIds, "muted", true); setSelecting(null); } },
-            { label: "Elimina", icon: Trash, danger: true, run: () => { for (const id of selectedIds) { const item = threads.find((entry) => entry.id === id); if (item) hideThread(item); } setSelecting(null); } },
+            { label: tk("Leggi"), icon: MarkRead, run: () => { readIds(selectedIds); setSelecting(null); } },
+            { label: tk("Archivia"), icon: Archive, run: () => { archiveIds(selectedIds, true); setSelecting(null); } },
+            { label: tk("Silenzia"), icon: BellOff, run: () => { store.setDmFlags(selectedIds, "muted", true); setSelecting(null); } },
+            { label: tk("Elimina"), icon: Trash, danger: true, run: () => { for (const id of selectedIds) { const item = threads.find((entry) => entry.id === id); if (item) hideThread(item); } setSelecting(null); } },
           ].map((action) => (
             <Pressable key={action.label} disabled={!selectedIds.length} onPress={() => { tap(); action.run(); }} style={{ flex: 1, alignItems: "center", gap: 3, paddingVertical: 4, opacity: selectedIds.length ? 1 : 0.35 }}>
               <action.icon size={22} color={action.danger ? theme.red : theme.blue} />
-              <T size={12} weight="600" color={action.danger ? theme.red : theme.blue}>{action.label}</T>
+              <T size={12} weight="600" color={action.danger ? theme.red : theme.blue}>{t(action.label)}</T>
             </Pressable>
           ))}
         </View>
@@ -282,26 +283,26 @@ export default function Messages() {
               <ThreadFace thread={sheetItem} size={40} />
               <T size={15} weight="600" lines={1} style={{ flex: 1 }}>{sheetItem.name}</T>
             </View>
-            <SheetRow icon={Pin} label={flags[sheetItem.id]?.pinned ? "Rimuovi dai fissati" : "Fissa"} onPress={() => { store.setDmFlag(sheetItem.id, "pinned", !flags[sheetItem.id]?.pinned); setSheet(null); }} />
+            <SheetRow icon={Pin} label={flags[sheetItem.id]?.pinned ? t("Rimuovi dai fissati") : t("Fissa")} onPress={() => { store.setDmFlag(sheetItem.id, "pinned", !flags[sheetItem.id]?.pinned); setSheet(null); }} />
             {unreadOf(sheetItem) ? (
-              <SheetRow icon={MarkRead} label="Segna come letta" onPress={() => { readIds([sheetItem.id]); setSheet(null); }} />
+              <SheetRow icon={MarkRead} label={t("Segna come letta")} onPress={() => { readIds([sheetItem.id]); setSheet(null); }} />
             ) : !sheetItem.live ? (
-              <SheetRow icon={MessageCircle} label="Segna come da leggere" onPress={() => { store.markChatUnread(sheetItem.id); setSheet(null); }} />
+              <SheetRow icon={MessageCircle} label={t("Segna come da leggere")} onPress={() => { store.markChatUnread(sheetItem.id); setSheet(null); }} />
             ) : null}
-            <SheetRow icon={flags[sheetItem.id]?.muted ? Bell : BellOff} label={flags[sheetItem.id]?.muted ? "Riattiva notifiche" : "Silenzia"} onPress={() => { store.setDmFlag(sheetItem.id, "muted", !flags[sheetItem.id]?.muted); setSheet(null); }} />
-            <SheetRow icon={Archive} label={isArchived(sheetItem) ? "Ripristina" : "Archivia"} onPress={() => { archiveIds([sheetItem.id], !isArchived(sheetItem)); setSheet(null); }} />
+            <SheetRow icon={flags[sheetItem.id]?.muted ? Bell : BellOff} label={flags[sheetItem.id]?.muted ? t("Riattiva notifiche") : t("Silenzia")} onPress={() => { store.setDmFlag(sheetItem.id, "muted", !flags[sheetItem.id]?.muted); setSheet(null); }} />
+            <SheetRow icon={Archive} label={isArchived(sheetItem) ? t("Ripristina") : t("Archivia")} onPress={() => { archiveIds([sheetItem.id], !isArchived(sheetItem)); setSheet(null); }} />
             {folders.filter((entry) => !entry.people || !entry.groups).map((entry) => {
               const inside = (entry.chats || []).includes(sheetItem.id);
               return (
                 <SheetRow
                   key={entry.id}
                   icon={Folder}
-                  label={inside ? `Togli da «${entry.name}»` : `Aggiungi a «${entry.name}»`}
+                  label={inside ? t("Togli da «{name}»", { name: t(entry.name) }) : t("Aggiungi a «{name}»", { name: t(entry.name) })}
                   onPress={() => { store.setDmFolders(folders.map((item) => (item.id === entry.id ? { ...item, chats: inside ? item.chats.filter((value) => value !== sheetItem.id) : [...(item.chats || []), sheetItem.id] } : item))); setSheet(null); }}
                 />
               );
             })}
-            <SheetRow icon={Trash} danger label="Elimina" onPress={() => hideThread(sheetItem)} />
+            <SheetRow icon={Trash} danger label={t("Elimina")} onPress={() => hideThread(sheetItem)} />
           </View>
         ) : null}
       </Sheet>
@@ -327,11 +328,11 @@ function SearchBar({ value, onChange, focus, setFocus }) {
           onChangeText={onChange}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
-          placeholder="Cerca"
+          placeholder={t("Cerca")}
           placeholderTextColor={theme.text2}
           autoCorrect={false}
           returnKeyType="search"
-          accessibilityLabel="Cerca nei messaggi"
+          accessibilityLabel={t("Cerca nei messaggi")}
           style={[{ color: theme.text, fontSize: 16, paddingVertical: 0, height: "100%" }, active ? { flex: 1 } : { width: 56 }]}
         />
         {value ? <Pressable onPress={() => onChange("")} hitSlop={8}><ClearIcon size={17} weight="fill" color={theme.text3} /></Pressable> : null}
@@ -383,14 +384,14 @@ function FolderTabs({ tabs, active, counts, onPick, onEdit, onManage }) {
                 delayLongPress={520}
                 style={({ pressed }) => [styles.tab, pressed && { transform: [{ scale: 0.96 }] }]}
               >
-                <T size={14} weight="600" color={on ? theme.text : theme.text2} style={{ letterSpacing: -0.15 }}>{entry.name}</T>
+                <T size={14} weight="600" color={on ? theme.text : theme.text2} style={{ letterSpacing: -0.15 }}>{t(entry.name)}</T>
                 {count ? <View style={[styles.tabBadge, { backgroundColor: on ? theme.blue : theme.text3 }]}><T size={10.5} weight="700" color="#fff">{count}</T></View> : null}
               </Pressable>
             );
           })}
         </ScrollView>
       </View>
-      <Pressable accessibilityLabel="Modifica cartelle" onPress={() => { tap(); onManage(); }} style={({ pressed }) => [styles.tabsEdit, { backgroundColor: theme.fill, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+      <Pressable accessibilityLabel={t("Modifica cartelle")} onPress={() => { tap(); onManage(); }} style={({ pressed }) => [styles.tabsEdit, { backgroundColor: theme.fill, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
         <Sliders size={17} weight="bold" color={theme.text2} />
       </Pressable>
     </View>
@@ -406,15 +407,17 @@ export const InboxRow = memo(function InboxRow({ item, pinned, time, count, mute
   const group = isGroupChat(item);
   const last = item.messages?.[item.messages.length - 1];
   const solo = !group && last?.from === "me";
-  const text = room ? "Chiamata in corso · Tocca per entrare" : solo ? String(preview.text || "").replace(/^(Tu|You): /, "") : preview.text;
+  const mePrefix = t("Tu: {text}", { text: "" });
+  const raw = String(preview.text || "");
+  const text = room ? t("Chiamata in corso · Tocca per entrare") : solo ? (mePrefix && raw.startsWith(mePrefix) ? raw.slice(mePrefix.length) : raw.replace(/^(Tu|You): /, "")) : preview.text;
   const sender = group && !preview.typing && !room ? String(preview.text || "").match(/^([^:]{1,24}): /) : null;
   const PreviewIcon = room ? Video : preview.icon ? PREVIEW_ICONS[preview.icon] : null;
   const actions = [
-    { key: "mute", color: "#ff9500", icon: muted ? Bell : BellOff, label: muted ? "Riattiva" : "Silenzia", run: onMute },
-    { key: "delete", color: "#ff3b30", icon: Trash, label: "Elimina", run: onDelete },
+    { key: "mute", color: "#ff9500", icon: muted ? Bell : BellOff, label: muted ? t("Riattiva") : t("Silenzia"), run: onMute },
+    { key: "delete", color: "#ff3b30", icon: Trash, label: t("Elimina"), run: onDelete },
     onUnarchive
-      ? { key: "unarchive", color: "#8e8e93", icon: Archive, label: "Ripristina", run: onUnarchive }
-      : { key: "archive", color: "#8e8e93", icon: Archive, label: "Archivia", run: onArchive },
+      ? { key: "unarchive", color: "#8e8e93", icon: Archive, label: t("Ripristina"), run: onUnarchive }
+      : { key: "archive", color: "#8e8e93", icon: Archive, label: t("Archivia"), run: onArchive },
   ];
   const renderRight = () => (
     <View style={{ flexDirection: "row", width: ACTION_W * actions.length }}>
@@ -475,8 +478,8 @@ export const InboxRow = memo(function InboxRow({ item, pinned, time, count, mute
 function CallRow({ entry, onCall }) {
   const theme = useChatTheme();
   const missed = entry.from === "them" && !entry.duration;
-  const label = entry.call === "video" ? "Video" : "Vocale";
-  const way = entry.from === "me" ? "In uscita" : missed ? "Persa" : "In entrata";
+  const label = entry.call === "video" ? t("Video") : t("Vocale");
+  const way = entry.from === "me" ? t("In uscita") : missed ? t("Persa") : t("In entrata");
   const WayIcon = entry.from === "me" ? PhoneOutgoing : missed ? PhoneMissed : PhoneIncoming;
   return (
     <View style={[styles.row, { minHeight: 56 }]}>
@@ -485,12 +488,12 @@ function CallRow({ entry, onCall }) {
         <View style={styles.l1}>
           <T size={15.5} weight="600" lines={1} color={missed ? theme.red : theme.text} style={{ flexShrink: 1 }}>{entry.thread.name}</T>
           <View style={{ flex: 1 }} />
-          <T size={13} color={theme.text2}>{entry.time}</T>
+          <T size={13} color={theme.text2}>{t(entry.time)}</T>
         </View>
         <View style={styles.l2}>
           <WayIcon size={14} weight="bold" color={missed ? theme.red : theme.text3} />
           <T size={14} color={theme.text2} lines={1} style={{ flex: 1 }}>{way} · {label}{entry.duration ? ` · ${callStamp(entry.duration)}` : ""}</T>
-          <Pressable accessibilityLabel={entry.call === "video" ? "Videochiamata" : "Chiama"} hitSlop={8} onPress={() => { tap(); onCall(); }} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center", marginTop: -14 }}>
+          <Pressable accessibilityLabel={entry.call === "video" ? t("Videochiamata") : t("Chiama")} hitSlop={8} onPress={() => { tap(); onCall(); }} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center", marginTop: -14 }}>
             {entry.call === "video" ? <Video size={20} weight="fill" color={theme.blue} /> : <Phone size={20} weight="fill" color={theme.blue} />}
           </Pressable>
         </View>

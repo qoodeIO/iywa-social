@@ -13,6 +13,7 @@ import { At, Bookmark, Comment, Feather, Heart, More, Plus, Send } from "./icons
 import { ChecksGlyph, PlayGlyph, ReelGlyph, UserGlyph } from "./feedIcons";
 import { Name, Sheet, T, tap } from "./kit";
 import { SHARE_BASE, commentCount, shown, tally } from "./feedData";
+import { t } from "../lib/i18n";
 
 const W = Dimensions.get("window").width;
 
@@ -174,13 +175,13 @@ export function StoryRail() {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
       <View style={styles.story}>
-        <Pressable accessibilityLabel="La tua storia" onPress={() => { tap(); router.push(yours ? `/story/${yours.id}` : STORY_CAMERA); }}>
+        <Pressable accessibilityLabel={t("La tua storia")} onPress={() => { tap(); router.push(yours ? `/story/${yours.id}` : STORY_CAMERA); }}>
           <StoryRing src={store.profile.src || AVATAR} total={yours?.frames.length || 1} seen={yours ? watched(yours) : 0} tone={yours ? (yoursSeen ? "seen" : yours.frames.some((frame) => frame.close) ? "close" : "live") : "empty"} />
         </Pressable>
-        <Pressable accessibilityLabel="Nuova storia" hitSlop={6} onPress={() => { tap(); router.push(STORY_CAMERA); }} style={[styles.storyPlus, { backgroundColor: theme.blue, borderColor: theme.bg }]}>
+        <Pressable accessibilityLabel={t("Nuova storia")} hitSlop={6} onPress={() => { tap(); router.push(STORY_CAMERA); }} style={[styles.storyPlus, { backgroundColor: theme.blue, borderColor: theme.bg }]}>
           <Plus size={12} weight="bold" color="#fff" />
         </Pressable>
-        <T size={12} color={theme.text2} lines={1}>La tua storia</T>
+        <T size={12} color={theme.text2} lines={1}>{t("La tua storia")}</T>
       </View>
       {rest.map((deck) => {
         const seenCount = watched(deck);
@@ -314,7 +315,7 @@ function PostMedia({ post, kind, images, onSingle, onDouble, onSlide, burst }) {
           ))}
         </ScrollView>
       ) : (
-        <Pressable onPress={press} accessibilityLabel={kind === "reel" ? `${playing ? "Pausa" : "Riproduci"} reel, ${post.name}` : `Apri post di ${post.name}`}>
+        <Pressable onPress={press} accessibilityLabel={kind === "reel" ? (playing ? t("Pausa reel, {name}", { name: post.name }) : t("Riproduci reel, {name}", { name: post.name })) : t("Apri post di {name}", { name: post.name })}>
           <Filtered src={images[0]} filter={post.filter} style={{ width: W, height }} />
         </Pressable>
       )}
@@ -340,7 +341,7 @@ function PostMedia({ post, kind, images, onSingle, onDouble, onSlide, burst }) {
               ))}
             </View>
           ) : null}
-          <Pressable accessibilityLabel="Persone taggate" hitSlop={8} onPress={() => { tap(); setShowTags((value) => !value); }} style={[styles.tagBtn, showTags && { backgroundColor: "#fff" }]}>
+          <Pressable accessibilityLabel={t("Persone taggate")} hitSlop={8} onPress={() => { tap(); setShowTags((value) => !value); }} style={[styles.tagBtn, showTags && { backgroundColor: "#fff" }]}>
             <UserGlyph size={15} weight="fill" color={showTags ? "#000" : "#fff"} />
           </Pressable>
         </>
@@ -357,8 +358,8 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
   const kind = post.kind === "reel" || post.type === "reel" ? "reel" : post.kind === "tweet" || post.type === "tweet" || !post.image ? "tweet" : "post";
   const images = Array.isArray(post.images) && post.images.length ? post.images : [post.image];
   const comments = commentCount(post, extraComments);
-  const time = post.time === "Now" ? "Adesso" : post.time;
-  const sub = kind === "reel" ? post.audio || "Audio originale" : String(post.place || post.handle || "");
+  const time = post.time === "Now" ? t("Adesso") : typeof post.time === "string" ? t(post.time) : post.time;
+  const sub = kind === "reel" ? (post.audio ? t(post.audio) : t("Audio originale")) : String(post.place || post.handle || "");
   const openAuthor = () => (mine ? router.push("/profile") : openPerson(post.name));
   const doubleLike = useCallback(() => { actions.doubleLike(post.id); setBurst(Date.now()); }, [actions, post.id]);
   const open = useCallback(() => (onOpen ? onOpen(post) : actions.open(post)), [actions, onOpen, post]);
@@ -379,10 +380,10 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
         </Pressable>
         {!mine && canFollow && !following ? (
           <Pressable onPress={() => actions.follow(post.name)} style={({ pressed }) => [styles.followLink, { backgroundColor: theme.btn, opacity: pressed ? 0.7 : 1 }]}>
-            <T size={13.5} weight="600">Segui</T>
+            <T size={13.5} weight="600">{t("Segui")}</T>
           </Pressable>
         ) : null}
-        <Pressable accessibilityLabel="Altro" hitSlop={8} onPress={() => { tap(); actions.menu(post, mine); }} style={styles.more}>
+        <Pressable accessibilityLabel={t("Altro")} hitSlop={8} onPress={() => { tap(); actions.menu(post, mine); }} style={styles.more}>
           <More size={22} weight="bold" color={theme.text} />
         </Pressable>
       </View>
@@ -394,25 +395,25 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
       )}
 
       <View style={styles.actions}>
-        <Pressable accessibilityLabel="Mi piace" accessibilityState={{ selected: liked }} onPress={() => actions.like(post.id)} style={styles.act}>
+        <Pressable accessibilityLabel={t("Mi piace")} accessibilityState={{ selected: liked }} onPress={() => actions.like(post.id)} style={styles.act}>
           <Heart size={25} weight={liked ? "fill" : "regular"} color={liked ? theme.red : theme.text} />
         </Pressable>
-        <Pressable accessibilityLabel="Commenta" onPress={() => actions.comment(post)} style={styles.act}>
+        <Pressable accessibilityLabel={t("Commenta")} onPress={() => actions.comment(post)} style={styles.act}>
           <Comment size={25} color={theme.text} />
         </Pressable>
-        <Pressable accessibilityLabel="Condividi" onPress={() => actions.share(post)} style={styles.act}>
+        <Pressable accessibilityLabel={t("Condividi")} onPress={() => actions.share(post)} style={styles.act}>
           <Send size={24} color={theme.text} />
         </Pressable>
         <View style={styles.dots} pointerEvents="none">
           {images.length > 1 && kind !== "tweet" ? images.map((src, index) => <View key={`${index}-${src}`} style={[styles.dot, { backgroundColor: index === slide ? theme.blue : theme.text3 }]} />) : null}
         </View>
-        <Pressable accessibilityLabel="Salva" accessibilityState={{ selected: saved }} onPress={() => actions.save(post.id)} style={styles.act}>
+        <Pressable accessibilityLabel={t("Salva")} accessibilityState={{ selected: saved }} onPress={() => actions.save(post.id)} style={styles.act}>
           <Bookmark size={25} weight={saved ? "fill" : "regular"} color={theme.text} />
         </Pressable>
       </View>
 
       <View style={styles.meta}>
-        {showCounts && !post.hideLikes ? <T size={14} weight="600">{tally(post.likes || "0", liked)} Mi piace</T> : null}
+        {showCounts && !post.hideLikes ? <T size={14} weight="600">{t("{n} Mi piace", { n: tally(post.likes || "0", liked) })}</T> : null}
         {post.tags?.length ? (
           <View style={styles.tagged}>
             <At size={14} color={theme.text2} />
@@ -428,7 +429,7 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
         ) : null}
         {comments > 0 ? (
           <Pressable onPress={() => actions.comment(post)} style={{ marginTop: 4 }}>
-            <T size={14} color={theme.text2}>Mostra tutti i {comments} commenti</T>
+            <T size={14} color={theme.text2}>{t("Mostra tutti i {n} commenti", { n: comments })}</T>
           </Pressable>
         ) : null}
         {time ? <T size={12} color={theme.text2} style={{ marginTop: 4 }}>{time}</T> : null}
@@ -477,13 +478,13 @@ export function PostMenu({ target, onClose, onDeleted }) {
   const rows = [];
   if (post) {
     if (mine) {
-      if (target.archivable ?? (inLibrary || post.mine)) rows.push({ label: store.archived?.includes(post.id) ? "Mostra nel profilo" : "Archivia", run: () => store.toggleArchive(post.id) });
-      if (inLibrary) rows.push({ label: "Elimina", danger: true, run: () => { store.dropPost(post.id); onDeleted?.(post.id); } });
+      if (target.archivable ?? (inLibrary || post.mine)) rows.push({ label: store.archived?.includes(post.id) ? t("Mostra nel profilo") : t("Archivia"), run: () => store.toggleArchive(post.id) });
+      if (inLibrary) rows.push({ label: t("Elimina"), danger: true, run: () => { store.dropPost(post.id); onDeleted?.(post.id); } });
     } else {
-      rows.push({ label: saved ? "Rimuovi dai salvati" : "Salva", run: () => store.toggleSave(post.id) });
-      if (canFollow) rows.push({ label: following ? "Non seguire più" : "Segui", run: () => store.toggleFollow(post.name) });
+      rows.push({ label: saved ? t("Rimuovi dai salvati") : t("Salva"), run: () => store.toggleSave(post.id) });
+      if (canFollow) rows.push({ label: following ? t("Non seguire più") : t("Segui"), run: () => store.toggleFollow(post.name) });
     }
-    rows.push({ label: "Condividi", run: () => setTimeout(() => router.push(`/share/${encodeURIComponent(post.id)}`), 260) });
+    rows.push({ label: t("Condividi"), run: () => setTimeout(() => router.push(`/share/${encodeURIComponent(post.id)}`), 260) });
   }
   return (
     <Sheet open={Boolean(post)} onClose={onClose}>
@@ -514,7 +515,7 @@ export const SuggestRail = memo(function SuggestRail({ people, follows, onFollow
   const theme = useTheme();
   return (
     <View style={[styles.suggest, { borderColor: theme.line }]}>
-      <T size={15} weight="600" style={styles.suggestTitle}>Persone che potresti conoscere</T>
+      <T size={15} weight="600" style={styles.suggestTitle}>{t("Persone che potresti conoscere")}</T>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestRail}>
         {people.map((person) => {
           const on = follows.includes(person.name);
@@ -525,7 +526,7 @@ export const SuggestRail = memo(function SuggestRail({ people, follows, onFollow
               <T size={13.5} weight="600" lines={1}>{person.name}</T>
               <T size={12} color={theme.text2} lines={1}>{person.meta}</T>
               <Pressable onPress={() => onFollow(person.name)} style={({ pressed }) => [styles.suggestBtn, { backgroundColor: on ? theme.btn : theme.blue, opacity: pressed ? 0.75 : 1 }]}>
-                <T size={14} weight="600" color={on ? theme.text : "#fff"}>{on ? "Segui già" : "Segui"}</T>
+                <T size={14} weight="600" color={on ? theme.text : "#fff"}>{on ? t("Segui già") : t("Segui")}</T>
               </Pressable>
             </Pressable>
           );
@@ -538,7 +539,7 @@ export const SuggestRail = memo(function SuggestRail({ people, follows, onFollow
 const ReelCard = memo(function ReelCard({ reel, on, onToggle }) {
   const theme = useTheme();
   return (
-    <Pressable onPress={() => onToggle(reel.id)} accessibilityLabel={`${on ? "Pausa" : "Riproduci"} reel, ${reel.name}`} style={[styles.reelCard, { backgroundColor: theme.fill }]}>
+    <Pressable onPress={() => onToggle(reel.id)} accessibilityLabel={on ? t("Pausa reel, {name}", { name: reel.name }) : t("Riproduci reel, {name}", { name: reel.name })} style={[styles.reelCard, { backgroundColor: theme.fill }]}>
       <Image source={{ uri: reel.src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={reel.src} />
       <LinearGradient colors={["transparent", "rgba(0,0,0,0.45)"]} style={[StyleSheet.absoluteFill, { top: "50%" }]} />
       <View style={styles.reelViews}><PlayGlyph size={12} weight="fill" color="#fff" /><T size={12.5} weight="600" color="#fff">{reel.likes}</T></View>
@@ -553,7 +554,7 @@ export const ReelsRail = memo(function ReelsRail({ prefs }) {
   const toggle = useCallback((id) => { tap(); setPlaying((value) => (value === id ? null : id)); }, []);
   return (
     <View style={[styles.suggest, { borderColor: theme.line }]}>
-      <T size={15} weight="600" style={styles.suggestTitle}>Reels</T>
+      <T size={15} weight="600" style={styles.suggestTitle}>{t("Reels")}</T>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestRail}>
         {REELS.filter((reel) => shown(prefs, reel)).map((reel) => <ReelCard key={reel.id} reel={reel} on={playing === reel.id} onToggle={toggle} />)}
       </ScrollView>
@@ -567,9 +568,9 @@ export function FeaturedHead({ onAll }) {
     <View style={[styles.featuredHead, { borderTopColor: theme.line }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Feather size={16} weight="fill" color={theme.text} />
-        <T size={15} weight="700">Pensieri per te</T>
+        <T size={15} weight="700">{t("Pensieri per te")}</T>
       </View>
-      <Pressable hitSlop={8} onPress={onAll}><T size={14} weight="600" color={theme.blue}>Vedi tutti</T></Pressable>
+      <Pressable hitSlop={8} onPress={onAll}><T size={14} weight="600" color={theme.blue}>{t("Vedi tutti")}</T></Pressable>
     </View>
   );
 }
@@ -582,8 +583,8 @@ export function FeedFooter({ done }) {
       <LinearGradient colors={["#ffb800", "#ff2d55", "#c013d1"]} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} style={styles.caughtRing}>
         <View style={[styles.caughtInner, { backgroundColor: theme.bg }]}><ChecksGlyph size={30} color={theme.text} /></View>
       </LinearGradient>
-      <T size={17} weight="600">Sei aggiornato</T>
-      <T size={14} color={theme.text2}>Hai visto tutti i nuovi post</T>
+      <T size={17} weight="600">{t("Sei aggiornato")}</T>
+      <T size={14} color={theme.text2}>{t("Hai visto tutti i nuovi post")}</T>
     </View>
   );
 }
@@ -595,7 +596,7 @@ export function Spinner({ size = 22 }) {
     v.value = withRepeat(withTiming(360, { duration: 800, easing: Easing.linear }), -1);
   }, [v]);
   const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${v.value}deg` }] }));
-  return <Animated.View accessibilityLabel="Caricamento" style={[{ width: size, height: size, borderRadius: size / 2, borderWidth: 2.5, borderColor: theme.text3, borderTopColor: theme.text2 }, style]} />;
+  return <Animated.View accessibilityLabel={t("Caricamento")} style={[{ width: size, height: size, borderRadius: size / 2, borderWidth: 2.5, borderColor: theme.text3, borderTopColor: theme.text2 }, style]} />;
 }
 
 const styles = StyleSheet.create({

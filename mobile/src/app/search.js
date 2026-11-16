@@ -12,10 +12,11 @@ import { CITIES, SEARCH_PEOPLE, explorePool, hashtagsOf, openGridItem } from "..
 import { Bag, ChevronLeft, Hash, MapPin, Search as SearchIcon, Verified, X } from "../ui/icons-profile";
 import { Btn, T, tap } from "../ui/kit";
 import { ExploreBlock, ExploreGrid, IgEmpty, PeekCard, SlideTabs, toBlocks } from "../ui/profile-kit";
+import { t, tk } from "../lib/i18n";
 
 const CARD = (Dimensions.get("window").width - INSET * 2 - 10) / 2;
 
-const TABS = [["top", "Per te"], ["accounts", "Account"], ["shop", "Shop"], ["tags", "Tag"], ["places", "Luoghi"]];
+const TABS = [["top", tk("Per te")], ["accounts", tk("Account")], ["shop", tk("Shop")], ["tags", tk("Tag")], ["places", tk("Luoghi")]];
 
 export default function Search() {
   const theme = useTheme();
@@ -141,10 +142,10 @@ export default function Search() {
               <T size={14} weight="600" lines={1} style={{ flexShrink: 1 }}>{person.handle}</T>
               {person.verified ? <Verified size={14} weight="fill" color={theme.blue} /> : null}
             </View>
-            <T size={14} color={theme.text2} lines={1}>{person.name} · {friend ? `Seguito da ${friend.handle}` : `${compact(person.followers)} follower`}</T>
+            <T size={14} color={theme.text2} lines={1}>{person.name} · {friend ? t("Seguito da {handle}", { handle: friend.handle }) : t("{n} follower", { n: compact(person.followers) })}</T>
           </View>
         </Pressable>
-        {big ? <Btn title={on ? "Segui già" : "Segui"} kind={on ? "gray" : "primary"} height={30} style={{ paddingHorizontal: 16 }} onPress={() => store.toggleFollow(person.name)} /> : null}
+        {big ? <Btn title={on ? t("Segui già") : t("Segui")} kind={on ? "gray" : "primary"} height={30} style={{ paddingHorizontal: 16 }} onPress={() => store.toggleFollow(person.name)} /> : null}
       </View>
     );
   };
@@ -182,17 +183,17 @@ export default function Search() {
           )}
           <View style={{ alignItems: "flex-start", gap: 3, flex: 1 }}>
             <T size={20} weight="700" style={{ letterSpacing: -0.4 }}>{scope.type === "tag" ? `#${scope.value}` : scope.value}</T>
-            <T size={14} color={theme.text2}>{matches.length} post</T>
+            <T size={14} color={theme.text2}>{t("{n} post", { n: matches.length })}</T>
             {scope.type === "tag" ? (
-              <Btn title={followTag ? "Segui già" : "Segui"} kind={followTag ? "gray" : "primary"} height={30} style={{ marginTop: 6, paddingHorizontal: 26 }} onPress={() => store.toggleFollow(`#${scope.value}`)} />
-            ) : <T size={13} color={theme.text2}>Italia</T>}
+              <Btn title={followTag ? t("Segui già") : t("Segui")} kind={followTag ? "gray" : "primary"} height={30} style={{ marginTop: 6, paddingHorizontal: 26 }} onPress={() => store.toggleFollow(`#${scope.value}`)} />
+            ) : <T size={13} color={theme.text2}>{t("Italia")}</T>}
           </View>
         </View>
         <View style={[styles.scopeTabs, { borderBottomColor: theme.line }]}>
-          <View style={[styles.scopeTab, { borderBottomWidth: 1, borderBottomColor: theme.text }]}><T size={14} weight="600">Più popolari</T></View>
-          <Pressable style={styles.scopeTab} onPress={() => setSeed((value) => value + 1)}><T size={14} weight="600" color={theme.text2}>Recenti</T></Pressable>
+          <View style={[styles.scopeTab, { borderBottomWidth: 1, borderBottomColor: theme.text }]}><T size={14} weight="600">{t("Più popolari")}</T></View>
+          <Pressable style={styles.scopeTab} onPress={() => setSeed((value) => value + 1)}><T size={14} weight="600" color={theme.text2}>{t("Recenti")}</T></Pressable>
         </View>
-        {matches.length ? <ExploreGrid posts={matches} onOpen={openPost} onPeek={setPeeked} limit={60} /> : <IgEmpty icon={Hash} title="Ancora nessun post" />}
+        {matches.length ? <ExploreGrid posts={matches} onOpen={openPost} onPeek={setPeeked} limit={60} /> : <IgEmpty icon={Hash} title={t("Ancora nessun post")} />}
       </ScrollView>
     );
   } else if (searching && !needle) {
@@ -202,8 +203,8 @@ export default function Search() {
         {recents.length ? (
           <>
             <View style={styles.head}>
-              <T size={16} weight="700">Recenti</T>
-              <Pressable hitSlop={8} onPress={() => { tap(); store.forgetSearch(); }}><T size={14} weight="600" color={theme.blue}>Cancella tutto</T></Pressable>
+              <T size={16} weight="700">{t("Recenti")}</T>
+              <Pressable hitSlop={8} onPress={() => { tap(); store.forgetSearch(); }}><T size={14} weight="600" color={theme.blue}>{t("Cancella tutto")}</T></Pressable>
             </View>
             {recents.map((entry) => (
               <View key={entry.key} style={styles.row}>
@@ -217,15 +218,15 @@ export default function Search() {
                   )}
                   <View style={{ flex: 1, gap: 1 }}>
                     <T size={14} weight="600" lines={1}>{entry.type === "tag" ? `#${entry.label}` : entry.label}</T>
-                    {entry.meta ? <T size={14} color={theme.text2} lines={1}>{entry.meta}</T> : entry.type === "place" ? <T size={14} color={theme.text2}>Luogo</T> : null}
+                    {entry.meta ? <T size={14} color={theme.text2} lines={1}>{entry.meta}</T> : entry.type === "place" ? <T size={14} color={theme.text2}>{t("Luogo")}</T> : null}
                   </View>
                 </Pressable>
-                <Pressable accessibilityLabel="Rimuovi" hitSlop={6} style={styles.x} onPress={() => store.forgetSearch(entry.key)}><X size={18} color={theme.text2} /></Pressable>
+                <Pressable accessibilityLabel={t("Rimuovi")} hitSlop={6} style={styles.x} onPress={() => store.forgetSearch(entry.key)}><X size={18} color={theme.text2} /></Pressable>
               </View>
             ))}
           </>
         ) : null}
-        <View style={styles.head}><T size={16} weight="700">Suggeriti per te</T></View>
+        <View style={styles.head}><T size={16} weight="700">{t("Suggeriti per te")}</T></View>
         {people.filter((person) => !follows.includes(person.name)).slice(0, 6).map((person) => accountRow(person, true))}
       </ScrollView>
     );
@@ -234,14 +235,14 @@ export default function Search() {
     const none = !accountHits.length && !tagHits.length && !placeHits.length && !postHits.length && !productHits.length;
     overlay = (
       <View style={{ flex: 1 }}>
-        <SlideTabs tabs={TABS.map(([id, label]) => ({ key: id, label }))} active={tab} onChange={setTab} height={42} style={{ marginBottom: 6 }} />
+        <SlideTabs tabs={TABS.map(([id, label]) => ({ key: id, label: t(label) }))} active={tab} onChange={setTab} height={42} style={{ marginBottom: 6 }} />
         <ScrollView key={key} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 30 }}>
-          {none ? <IgEmpty icon={SearchIcon} title={`Nessun risultato per «${query.trim()}»`} text="Prova un altro nome, luogo o tag." /> : null}
+          {none ? <IgEmpty icon={SearchIcon} title={t("Nessun risultato per «{query}»", { query: query.trim() })} text={t("Prova un altro nome, luogo o tag.")} /> : null}
           {key === "top" ? (
             <>
               {accountHits.slice(0, 3).map((person) => accountRow(person))}
-              {tagHits.slice(0, 2).map(([tag, count]) => line(tag, Hash, `#${tag}`, `${count} post`, () => openScope({ type: "tag", value: tag })))}
-              {placeHits.slice(0, 1).map((city) => line(city, MapPin, city, `${placeCount(city)} post`, () => openScope({ type: "place", value: city })))}
+              {tagHits.slice(0, 2).map(([tag, count]) => line(tag, Hash, `#${tag}`, t("{n} post", { n: count }), () => openScope({ type: "tag", value: tag })))}
+              {placeHits.slice(0, 1).map((city) => line(city, MapPin, city, t("{n} post", { n: placeCount(city) }), () => openScope({ type: "place", value: city })))}
               {postHits.length ? <View style={{ marginTop: 10 }}><ExploreGrid posts={postHits} onOpen={openPost} onPeek={setPeeked} limit={30} /></View> : null}
             </>
           ) : null}
@@ -257,10 +258,10 @@ export default function Search() {
                   </Pressable>
                 ))}
               </View>
-            ) : <IgEmpty icon={Bag} title="Nessun prodotto" />
+            ) : <IgEmpty icon={Bag} title={t("Nessun prodotto")} />
           ) : null}
-          {key === "tags" ? tagHits.map(([tag, count]) => line(tag, Hash, `#${tag}`, `${count} post`, () => openScope({ type: "tag", value: tag }))) : null}
-          {key === "places" ? placeHits.map((city) => line(city, MapPin, city, `${placeCount(city)} post · Italia`, () => openScope({ type: "place", value: city }))) : null}
+          {key === "tags" ? tagHits.map(([tag, count]) => line(tag, Hash, `#${tag}`, t("{n} post", { n: count }), () => openScope({ type: "tag", value: tag }))) : null}
+          {key === "places" ? placeHits.map((city) => line(city, MapPin, city, t("{n} post · Italia", { n: placeCount(city) }), () => openScope({ type: "place", value: city }))) : null}
         </ScrollView>
       </View>
     );
@@ -272,7 +273,7 @@ export default function Search() {
         const on = topic === item;
         return (
           <Pressable key={item} onPress={() => { tap(); pickTopic(item); }} style={({ pressed }) => [styles.topic, { borderColor: on ? theme.text : theme.line, backgroundColor: on ? theme.text : "transparent", transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-            <T size={14} weight="600" color={on ? theme.bg : theme.text}>{item === "all" ? "Per te" : item}</T>
+            <T size={14} weight="600" color={on ? theme.bg : theme.text}>{item === "all" ? t("Per te") : t(item)}</T>
           </Pressable>
         );
       })}
@@ -332,7 +333,7 @@ function SearchBar({ inputRef, value, scope, searching, onBack, onChange, onFocu
   return (
     <View style={styles.bar}>
       {scope ? (
-        <Pressable accessibilityLabel="Indietro" hitSlop={8} onPress={onBack} style={{ marginLeft: -6, width: 28, height: 36, alignItems: "center", justifyContent: "center" }}>
+        <Pressable accessibilityLabel={t("Indietro")} hitSlop={8} onPress={onBack} style={{ marginLeft: -6, width: 28, height: 36, alignItems: "center", justifyContent: "center" }}>
           <ChevronLeft size={24} weight="bold" color={theme.text} />
         </Pressable>
       ) : null}
@@ -344,23 +345,23 @@ function SearchBar({ inputRef, value, scope, searching, onBack, onChange, onFocu
           onChangeText={onChange}
           onFocus={onFocus}
           onSubmitEditing={onSubmit}
-          placeholder="Cerca"
+          placeholder={t("Cerca")}
           placeholderTextColor={theme.text2}
-          accessibilityLabel="Cerca persone, tag o luoghi"
+          accessibilityLabel={t("Cerca persone, tag o luoghi")}
           returnKeyType="search"
           autoCorrect={false}
           autoCapitalize="none"
           style={{ flex: 1, height: "100%", color: theme.text, fontSize: 15 }}
         />
         {value && !scope ? (
-          <Pressable accessibilityLabel="Cancella" hitSlop={8} onPress={onClear} style={[styles.clear, { backgroundColor: theme.text3 }]}>
+          <Pressable accessibilityLabel={t("Cancella")} hitSlop={8} onPress={onClear} style={[styles.clear, { backgroundColor: theme.text3 }]}>
             <X size={10} weight="bold" color={theme.bg} />
           </Pressable>
         ) : null}
       </View>
       <Animated.View style={{ overflow: "hidden", maxWidth: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 80] }), marginLeft: anim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }), opacity: anim }}>
         <Pressable onPress={onCancel} hitSlop={6} disabled={!show}>
-          <T size={15} weight="500" lines={1}>Annulla</T>
+          <T size={15} weight="500" lines={1}>{t("Annulla")}</T>
         </Pressable>
       </Animated.View>
     </View>

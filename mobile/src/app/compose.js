@@ -6,6 +6,7 @@ import { useStore } from "../lib/store";
 import { Camera, Hash, ImageIcon, MapPin } from "../ui/icons";
 import { Avatar, Btn, T, tap } from "../ui/kit";
 import ThoughtComposer from "../ui/thought-composer";
+import { t } from "../lib/i18n";
 
 const LIMIT = 500;
 
@@ -31,8 +32,8 @@ export default function Compose() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.head, { borderBottomColor: theme.line }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}><T size={16}>Annulla</T></Pressable>
-        <T size={16} weight="700">{kind === "story" ? "Nuova storia" : "Nuovo pensiero"}</T>
+        <Pressable onPress={() => router.back()} hitSlop={8}><T size={16}>{t("Annulla")}</T></Pressable>
+        <T size={16} weight="700">{kind === "story" ? t("Nuova storia") : t("Nuovo pensiero")}</T>
         <View style={{ width: 60 }} />
       </View>
       {kind === "story" ? (
@@ -43,7 +44,7 @@ export default function Compose() {
             <Avatar src={store.profile.src} size={40} />
             <View style={{ flex: 1, gap: 4 }}>
               <T size={15} weight="700">{handle}</T>
-              <TextInput autoFocus multiline value={text} onChangeText={(value) => setText(value.slice(0, LIMIT))} placeholder="Cosa c'è di nuovo?" placeholderTextColor={theme.text2} style={{ color: theme.text, fontSize: 16, minHeight: 120, textAlignVertical: "top" }} />
+              <TextInput autoFocus multiline value={text} onChangeText={(value) => setText(value.slice(0, LIMIT))} placeholder={t("Cosa c'è di nuovo?")} placeholderTextColor={theme.text2} style={{ color: theme.text, fontSize: 16, minHeight: 120, textAlignVertical: "top" }} />
               <View style={{ flexDirection: "row", gap: 18, marginTop: 8 }}>
                 <ImageIcon size={22} color={theme.text2} />
                 <Hash size={22} color={theme.text2} />
@@ -56,7 +57,7 @@ export default function Compose() {
       {kind !== "story" ? (
         <View style={[styles.foot, { borderTopColor: theme.line }]}>
           <T size={13} color={left < 40 ? theme.red : theme.text2}>{left}</T>
-          <Btn title="Pubblica" kind="primary" disabled={!text.trim()} onPress={publish} height={36} />
+          <Btn title={t("Pubblica")} kind="primary" disabled={!text.trim()} onPress={publish} height={36} />
         </View>
       ) : null}
     </KeyboardAvoidingView>

@@ -16,6 +16,7 @@ import { Filtered, MentionSuggest, STORY_CAMERA } from "../ui/feed";
 import { DEMO_GALLERY, POST_FILTERS, STORY_PLACES } from "../ui/feedData";
 import { publishPost, showToast } from "../ui/feedEcho";
 import { keepAll } from "../lib/media-store";
+import { t } from "../lib/i18n";
 
 const W = Dimensions.get("window").width;
 const CELL = (W - 6) / 4;
@@ -97,7 +98,7 @@ export default function CreateScreen() {
       thread: [],
     };
     publishPost(store, item);
-    showToast({ text: "Post condiviso", src: item.image });
+    showToast({ text: t("Post condiviso"), src: item.image });
     if (router.canDismiss()) router.dismissAll();
     router.replace("/");
   }
@@ -107,18 +108,18 @@ export default function CreateScreen() {
     if (step === "pick") router.back();
     else setStep(step === "details" ? "edit" : "pick");
   };
-  const title = step === "edit" ? "Modifica" : "Nuovo post";
+  const title = step === "edit" ? t("Modifica") : t("Nuovo post");
   const stageH = aspect === "1:1" ? W : Math.round(W * 1.25);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg, paddingTop: insets.top }}>
       <View style={styles.head}>
-        <Pressable accessibilityLabel={step === "pick" ? "Chiudi" : "Indietro"} hitSlop={8} onPress={back} style={styles.headBtn}>
+        <Pressable accessibilityLabel={step === "pick" ? t("Chiudi") : t("Indietro")} hitSlop={8} onPress={back} style={styles.headBtn}>
           {step === "pick" ? <Close size={26} color={theme.text} /> : <ChevronLeft size={26} weight="bold" color={theme.text} />}
         </Pressable>
         <T size={16} weight="700">{title}</T>
         <Pressable hitSlop={8} disabled={!picked.length} onPress={() => { tap(); if (step === "details") publish(); else setStep(step === "pick" ? "edit" : "details"); }} style={[styles.headBtn, { alignItems: "flex-end", opacity: picked.length ? 1 : 0.4 }]}>
-          <T size={15} weight="700" color={theme.blue}>{step === "details" ? "Condividi" : "Avanti"}</T>
+          <T size={15} weight="700" color={theme.blue}>{step === "details" ? t("Condividi") : t("Avanti")}</T>
         </Pressable>
       </View>
 
@@ -132,19 +133,19 @@ export default function CreateScreen() {
                 <View pointerEvents="none" style={[styles.mask, { right: 0 }]} />
               </>
             ) : null}
-            <Pressable accessibilityLabel="Formato" onPress={() => { tap(); setAspect((value) => (value === "4:5" ? "1:1" : "4:5")); }} style={[styles.chip, { left: 10 }]}>
+            <Pressable accessibilityLabel={t("Formato")} onPress={() => { tap(); setAspect((value) => (value === "4:5" ? "1:1" : "4:5")); }} style={[styles.chip, { left: 10 }]}>
               <T size={12.5} weight="700" color="#fff">{aspect}</T>
             </Pressable>
             <Pressable onPress={() => { tap(); setMulti((value) => !value); if (multi) setPicked([focus]); }} style={[styles.chip, { right: 10 }, multi && { backgroundColor: "#0095f6" }]}>
               <CopyGlyph size={15} weight={multi ? "fill" : "regular"} color="#fff" />
-              <T size={12.5} weight="700" color="#fff">Seleziona più</T>
+              <T size={12.5} weight="700" color="#fff">{t("Seleziona più")}</T>
             </Pressable>
           </View>
           <View style={styles.bar}>
-            <T size={16} weight="700">Recenti</T>
+            <T size={16} weight="700">{t("Recenti")}</T>
             <Pressable onPress={fromDevice} style={({ pressed }) => [styles.device, { backgroundColor: theme.fill, opacity: pressed ? 0.7 : 1 }]}>
               <ImageIcon size={16} color={theme.text} />
-              <T size={13} weight="600">Libreria</T>
+              <T size={13} weight="600">{t("Libreria")}</T>
             </Pressable>
           </View>
           <FlashList
@@ -154,7 +155,7 @@ export default function CreateScreen() {
             extraData={`${focus}|${picked.join(",")}|${multi}`}
             contentContainerStyle={{ paddingBottom: insets.bottom + 70 }}
             renderItem={({ item, index }) => (item === "camera" ? (
-              <Pressable accessibilityLabel="Fotocamera" onPress={() => { tap(); router.replace(STORY_CAMERA); }} style={[styles.cell, styles.cam, { backgroundColor: theme.fill }]}>
+              <Pressable accessibilityLabel={t("Fotocamera")} onPress={() => { tap(); router.replace(STORY_CAMERA); }} style={[styles.cell, styles.cam, { backgroundColor: theme.fill }]}>
                 <Camera size={28} color={theme.text} />
               </Pressable>
             ) : (
@@ -162,10 +163,10 @@ export default function CreateScreen() {
             ))}
           />
           <View style={[styles.modes, { bottom: insets.bottom + 14 }]}>
-            <View style={[styles.mode, styles.modeOn]}><T size={12.5} weight="700" color="#fff" style={styles.modeText}>POST</T></View>
-            <Pressable onPress={() => { tap(); router.replace(STORY_CAMERA); }} style={styles.mode}><T size={12.5} weight="700" color="rgba(255,255,255,0.7)" style={styles.modeText}>STORIA</T></Pressable>
-            <Pressable onPress={() => { tap(); router.replace("/reel-camera"); }} style={styles.mode}><T size={12.5} weight="700" color="rgba(255,255,255,0.7)" style={styles.modeText}>REEL</T></Pressable>
-            <Pressable onPress={() => { tap(); router.replace("/compose"); }} style={styles.mode}><T size={12.5} weight="700" color="rgba(255,255,255,0.7)" style={styles.modeText}>PENSIERO</T></Pressable>
+            <View style={[styles.mode, styles.modeOn]}><T size={12.5} weight="700" color="#fff" style={styles.modeText}>{t("POST")}</T></View>
+            <Pressable onPress={() => { tap(); router.replace(STORY_CAMERA); }} style={styles.mode}><T size={12.5} weight="700" color="rgba(255,255,255,0.7)" style={styles.modeText}>{t("STORIA")}</T></Pressable>
+            <Pressable onPress={() => { tap(); router.replace("/reel-camera"); }} style={styles.mode}><T size={12.5} weight="700" color="rgba(255,255,255,0.7)" style={styles.modeText}>{t("REEL")}</T></Pressable>
+            <Pressable onPress={() => { tap(); router.replace("/compose"); }} style={styles.mode}><T size={12.5} weight="700" color="rgba(255,255,255,0.7)" style={styles.modeText}>{t("PENSIERO")}</T></Pressable>
           </View>
         </View>
       ) : null}
@@ -187,7 +188,7 @@ export default function CreateScreen() {
               const on = filter === item.id;
               return (
                 <Pressable key={item.id} onPress={() => { tap(); setFilter(item.id); }} style={styles.filterBtn}>
-                  <T size={12} weight="600" color={on ? theme.text : theme.text2}>{item.label}</T>
+                  <T size={12} weight="600" color={on ? theme.text : theme.text2}>{t(item.label)}</T>
                   <View style={[styles.filterThumbWrap, on && { borderColor: theme.text, transform: [{ scale: 1.06 }] }]}>
                     <Filtered src={picked[slide] || picked[0]} filter={item.id} style={styles.filterThumb} transition={0} />
                   </View>
@@ -242,14 +243,14 @@ function Details({ picked, filter, caption, setCaption, tags, setTags, place, se
             maxLength={2200}
             multiline
             autoFocus
-            placeholder="Scrivi una didascalia… usa @ per menzionare e # per i tag"
+            placeholder={t("Scrivi una didascalia… usa @ per menzionare e # per i tag")}
             placeholderTextColor={theme.text2}
-            accessibilityLabel="Didascalia"
+            accessibilityLabel={t("Didascalia")}
             style={[styles.caption, { color: theme.text }]}
           />
         </View>
         <MentionSuggest value={caption} onPick={setCaption} style={{ marginHorizontal: INSET, marginTop: 8 }} />
-        <Row icon={At} label="Tagga persone" value={tagLabel} onPress={() => setPanel(panel === "tag" ? null : "tag")} />
+        <Row icon={At} label={t("Tagga persone")} value={tagLabel} onPress={() => setPanel(panel === "tag" ? null : "tag")} />
         {panel === "tag" ? (
           <Animated.View entering={FadeIn.duration(200)} style={[styles.pick, { borderBottomColor: theme.line }]}>
             {CONTACTS.map((person) => {
@@ -266,7 +267,7 @@ function Details({ picked, filter, caption, setCaption, tags, setTags, place, se
             })}
           </Animated.View>
         ) : null}
-        <Row icon={MapPin} label="Aggiungi luogo" value={place} onPress={() => setPanel(panel === "place" ? null : "place")} />
+        <Row icon={MapPin} label={t("Aggiungi luogo")} value={place} onPress={() => setPanel(panel === "place" ? null : "place")} />
         {panel === "place" ? (
           <Animated.View entering={FadeIn.duration(200)} style={[styles.places, { borderBottomColor: theme.line }]}>
             {STORY_PLACES.map((name) => {
@@ -279,11 +280,11 @@ function Details({ picked, filter, caption, setCaption, tags, setTags, place, se
             })}
           </Animated.View>
         ) : null}
-        <T size={13} weight="600" color={theme.text2} style={styles.sub}>Impostazioni avanzate</T>
-        <Row icon={Heart} label="Nascondi il numero di Mi piace" toggle={hideLikes} onPress={() => setHideLikes((value) => !value)} />
-        <Row icon={Comment} label="Disattiva i commenti" toggle={noComments} onPress={() => setNoComments((value) => !value)} />
+        <T size={13} weight="600" color={theme.text2} style={styles.sub}>{t("Impostazioni avanzate")}</T>
+        <Row icon={Heart} label={t("Nascondi il numero di Mi piace")} toggle={hideLikes} onPress={() => setHideLikes((value) => !value)} />
+        <Row icon={Comment} label={t("Disattiva i commenti")} toggle={noComments} onPress={() => setNoComments((value) => !value)} />
         <Pressable onPress={onShare} style={({ pressed }) => [styles.share, { backgroundColor: theme.blue, opacity: pressed ? 0.8 : 1 }]}>
-          <T size={15} weight="700" color="#fff">Condividi</T>
+          <T size={15} weight="700" color="#fff">{t("Condividi")}</T>
         </Pressable>
       </ScrollView>
     </Animated.View>

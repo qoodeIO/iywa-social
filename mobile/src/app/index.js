@@ -12,6 +12,7 @@ import { T, tap } from "../ui/kit";
 import { FeaturedHead, FeedFooter, FeedPost, PostMenu, ReelsRail, StoryRail, SuggestRail, usePostActions } from "../ui/feed";
 import { ComposePrompt, ThoughtEntry, buildThoughts, composeThought } from "../ui/thoughts";
 import { HOME_HERO, personHidden, shown } from "../ui/feedData";
+import { t } from "../lib/i18n";
 
 const BAR = 48;
 const THOUGHTS_ROUTE = "/thoughts";
@@ -126,10 +127,10 @@ export default function Home() {
         <View style={styles.topInner}>
           <T size={27} weight="700" style={{ letterSpacing: -1.6 }}>Space</T>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <TopIcon icon={Bag} label="Shop" badge={cartCount} onPress={() => router.push("/shop")} />
-            <TopIcon icon={Feather} label="Pensieri" onPress={() => router.push(THOUGHTS_ROUTE)} />
-            <TopIcon icon={PlusSquare} label="Crea" onPress={() => router.push("/create")} />
-            <TopIcon icon={Heart} label="Notifiche" dot={unread} onPress={() => router.push("/notifications")} />
+            <TopIcon icon={Bag} label={t("Shop")} badge={cartCount} onPress={() => router.push("/shop")} />
+            <TopIcon icon={Feather} label={t("Pensieri")} onPress={() => router.push(THOUGHTS_ROUTE)} />
+            <TopIcon icon={PlusSquare} label={t("Crea")} onPress={() => router.push("/create")} />
+            <TopIcon icon={Heart} label={t("Notifiche")} dot={unread} onPress={() => router.push("/notifications")} />
           </View>
         </View>
       </Animated.View>

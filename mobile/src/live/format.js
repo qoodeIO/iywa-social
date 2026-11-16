@@ -1,4 +1,5 @@
 // Pure helpers shared by Messages, chat and calls. Ported from src/App.jsx (Italian copy).
+import { localeTag, t, tk } from "../lib/i18n";
 
 export const AVATAR_TONES = [["#ff6a5c", "#7a1d3b"], ["#ffb347", "#8a3b12"], ["#5ad1c9", "#1d4f7a"], ["#9b8cff", "#3b1d7a"], ["#7ee08a", "#1d5a3b"], ["#ff8fc7", "#7a1d5a"]];
 export const GROUP_TONES = [
@@ -8,28 +9,28 @@ export const GROUP_TONES = [
 export const DM_REACTIONS = ["❤️", "😂", "😮", "😢", "😡", "👍"];
 export const VOICE_WAVE = [28, 46, 72, 40, 90, 58, 34, 76, 96, 48, 36, 82, 62, 42, 88, 54, 32, 70, 44, 84, 38, 66, 50, 78, 34, 60];
 export const WALLPAPERS = [
-  { id: "sky", it: "Cielo" },
-  { id: "night", it: "Notte" },
-  { id: "peach", it: "Pesca" },
-  { id: "mint", it: "Menta" },
-  { id: "lavender", it: "Lavanda" },
-  { id: "plain", it: "Semplice" },
+  { id: "sky", it: tk("Cielo") },
+  { id: "night", it: tk("Notte") },
+  { id: "peach", it: tk("Pesca") },
+  { id: "mint", it: tk("Menta") },
+  { id: "lavender", it: tk("Lavanda") },
+  { id: "plain", it: tk("Semplice") },
 ];
 export const CALL_NOTICES = {
-  denied: "Consenti microfono e fotocamera per chiamare",
-  "no-device": "Nessun microfono o fotocamera",
-  "in-use": "Fotocamera o microfono già in uso",
-  insecure: "Le chiamate richiedono HTTPS",
-  media: "Impossibile aprire il microfono",
-  offline: "Sei offline",
-  "no-answer": "Nessuna risposta",
-  declined: "Chiamata rifiutata",
-  busy: "Occupato in un'altra chiamata",
-  full: "Chiamata piena (6 persone)",
-  ended: "La chiamata è terminata",
-  moved: "Risposto su un altro dispositivo",
-  failed: "Chiamata non riuscita",
-  "missed-while-busy": "Chiamata persa mentre eri occupato",
+  denied: tk("Consenti microfono e fotocamera per chiamare"),
+  "no-device": tk("Nessun microfono o fotocamera"),
+  "in-use": tk("Fotocamera o microfono già in uso"),
+  insecure: tk("Le chiamate richiedono HTTPS"),
+  media: tk("Impossibile aprire il microfono"),
+  offline: tk("Sei offline"),
+  "no-answer": tk("Nessuna risposta"),
+  declined: tk("Chiamata rifiutata"),
+  busy: tk("Occupato in un'altra chiamata"),
+  full: tk("Chiamata piena (6 persone)"),
+  ended: tk("La chiamata è terminata"),
+  moved: tk("Risposto su un altro dispositivo"),
+  failed: tk("Chiamata non riuscita"),
+  "missed-while-busy": tk("Chiamata persa mentre eri occupato"),
 };
 
 export function initialsOf(name) {
@@ -64,17 +65,22 @@ export function clockNow() {
   return clockOf(Date.now());
 }
 
-const WEEKDAYS = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
-const MONTHS = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+// Short weekday ("lun") and day + month ("5 gen") in the current language.
+function weekdayOf(date) {
+  return new Intl.DateTimeFormat(localeTag(), { weekday: "short" }).format(date).replace(/\.$/, "");
+}
+function dayMonthOf(date, withYear) {
+  return new Intl.DateTimeFormat(localeTag(), withYear ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" }).format(date);
+}
 
 export function dayOf(ms) {
   const date = new Date(ms);
   const today = new Date();
   const start = (value) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
   const diff = Math.round((start(today) - start(date)) / 86_400_000);
-  if (diff === 0) return "Oggi";
-  if (diff === 1) return "Ieri";
-  return `${date.getDate()} ${MONTHS[date.getMonth()]}${diff > 300 ? ` ${date.getFullYear()}` : ""}`;
+  if (diff === 0) return t("Oggi");
+  if (diff === 1) return t("Ieri");
+  return dayMonthOf(date, diff > 300);
 }
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -84,7 +90,7 @@ export function listTime(ms) {
   const diff = Math.round((Date.now() - ms) / 86_400_000);
   const date = new Date(ms);
   if (date.toDateString() === new Date().toDateString()) return clockOf(ms);
-  if (diff < 7) return WEEKDAYS[date.getDay()];
+  if (diff < 7) return weekdayOf(date);
   return `${date.getDate()}/${date.getMonth() + 1}`;
 }
 
@@ -103,39 +109,39 @@ export function demoTime(label) {
   if (days) {
     const at = new Date(Date.now() - Number(days[1]) * 86_400_000);
     if (Number(days[1]) < 7) {
-      const text = WEEKDAYS[at.getDay()];
+      const text = weekdayOf(at);
       return text.charAt(0).toUpperCase() + text.slice(1);
     }
     return `${pad(at.getDate())}/${pad(at.getMonth() + 1)}`;
   }
-  return value;
+  return t(value);
 }
 
 export function seenText(person) {
   if (!person) return "";
-  if (person.online) return "online";
-  if (!person.lastSeen) return "offline";
+  if (person.online) return t("online");
+  if (!person.lastSeen) return t("offline");
   const sameDay = new Date(person.lastSeen).toDateString() === new Date().toDateString();
-  const when = sameDay ? clockOf(person.lastSeen) : `${dayOf(person.lastSeen).toLowerCase()} ${clockOf(person.lastSeen)}`;
-  return `ultimo accesso ${sameDay ? "alle " : ""}${when}`;
+  if (sameDay) return t("ultimo accesso alle {time}", { time: clockOf(person.lastSeen) });
+  return t("ultimo accesso {day} {time}", { day: dayOf(person.lastSeen).toLowerCase(), time: clockOf(person.lastSeen) });
 }
 
 export function nameIn(conv, handle, me) {
-  if (handle === me) return "Tu";
+  if (handle === me) return t("Tu");
   return conv?.members.find((member) => member.handle === handle)?.name || handle;
 }
 
 export function systemText(message, conv, me) {
   const mine = message.by === me;
   const by = nameIn(conv, message.by, me);
-  const who = message.who === me ? "te" : nameIn(conv, message.who, me);
+  const who = message.who === me ? t("te") : nameIn(conv, message.who, me);
   switch (message.event) {
-    case "created": return mine ? `Hai creato il gruppo «${message.title}».` : `${by} ha creato il gruppo «${message.title}».`;
-    case "renamed": return mine ? `Hai rinominato il gruppo in «${message.title}».` : `${by} ha rinominato il gruppo in «${message.title}».`;
-    case "added": return mine ? `Hai aggiunto ${who}.` : `${by} ha aggiunto ${who}.`;
-    case "removed": return mine ? `Hai rimosso ${who}.` : `${by} ha rimosso ${who}.`;
-    case "left": return message.who === me ? "Hai lasciato il gruppo." : `${who} ha lasciato il gruppo.`;
-    case "pinned": return mine ? "Hai fissato un messaggio." : `${by} ha fissato un messaggio.`;
+    case "created": return mine ? t("Hai creato il gruppo «{name}».", { name: message.title }) : t("{by} ha creato il gruppo «{name}».", { by, name: message.title });
+    case "renamed": return mine ? t("Hai rinominato il gruppo in «{name}».", { name: message.title }) : t("{by} ha rinominato il gruppo in «{name}».", { by, name: message.title });
+    case "added": return mine ? t("Hai aggiunto {who}.", { who }) : t("{by} ha aggiunto {who}.", { by, who });
+    case "removed": return mine ? t("Hai rimosso {who}.", { who }) : t("{by} ha rimosso {who}.", { by, who });
+    case "left": return message.who === me ? t("Hai lasciato il gruppo.") : t("{who} ha lasciato il gruppo.", { who });
+    case "pinned": return mine ? t("Hai fissato un messaggio.") : t("{by} ha fissato un messaggio.", { by });
     default: return message.text || "";
   }
 }
@@ -147,7 +153,7 @@ export function liveThread(conv, me, typing) {
   const other = others[0];
   const face = (member) => ({ handle: member.handle, name: member.name, meta: seenText(member), src: member.src || "", online: member.online });
   const members = group ? others.map(face) : undefined;
-  const name = group ? conv.title : (other?.name || "Chat");
+  const name = group ? conv.title : (other?.name || t("Chat"));
   const typers = Object.keys(typing?.[conv.id] || {}).filter((handle) => handle !== me).map((handle) => nameIn(conv, handle, me).split(" ")[0]);
   const messages = conv.messages.map((message) => ({
     ...message,
@@ -179,7 +185,7 @@ export function liveThread(conv, me, typing) {
     unread: conv.unread || 0,
     time: listTime(conv.updatedAt),
     updatedAt: conv.updatedAt || 0,
-    preview: last ? "" : "Nuova chat",
+    preview: last ? "" : t("Nuova chat"),
   };
 }
 
@@ -230,38 +236,39 @@ export function textHidden(prefs, text) {
 
 export function defaultFolders() {
   return [
-    { id: "unread", name: "Non lette", unreadOnly: true, chats: [] },
-    { id: "people", name: "Personali", people: true, chats: [] },
-    { id: "groups", name: "Gruppi", groups: true, chats: [] },
+    { id: "unread", name: tk("Non lette"), unreadOnly: true, chats: [] },
+    { id: "people", name: tk("Personali"), people: true, chats: [] },
+    { id: "groups", name: tk("Gruppi"), groups: true, chats: [] },
   ];
 }
 
 export function folderSummary(entry) {
   const parts = [];
-  if (entry.people) parts.push("chat personali");
-  if (entry.groups) parts.push("gruppi");
-  if (entry.chats?.length) parts.push(`${entry.chats.length} chat`);
-  if (entry.unreadOnly) parts.push("nuovi messaggi da tutte le chat");
-  let text = parts.join(", ") || "vuota";
-  if (entry.noMuted) text += ", senza silenziate";
-  if (entry.noRead && !entry.unreadOnly) text += ", solo non lette";
+  if (entry.people) parts.push(t("chat personali"));
+  if (entry.groups) parts.push(t("gruppi"));
+  if (entry.chats?.length) parts.push(t("{n} chat", { n: entry.chats.length }));
+  if (entry.unreadOnly) parts.push(t("nuovi messaggi da tutte le chat"));
+  let text = parts.join(", ") || t("vuota");
+  if (entry.noMuted) text += `, ${t("senza silenziate")}`;
+  if (entry.noRead && !entry.unreadOnly) text += `, ${t("solo non lette")}`;
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export function previewOf(item) {
-  if (item.typing?.length) return { icon: null, text: "sta scrivendo…", typing: true };
+  if (item.typing?.length) return { icon: null, text: t("sta scrivendo…"), typing: true };
   const last = item.messages?.[item.messages.length - 1];
-  const mine = last?.from === "me" ? "Tu: " : item.group && last?.from === "them" ? `${String(last.senderName || "").split(" ")[0]}: ` : "";
-  if (!last) return { icon: null, text: item.preview || "Nuova chat" };
+  const sender = item.group && last?.from === "them" ? String(last.senderName || "").split(" ")[0] : "";
+  const lead = (text) => (last?.from === "me" ? t("Tu: {text}", { text }) : sender ? `${sender}: ${text}` : text);
+  if (!last) return { icon: null, text: item.preview || t("Nuova chat") };
   if (last.from === "system") return { icon: null, text: last.text || item.preview };
-  if (last.kind === "image") return { icon: "image", text: `${mine}${last.text || "Foto"}` };
-  if (last.kind === "audio") return { icon: "mic", text: `${mine}Messaggio vocale` };
+  if (last.kind === "image") return { icon: "image", text: lead(last.text || t("Foto")) };
+  if (last.kind === "audio") return { icon: "mic", text: lead(t("Messaggio vocale")) };
   if (last.kind === "call") {
-    const label = last.call === "video" ? "Videochiamata" : "Chiamata";
-    const detail = last.duration ? callStamp(last.duration) : last.from === "me" ? "Nessuna risposta" : "Persa";
+    const label = last.call === "video" ? t("Videochiamata") : t("Chiamata");
+    const detail = last.duration ? callStamp(last.duration) : last.from === "me" ? t("Nessuna risposta") : t("Persa");
     return { icon: last.call === "video" ? "video" : "phone", text: `${label} · ${detail}` };
   }
-  return { icon: null, text: `${mine}${last.text || item.preview}` };
+  return { icon: null, text: lead(last.text || item.preview) };
 }
 
 export function isGroupChat(item) {

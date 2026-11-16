@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { AVATAR, CONTACTS } from "../../data";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
 import { GROUP_TONES, personHidden, seenText } from "../../live/format";
 import { fileToDataUrl, keepFile } from "../../live/media";
@@ -80,14 +81,14 @@ export default function NewGroup() {
       if (pickedLive.length) {
         const url = await fileToDataUrl(uri, "image/jpeg");
         if (!url || url.length > 160_000) {
-          flash("Foto troppo grande per un gruppo live.", 2200);
+          flash(t("Foto troppo grande per un gruppo live."), 2200);
           return;
         }
         setPhoto(url);
       } else setPhoto(keepFile(uri, "group"));
       setPhotoPick(false);
     } catch {
-      flash("Impossibile aprire la foto.");
+      flash(t("Impossibile aprire la foto."));
     }
   }
 
@@ -100,7 +101,7 @@ export default function NewGroup() {
       setBusy(true);
       live.createGroup(title, pickedLive, { about: about.trim(), photo })
         .then((id) => router.replace(`/chat/${id}`))
-        .catch(() => flash("Impossibile creare il gruppo. Riprova.", 2200))
+        .catch(() => flash(t("Impossibile creare il gruppo. Riprova."), 2200))
         .finally(() => setBusy(false));
       return;
     }
@@ -118,7 +119,7 @@ export default function NewGroup() {
       members,
       photo: photo || `tone:${Math.floor(Math.random() * GROUP_TONES.length)}`,
       about: about.trim(),
-      messages: [{ from: "system", text: `Hai creato il gruppo «${title}».` }],
+      messages: [{ from: "system", text: t("Hai creato il gruppo «{name}».", { name: title }) }],
     });
     router.replace(`/chat/${id}`);
   }
@@ -132,11 +133,11 @@ export default function NewGroup() {
   if (step === "members") {
     return (
       <View style={{ flex: 1, backgroundColor: theme.bg }}>
-        <SubHead title="Nuovo gruppo" meta={picked.size ? `${picked.size} di 199 selezionati` : "Aggiungi membri"} />
+        <SubHead title={t("Nuovo gruppo")} meta={picked.size ? t("{n} di 199 selezionati", { n: picked.size }) : t("Aggiungi membri")} />
         <View style={[styles.chips, { borderBottomColor: theme.line }]}>
           {chips.map((chip) => (
             <Animated.View key={chip.key} entering={ZoomIn.springify().damping(14)}>
-              <Pressable accessibilityLabel={`Rimuovi ${chip.name}`} onPress={() => { tap(); toggle(chip.key); }} style={[styles.chip, { backgroundColor: theme.dark ? "#0a2236" : "#e3f2fe" }]}>
+              <Pressable accessibilityLabel={t("Rimuovi {name}", { name: chip.name })} onPress={() => { tap(); toggle(chip.key); }} style={[styles.chip, { backgroundColor: theme.dark ? "#0a2236" : "#e3f2fe" }]}>
                 <Face src={chip.src} name={chip.name} size={32} />
                 <T size={14} weight="600">{chip.label}</T>
                 <Close size={12} weight="bold" color={theme.text2} />
@@ -147,21 +148,21 @@ export default function NewGroup() {
             value={query}
             onChangeText={setQuery}
             onKeyPress={(event) => { if (event.nativeEvent.key === "Backspace" && !query && chips.length) toggle(chips[chips.length - 1].key); }}
-            placeholder={chips.length ? "" : "Chi vuoi aggiungere?"}
+            placeholder={chips.length ? "" : t("Chi vuoi aggiungere?")}
             placeholderTextColor={theme.text3}
             autoCorrect={false}
             autoCapitalize="none"
-            accessibilityLabel="Cerca persone per il gruppo"
+            accessibilityLabel={t("Cerca persone per il gruppo")}
             style={{ flexGrow: 1, minWidth: 120, height: 32, color: theme.text, fontSize: 15 }}
           />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 110 }}>
           {online ? (
             <>
-              <T size={13} weight="700" color={theme.text2} style={styles.letter}>Su Space</T>
+              <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("Su Space")}</T>
               {livePeople.length ? livePeople.map((person) => (
-                <CheckRow key={person.handle} on={picked.has(`live:${person.handle}`)} src={person.src} name={person.name} online={person.online} meta={person.online ? "online" : seenText(person)} metaBlue={person.online} onPress={() => toggle(`live:${person.handle}`)} />
-              )) : <Hint>{needle ? "Nessuno con questo nome su Space." : "Ancora nessun altro iscritto."}</Hint>}
+                <CheckRow key={person.handle} on={picked.has(`live:${person.handle}`)} src={person.src} name={person.name} online={person.online} meta={person.online ? t("online") : seenText(person)} metaBlue={person.online} onPress={() => toggle(`live:${person.handle}`)} />
+              )) : <Hint>{needle ? t("Nessuno con questo nome su Space.") : t("Ancora nessun altro iscritto.")}</Hint>}
             </>
           ) : null}
           {letters.map(([letter, list]) => (
@@ -171,24 +172,24 @@ export default function NewGroup() {
             </Fragment>
           ))}
         </ScrollView>
-        {mixed || hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint || "I contatti demo non possono entrare in un gruppo live. Scegli solo persone su Space o solo contatti demo."}</Hint> : null}
-        {fab(enough && !mixed, <ArrowRight size={24} weight="bold" color={enough && !mixed ? "#fff" : theme.text3} />, () => { tap(); setStep("details"); setQuery(""); }, "Avanti")}
+        {mixed || hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint || t("I contatti demo non possono entrare in un gruppo live. Scegli solo persone su Space o solo contatti demo.")}</Hint> : null}
+        {fab(enough && !mixed, <ArrowRight size={24} weight="bold" color={enough && !mixed ? "#fff" : theme.text3} />, () => { tap(); setStep("details"); setQuery(""); }, t("Avanti"))}
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <SubHead title="Nuovo gruppo" meta={`${chips.length + 1} membri`} onBack={() => setStep("members")} />
+      <SubHead title={t("Nuovo gruppo")} meta={t("{n} membri", { n: chips.length + 1 })} onBack={() => setStep("members")} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 110 }}>
         <View style={styles.details}>
-          <Pressable accessibilityLabel="Foto del gruppo" onPress={() => { tap(); setPhotoPick((value) => !value); }} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}>
+          <Pressable accessibilityLabel={t("Foto del gruppo")} onPress={() => { tap(); setPhotoPick((value) => !value); }} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}>
             {photo ? <GroupAvatar photo={photo} title={name || "?"} size={70} /> : (
               <View style={[styles.photoEmpty, { backgroundColor: theme.dark ? "#0a2236" : "#e3f2fe" }]}><Camera size={28} weight="fill" color={theme.blue} /></View>
             )}
             <View style={[styles.photoPlus, { backgroundColor: theme.blue, borderColor: theme.bg }]}><Plus size={12} weight="bold" color="#fff" /></View>
           </Pressable>
-          <TextInput value={name} onChangeText={setName} maxLength={40} autoFocus placeholder="Nome del gruppo" placeholderTextColor={theme.text3} accessibilityLabel="Nome del gruppo" style={[styles.name, { color: theme.text, borderBottomColor: theme.blue }]} />
+          <TextInput value={name} onChangeText={setName} maxLength={40} autoFocus placeholder={t("Nome del gruppo")} placeholderTextColor={theme.text3} accessibilityLabel={t("Nome del gruppo")} style={[styles.name, { color: theme.text, borderBottomColor: theme.blue }]} />
         </View>
         {photoPick ? (
           <ToneRow
@@ -197,18 +198,18 @@ export default function NewGroup() {
             onPick={(value) => { setPhoto(value); setPhotoPick(false); }}
             extra={(
               <>
-                <Pressable onPress={uploadPhoto} style={[styles.toneExtra, { backgroundColor: theme.fill }]}><ImageIcon size={16} color={theme.text} /><T size={9} weight="600">Foto</T></Pressable>
+                <Pressable onPress={uploadPhoto} style={[styles.toneExtra, { backgroundColor: theme.fill }]}><ImageIcon size={16} color={theme.text} /><T size={9} weight="600">{t("Foto")}</T></Pressable>
                 {photo ? <Pressable onPress={() => { tap(); setPhoto(""); setPhotoPick(false); }} style={[styles.toneExtra, { backgroundColor: theme.fill }]}><Close size={16} weight="bold" color={theme.text} /></Pressable> : null}
               </>
             )}
           />
         ) : null}
-        <TextInput value={about} onChangeText={setAbout} maxLength={255} multiline placeholder="Descrizione (facoltativa)" placeholderTextColor={theme.text2} accessibilityLabel="Descrizione" style={[styles.about, { backgroundColor: theme.fill, color: theme.text }]} />
-        <Hint>Puoi cambiare nome, foto e descrizione più tardi nelle info del gruppo.</Hint>
-        <T size={13} weight="700" color={theme.text2} style={styles.letter}>{`${chips.length + 1} membri`}</T>
+        <TextInput value={about} onChangeText={setAbout} maxLength={255} multiline placeholder={t("Descrizione (facoltativa)")} placeholderTextColor={theme.text2} accessibilityLabel={t("Descrizione")} style={[styles.about, { backgroundColor: theme.fill, color: theme.text }]} />
+        <Hint>{t("Puoi cambiare nome, foto e descrizione più tardi nelle info del gruppo.")}</Hint>
+        <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("{n} membri", { n: chips.length + 1 })}</T>
         <View style={styles.member}>
           <Face src={live?.me?.src || store.profile?.src || AVATAR} name={live?.me?.name || store.profile?.name} size={46} />
-          <View style={{ flex: 1 }}><T size={15} weight="600">{live?.me?.name || store.profile?.name || "Tu"}</T><T size={13.5} color={theme.text2}>proprietario</T></View>
+          <View style={{ flex: 1 }}><T size={15} weight="600">{live?.me?.name || store.profile?.name || t("Tu")}</T><T size={13.5} color={theme.text2}>{t("proprietario")}</T></View>
         </View>
         {chips.map((chip) => (
           <View key={chip.key} style={styles.member}>
@@ -218,7 +219,7 @@ export default function NewGroup() {
         ))}
       </ScrollView>
       {hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint}</Hint> : null}
-      {fab(ready, busy ? <Spinner color="#fff" size={22} /> : <Check size={24} weight="bold" color={ready ? "#fff" : theme.text3} />, create, "Crea gruppo")}
+      {fab(ready, busy ? <Spinner color="#fff" size={22} /> : <Check size={24} weight="bold" color={ready ? "#fff" : theme.text3} />, create, t("Crea gruppo"))}
     </KeyboardAvoidingView>
   );
 }

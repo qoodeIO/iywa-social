@@ -11,6 +11,7 @@ import { useStore } from "../lib/store";
 import { AVATAR, avatarFor } from "../data";
 import { Checked, ChevronLeft, Eye, EyeOff, Warn } from "./icons-profile";
 import { T, tap } from "./kit";
+import { LANGS, currentLanguage, t } from "../lib/i18n";
 
 export const DEMO_USER = { name: "Giulia Neri", handle: "forno.neri", password: "forno" };
 
@@ -140,15 +141,15 @@ export function AuthScreen({ onDone, backHandle }) {
     setTimeout(() => {
       if (mode === "login") {
         const user = findUser(handle);
-        if (!user) return fail("Nessun account con questo nome utente.");
-        if (user.password !== password) return fail("Password errata. Riprova.");
+        if (!user) return fail(t("Nessun account con questo nome utente."));
+        if (user.password !== password) return fail(t("Password errata. Riprova."));
         setBusy(false);
         enterAs(user.handle);
         return;
       }
       if (mode === "forgot") {
         const user = findUser(handle);
-        if (!user) return fail("Nessun account con questo nome utente.");
+        if (!user) return fail(t("Nessun account con questo nome utente."));
         setBusy(false);
         setHandle(user.handle);
         setMode("reset");
@@ -156,32 +157,32 @@ export function AuthScreen({ onDone, backHandle }) {
         setAgain("");
         return;
       }
-      if (password !== again) return fail("Le due password non coincidono.");
+      if (password !== again) return fail(t("Le due password non coincidono."));
       if (mode === "reset") {
         store.resetPassword(handle, password);
         setBusy(false);
         go("login");
-        setNote("Password aggiornata. Accedi con quella nuova.");
+        setNote(t("Password aggiornata. Accedi con quella nuova."));
         return;
       }
-      if (taken) return fail("Questo nome utente è già in uso.");
+      if (taken) return fail(t("Questo nome utente è già in uso."));
       setBusy(false);
       store.joinAccount({ name: name.trim(), handle: joinKey, password });
       onDone?.();
     }, 520);
   }
 
-  const cta = mode === "join" ? "Crea account" : mode === "forgot" ? "Continua" : mode === "reset" ? "Salva password" : "Accedi";
-  const heading = { login: backUser ? "Aggiungi un account" : "Bentornato", join: "Crea il tuo account", forgot: "Trova il tuo account", reset: "Scegli una nuova password" }[mode];
+  const cta = mode === "join" ? t("Crea account") : mode === "forgot" ? t("Continua") : mode === "reset" ? t("Salva password") : t("Accedi");
+  const heading = { login: backUser ? t("Aggiungi un account") : t("Bentornato"), join: t("Crea il tuo account"), forgot: t("Trova il tuo account"), reset: t("Scegli una nuova password") }[mode];
   const sub = {
     login: "",
-    join: "Condividi il tuo lavoro, segui gli artigiani e chatta in tempo reale.",
-    forgot: "Scrivi il tuo nome utente e ti aiutiamo a impostare una nuova password.",
-    reset: `Per @${handle}. Usa almeno 4 caratteri.`,
+    join: t("Condividi il tuo lavoro, segui gli artigiani e chatta in tempo reale."),
+    forgot: t("Scrivi il tuo nome utente e ti aiutiamo a impostare una nuova password."),
+    reset: t("Per @{handle}. Usa almeno 4 caratteri.", { handle }),
   }[mode];
   const saved = users.filter((user) => user.handle !== back).slice(0, 3);
   const eye = password ? (
-    <Pressable accessibilityLabel={show ? "Nascondi password" : "Mostra password"} hitSlop={8} onPress={() => setShow((value) => !value)} style={styles.trail}>
+    <Pressable accessibilityLabel={show ? t("Nascondi password") : t("Mostra password")} hitSlop={8} onPress={() => setShow((value) => !value)} style={styles.trail}>
       {show ? <EyeOff size={22} color={a.text} /> : <Eye size={22} color={a.text} />}
     </Pressable>
   ) : null;
@@ -191,14 +192,14 @@ export function AuthScreen({ onDone, backHandle }) {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: a.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.top, { paddingTop: insets.top }]}>
         {mode !== "login" ? (
-          <Pressable accessibilityLabel="Indietro" onPress={() => go("login")} style={styles.back}><ChevronLeft size={22} weight="bold" color={a.text} /></Pressable>
+          <Pressable accessibilityLabel={t("Indietro")} onPress={() => go("login")} style={styles.back}><ChevronLeft size={22} weight="bold" color={a.text} /></Pressable>
         ) : backUser ? (
           <Pressable onPress={() => enterAs(backUser.handle)} style={[styles.back, { paddingRight: 12, backgroundColor: a.field, borderWidth: StyleSheet.hairlineWidth, borderColor: a.line }]}>
             <ChevronLeft size={22} weight="bold" color={a.text} />
-            <T size={14.5} weight="600" color={a.text}>Torna a @{backUser.handle}</T>
+            <T size={14.5} weight="600" color={a.text}>{t("Torna a @{handle}", { handle: backUser.handle })}</T>
           </Pressable>
         ) : <View />}
-        <T size={13} color={a.sub}>Italiano</T>
+        <T size={13} color={a.sub}>{LANGS.find((lang) => lang.id === currentLanguage())?.label || "Italiano"}</T>
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ width: "100%", alignItems: "center", opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
@@ -215,11 +216,11 @@ export function AuthScreen({ onDone, backHandle }) {
             </View>
           ) : null}
           <Animated.View style={{ width: "100%", gap: 10, transform: [{ translateX: shake }] }}>
-            {mode === "join" ? <AuthField a={a} label="Nome e cognome" value={name} onChange={setName} autoComplete="name" returnKeyType="next" /> : null}
+            {mode === "join" ? <AuthField a={a} label={t("Nome e cognome")} value={name} onChange={setName} autoComplete="name" returnKeyType="next" /> : null}
             {mode !== "reset" ? (
               <AuthField
                 a={a}
-                label="Nome utente"
+                label={t("Nome utente")}
                 value={handle}
                 onChange={(value) => setHandle(mode === "join" ? value.toLowerCase().replace(/\s+/g, "") : value)}
                 autoComplete="username"
@@ -227,13 +228,13 @@ export function AuthScreen({ onDone, backHandle }) {
                 onSubmit={mode === "forgot" ? submit : () => passRef.current?.focus()}
                 state={mode === "join" && handle ? (taken || !handleOk ? "err" : "ok") : ""}
                 trailing={mode === "join" && handle ? <View style={styles.trail}>{taken || !handleOk ? <Warn size={20} weight="fill" color={a.red} /> : <Checked size={20} weight="fill" color={a.green} />}</View> : null}
-                hint={mode === "join" && handle ? (taken ? "Già in uso" : !handleOk ? "3–30 lettere, numeri, . o _" : "Disponibile") : ""}
+                hint={mode === "join" && handle ? (taken ? t("Già in uso") : !handleOk ? t("3–30 lettere, numeri, . o _") : t("Disponibile")) : ""}
               />
             ) : null}
             {mode !== "forgot" ? (
               <AuthField
                 a={a}
-                label={mode === "reset" ? "Nuova password" : "Password"}
+                label={mode === "reset" ? t("Nuova password") : t("Password")}
                 value={password}
                 onChange={setPassword}
                 secure={!show}
@@ -245,17 +246,17 @@ export function AuthScreen({ onDone, backHandle }) {
               />
             ) : null}
             {(mode === "join" || mode === "reset") && password ? (
-              <View style={styles.strength} accessibilityLabel="Robustezza password">
+              <View style={styles.strength} accessibilityLabel={t("Robustezza password")}>
                 <View style={{ flex: 1, flexDirection: "row", gap: 4 }}>
                   {[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, { backgroundColor: strength >= i ? strengthColors[strength] : a.line }]} />)}
                 </View>
-                <T size={12} weight="600" color={a.sub} style={{ minWidth: 64, textAlign: "right" }}>{["Troppo corta", "Debole", "Discreta", "Buona", "Forte"][strength]}</T>
+                <T size={12} weight="600" color={a.sub} style={{ minWidth: 64, textAlign: "right" }}>{[t("Troppo corta"), t("Debole"), t("Discreta"), t("Buona"), t("Forte")][strength]}</T>
               </View>
             ) : null}
             {mode === "join" || mode === "reset" ? (
               <AuthField
                 a={a}
-                label="Ripeti password"
+                label={t("Ripeti password")}
                 value={again}
                 onChange={setAgain}
                 secure={!show}
@@ -277,16 +278,16 @@ export function AuthScreen({ onDone, backHandle }) {
             </Pressable>
             {mode === "login" ? (
               <Pressable onPress={() => go("forgot")} style={{ alignSelf: "center", marginTop: 10, padding: 6 }}>
-                <T size={14} weight="600" color={a.text}>Password dimenticata?</T>
+                <T size={14} weight="600" color={a.text}>{t("Password dimenticata?")}</T>
               </Pressable>
             ) : null}
-            {mode === "join" ? <T size={12} color={a.sub} style={{ textAlign: "center", marginTop: 4, lineHeight: 17 }}>Iscrivendoti accetti i Termini e l'Informativa sulla privacy.</T> : null}
+            {mode === "join" ? <T size={12} color={a.sub} style={{ textAlign: "center", marginTop: 4, lineHeight: 17 }}>{t("Iscrivendoti accetti i Termini e l'Informativa sulla privacy.")}</T> : null}
           </Animated.View>
           {mode === "login" && saved.length && !handle ? (
             <View style={{ width: "100%", marginTop: 26 }}>
               <View style={styles.or}>
                 <View style={[styles.orLine, { backgroundColor: a.line }]} />
-                <T size={12.5} color={a.sub}>Account su questo dispositivo</T>
+                <T size={12.5} color={a.sub}>{t("Account su questo dispositivo")}</T>
                 <View style={[styles.orLine, { backgroundColor: a.line }]} />
               </View>
               <View style={{ flexDirection: "row", justifyContent: "center", gap: 18 }}>
@@ -307,7 +308,7 @@ export function AuthScreen({ onDone, backHandle }) {
       </ScrollView>
       <View style={[styles.foot, { paddingBottom: Math.max(26, insets.bottom + 8) }]}>
         <Pressable onPress={() => go(mode === "login" ? "join" : "login")} style={({ pressed }) => [styles.outline, { borderColor: a.blue, backgroundColor: pressed ? "rgba(0,149,246,0.1)" : "transparent" }]}>
-          <T size={15} weight="700" color={a.blue}>{mode === "login" ? "Crea nuovo account" : "Ho già un account"}</T>
+          <T size={15} weight="700" color={a.blue}>{mode === "login" ? t("Crea nuovo account") : t("Ho già un account")}</T>
         </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <LinearGradient colors={["#8b5cf6", "#3b82f6", "#06b6d4"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 14, height: 14, borderRadius: 4 }} />

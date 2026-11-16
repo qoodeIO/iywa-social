@@ -23,6 +23,7 @@ import {
 import { Btn, T, tap } from "./kit";
 import { ActionSheet, IgEmpty, SlideTabs, useToast } from "./profile-kit";
 import { RichText, ThoughtEntry, composeThought, thoughtRows } from "./thoughts";
+import { t } from "../lib/i18n";
 
 const W = Dimensions.get("window").width;
 const TILE = (W - 4) / 3;
@@ -66,14 +67,14 @@ export function BusinessCard({ shop }) {
       </Pressable>
       {state ? (
         <T size={14} color={theme.text2}>
-          <T size={14} weight="600" color={state.open ? "#1cd14f" : theme.text2}>{state.open ? "Aperto ora" : "Chiuso"}</T>
+          <T size={14} weight="600" color={state.open ? "#1cd14f" : theme.text2}>{state.open ? t("Aperto ora") : t("Chiuso")}</T>
           {" · "}{daysLabel(shop.hours.days)} {shop.hours.open}–{shop.hours.close}
         </T>
       ) : null}
       <View style={{ flexDirection: "row", gap: 6, paddingTop: 12 }}>
-        <Btn title="Chiama" icon={Phone} size={14} height={32} flex={1} onPress={() => open(`tel:${String(shop.phone).replace(/\s/g, "")}`, shop.phone, "Numero copiato")} />
-        <Btn title="Indicazioni" icon={Directions} size={14} height={32} flex={1} onPress={() => Linking.openURL(maps).catch(() => {})} />
-        <Btn title="Email" icon={Mail} size={14} height={32} flex={1} onPress={() => open(`mailto:${shop.email}`, shop.email, "Email copiata")} />
+        <Btn title={t("Chiama")} icon={Phone} size={14} height={32} flex={1} onPress={() => open(`tel:${String(shop.phone).replace(/\s/g, "")}`, shop.phone, t("Numero copiato"))} />
+        <Btn title={t("Indicazioni")} icon={Directions} size={14} height={32} flex={1} onPress={() => Linking.openURL(maps).catch(() => {})} />
+        <Btn title={t("Email")} icon={Mail} size={14} height={32} flex={1} onPress={() => open(`mailto:${shop.email}`, shop.email, t("Email copiata"))} />
       </View>
       {note ? <T size={12.5} color={theme.text2} style={{ textAlign: "center", marginTop: 6 }}>{note}</T> : null}
     </View>
@@ -87,21 +88,21 @@ export function BusinessInsights() {
     <View style={[styles.dash, { backgroundColor: theme.btn }]}>
       <Pressable accessibilityState={{ expanded: open }} onPress={() => { tap(); setOpen((value) => !value); }} style={styles.dashRow}>
         <View style={{ flex: 1 }}>
-          <T size={14} weight="600">Dashboard professionale</T>
-          <T size={12.5} color={theme.text2}>12,4k account raggiunti negli ultimi 30 giorni</T>
+          <T size={14} weight="600">{t("Dashboard professionale")}</T>
+          <T size={12.5} color={theme.text2}>{t("12,4k account raggiunti negli ultimi 30 giorni")}</T>
         </View>
         <View style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}><ChevronDown size={14} weight="bold" color={theme.text2} /></View>
       </Pressable>
       {open ? (
         <Animated.View entering={FadeIn.duration(200)} style={{ paddingHorizontal: 12, paddingBottom: 10 }}>
-          {[["Account raggiunti", "12.412", "+18%"], ["Visite al profilo", "486", "+9%"], ["Richieste dello shop nel Direct", "37", "+24%"]].map(([label, value, delta]) => (
+          {[[t("Account raggiunti"), "12.412", "+18%"], [t("Visite al profilo"), "486", "+9%"], [t("Richieste dello shop nel Direct"), "37", "+24%"]].map(([label, value, delta]) => (
             <View key={label} style={[styles.stat, { borderTopColor: theme.line }]}>
               <T size={13.5} style={{ flex: 1 }}>{label}</T>
               <T size={13.5} weight="700">{value}</T>
               <T size={12} weight="600" color="#1cd14f">{delta}</T>
             </View>
           ))}
-          <T size={11.5} color={theme.text3} style={{ marginTop: 4 }}>Dati di esempio per l'anteprima.</T>
+          <T size={11.5} color={theme.text3} style={{ marginTop: 4 }}>{t("Dati di esempio per l'anteprima.")}</T>
         </Animated.View>
       ) : null}
     </View>
@@ -122,7 +123,7 @@ export function ShopGrid({ shop, onOpen, onAdd }) {
             const on = cat === item;
             return (
               <Pressable key={item} onPress={() => { tap(); setCat(item); }} style={[styles.cat, { backgroundColor: on ? theme.text : "transparent", borderColor: on ? theme.text : theme.line }]}>
-                <T size={13} weight="600" color={on ? theme.bg : theme.text}>{item === "all" ? "Tutti" : item}</T>
+                <T size={13} weight="600" color={on ? theme.bg : theme.text}>{item === "all" ? t("Tutti") : item}</T>
               </Pressable>
             );
           })}
@@ -132,8 +133,8 @@ export function ShopGrid({ shop, onOpen, onAdd }) {
         {shop.mine && onAdd ? (
           <Pressable onPress={onAdd} style={({ pressed }) => [styles.shopAdd, { width, height: width, borderColor: "rgba(0,149,246,0.55)", backgroundColor: "rgba(0,149,246,0.06)", transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
             <View style={[styles.shopAddIcon, { backgroundColor: theme.blue }]}><Plus size={22} color="#fff" /></View>
-            <T size={14} weight="600">Aggiungi prodotto</T>
-            <T size={13} color={theme.text2}>Foto, prezzo, pezzi</T>
+            <T size={14} weight="600">{t("Aggiungi prodotto")}</T>
+            <T size={13} color={theme.text2}>{t("Foto, prezzo, pezzi")}</T>
           </Pressable>
         ) : null}
         {list.map((product) => {
@@ -155,7 +156,7 @@ export function ShopGrid({ shop, onOpen, onAdd }) {
           );
         })}
       </View>
-      {!list.length && !shop.mine ? <IgEmpty icon={Bag} title="Ancora nessun prodotto" /> : null}
+      {!list.length && !shop.mine ? <IgEmpty icon={Bag} title={t("Ancora nessun prodotto")} /> : null}
     </View>
   );
 }
@@ -171,7 +172,7 @@ const GridRow = memo(function GridRow({ items, tall, pinned, kindMark, reelMark,
       {items.map((post) => (
         <Pressable
           key={post.id}
-          accessibilityLabel={`Apri ${post.kind || "post"}, ${post.name}`}
+          accessibilityLabel={t("Apri {kind}, {name}", { kind: post.kind || "post", name: post.name })}
           onPress={() => onOpen(post)}
           onLongPress={onPeek ? () => { tap("medium"); onPeek(post); } : undefined}
           delayLongPress={380}
@@ -271,11 +272,11 @@ export function MyProfile() {
   const tagged = POSTS.filter((item) => item.tagged);
   const boards = shop ? ["posts", "reels", "shop", "thoughts", "tagged"] : ["posts", "reels", "thoughts", "tagged"];
   const tabs = [
-    { key: "posts", label: "Post", icon: LayoutGrid },
-    { key: "reels", label: "Reels", icon: SquarePlay },
-    ...(shop ? [{ key: "shop", label: "Shop", icon: Bag }] : []),
-    { key: "thoughts", label: "Pensieri", icon: Feather },
-    { key: "tagged", label: "Tag", icon: AtSign },
+    { key: "posts", label: t("Post"), icon: LayoutGrid },
+    { key: "reels", label: t("Reels"), icon: SquarePlay },
+    ...(shop ? [{ key: "shop", label: t("Shop"), icon: Bag }] : []),
+    { key: "thoughts", label: t("Pensieri"), icon: Feather },
+    { key: "tagged", label: t("Tag"), icon: AtSign },
   ];
   const current = boards[Math.min(board, boards.length - 1)];
   const posts = useCountUp(grid.length);
@@ -299,11 +300,11 @@ export function MyProfile() {
       <View style={styles.head}>
         <View>
           <Pressable onPress={() => { setNoteDraft(profile.note || ""); setNoteOpen(true); }} style={[styles.note, { backgroundColor: theme.fill }]}>
-            {profile.note ? <T size={11.5} lines={2}>{profile.note}</T> : <T size={11.5} color={theme.text2}>Nota…</T>}
+            {profile.note ? <T size={11.5} lines={2}>{profile.note}</T> : <T size={11.5} color={theme.text2}>{t("Nota…")}</T>}
             <View style={[styles.noteTail, { backgroundColor: theme.fill }]} />
           </Pressable>
           <Pressable
-            accessibilityLabel={myDeck ? "Apri la tua storia" : "Aggiungi alla storia"}
+            accessibilityLabel={myDeck ? t("Apri la tua storia") : t("Aggiungi alla storia")}
             onPress={() => (myDeck ? router.push(`/story/${myDeck.id}`) : router.push("/story/new"))}
             style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.95 : 1 }] })}
           >
@@ -317,7 +318,7 @@ export function MyProfile() {
               )
             ) : <Image source={{ uri: profile.src || AVATAR }} style={styles.face} contentFit="cover" />}
           </Pressable>
-          <Pressable accessibilityLabel="Nuova storia" hitSlop={6} onPress={() => router.push("/story/new")} style={[styles.add, { backgroundColor: theme.text, borderColor: theme.bg }]}>
+          <Pressable accessibilityLabel={t("Nuova storia")} hitSlop={6} onPress={() => router.push("/story/new")} style={[styles.add, { backgroundColor: theme.text, borderColor: theme.bg }]}>
             <Plus size={12} weight="bold" color={theme.bg} />
           </Pressable>
         </View>
@@ -327,9 +328,9 @@ export function MyProfile() {
             {profile.pronouns ? <T size={13} color={theme.text2}>{profile.pronouns}</T> : null}
           </View>
           <View style={{ flexDirection: "row", gap: 22 }}>
-            <StatButton value={compact(posts)} label="post" onPress={() => setBoard(0)} />
-            <StatButton value={compact(followers)} label="follower" onPress={() => router.push("/people/followers")} />
-            <StatButton value={compact(following)} label="seguiti" onPress={() => router.push("/people/following")} />
+            <StatButton value={compact(posts)} label={t("post")} onPress={() => setBoard(0)} />
+            <StatButton value={compact(followers)} label={t("follower")} onPress={() => router.push("/people/followers")} />
+            <StatButton value={compact(following)} label={t("seguiti")} onPress={() => router.push("/people/following")} />
           </View>
         </View>
       </View>
@@ -350,36 +351,36 @@ export function MyProfile() {
         </View>
       ) : null}
       <View style={styles.buttons}>
-        <Btn title="Modifica profilo" flex={1} height={32} onPress={() => router.push("/edit-profile")} />
-        <Btn title="Condividi profilo" flex={1} height={32} onPress={() => router.push("/qr")} />
-        <Pressable accessibilityLabel="Scopri persone" accessibilityState={{ selected: discover }} onPress={() => { tap(); setDiscover((value) => !value); }} style={({ pressed }) => [styles.square, { backgroundColor: discover ? theme.text : theme.btn, opacity: pressed ? 0.7 : 1 }]}>
+        <Btn title={t("Modifica profilo")} flex={1} height={32} onPress={() => router.push("/edit-profile")} />
+        <Btn title={t("Condividi profilo")} flex={1} height={32} onPress={() => router.push("/qr")} />
+        <Pressable accessibilityLabel={t("Scopri persone")} accessibilityState={{ selected: discover }} onPress={() => { tap(); setDiscover((value) => !value); }} style={({ pressed }) => [styles.square, { backgroundColor: discover ? theme.text : theme.btn, opacity: pressed ? 0.7 : 1 }]}>
           <UserPlus size={17} weight={discover ? "fill" : "regular"} color={discover ? theme.bg : theme.text} />
         </Pressable>
       </View>
       {discover ? (
         <Animated.View entering={FadeInDown.duration(320)} exiting={FadeOutUp.duration(200)}>
           <View style={styles.discoverHead}>
-            <T size={14} weight="600">Scopri persone</T>
-            <Pressable onPress={() => say("Altri suggerimenti a breve")}><T size={14} color={theme.scheme === "dark" ? "#4f8ff7" : "#00376b"}>Vedi tutti</T></Pressable>
+            <T size={14} weight="600">{t("Scopri persone")}</T>
+            <Pressable onPress={() => say(t("Altri suggerimenti a breve"))}><T size={14} color={theme.scheme === "dark" ? "#4f8ff7" : "#00376b"}>{t("Vedi tutti")}</T></Pressable>
           </View>
           <GHScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" contentContainerStyle={{ gap: 8, paddingHorizontal: INSET, paddingBottom: 8 }}>
             {suggestions.map((person) => (
               <View key={person.name} style={[styles.suggest, { borderColor: theme.line }]}>
-                <Pressable accessibilityLabel="Ignora" hitSlop={6} style={styles.suggestX} onPress={() => setDismissed((prev) => [...prev, person.name])}><X size={14} color={theme.text2} /></Pressable>
+                <Pressable accessibilityLabel={t("Ignora")} hitSlop={6} style={styles.suggestX} onPress={() => setDismissed((prev) => [...prev, person.name])}><X size={14} color={theme.text2} /></Pressable>
                 <Image source={{ uri: person.src }} style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: theme.fill }} contentFit="cover" />
                 <T size={13.5} weight="600" lines={1} style={{ marginTop: 8 }}>{person.name}</T>
                 <T size={12} color={theme.text2} lines={1}>{person.meta}</T>
-                <Btn title="Segui" kind="primary" height={30} style={{ alignSelf: "stretch", marginTop: 10 }} onPress={() => store.toggleFollow(person.name)} />
+                <Btn title={t("Segui")} kind="primary" height={30} style={{ alignSelf: "stretch", marginTop: 10 }} onPress={() => store.toggleFollow(person.name)} />
               </View>
             ))}
-            {suggestions.length === 0 ? <T size={13} color={theme.text2} style={{ paddingVertical: 20 }}>Segui già tutti i suggeriti.</T> : null}
+            {suggestions.length === 0 ? <T size={13} color={theme.text2} style={{ paddingVertical: 20 }}>{t("Segui già tutti i suggeriti.")}</T> : null}
           </GHScrollView>
         </Animated.View>
       ) : null}
       <GHScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.highlights}>
         <Pressable onPress={() => router.push("/story/highlight")} style={({ pressed }) => [styles.highlight, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
           <View style={[styles.hlRing, { borderColor: theme.line, alignItems: "center", justifyContent: "center" }]}><Plus size={26} weight="light" color={theme.text} /></View>
-          <T size={12} lines={1}>Nuovo</T>
+          <T size={12} lines={1}>{t("Nuovo")}</T>
         </Pressable>
         {highlights.map((item) => (
           <Pressable key={item.id} onPress={() => router.push(`/story/${item.id}`)} style={({ pressed }) => [styles.highlight, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
@@ -395,17 +396,17 @@ export function MyProfile() {
     if (item.type === "row" || item.type === "tallrow") {
       return <GridRow items={item.items} tall={item.tall} pinned={item.board === "posts" ? pinned : null} kindMark={item.board === "posts"} reelMark={item.board === "reels"} onOpen={openTile} onPeek={(post) => setPeek({ post, board: item.board })} />;
     }
-    if (item.type === "thought") return <ThoughtEntry thought={item.row.thought} repostedBy={item.row.repost ? "Hai ripubblicato" : undefined} />;
+    if (item.type === "thought") return <ThoughtEntry thought={item.row.thought} repostedBy={item.row.repost ? t("Hai ripubblicato") : undefined} />;
     if (item.type === "shop") return <ShopGrid shop={shop} onOpen={(product) => router.push(`/product/me/${product.id}`)} onAdd={() => router.push("/product-edit/new")} />;
     if (current === "thoughts") {
       return (
-        <IgEmpty icon={Feather} title="Condividi il tuo primo pensiero" text="Una frase, una domanda, un sondaggio.">
-          <Btn title="Scrivi un pensiero" kind="primary" height={30} style={{ marginTop: 8, paddingHorizontal: 16 }} onPress={() => composeThought()} />
+        <IgEmpty icon={Feather} title={t("Condividi il tuo primo pensiero")} text={t("Una frase, una domanda, un sondaggio.")}>
+          <Btn title={t("Scrivi un pensiero")} kind="primary" height={30} style={{ marginTop: 8, paddingHorizontal: 16 }} onPress={() => composeThought()} />
         </IgEmpty>
       );
     }
-    if (current === "tagged") return <IgEmpty icon={AtSign} title="Foto e video in cui sei taggato" text="Quando qualcuno ti tagga, appariranno qui." />;
-    return <IgEmpty icon={current === "reels" ? SquarePlay : Camera} title={current === "reels" ? "Condividi il tuo primo reel" : "Condividi il tuo primo post"} text="Apparirà sul tuo profilo." />;
+    if (current === "tagged") return <IgEmpty icon={AtSign} title={t("Foto e video in cui sei taggato")} text={t("Quando qualcuno ti tagga, appariranno qui.")} />;
+    return <IgEmpty icon={current === "reels" ? SquarePlay : Camera} title={current === "reels" ? t("Condividi il tuo primo reel") : t("Condividi il tuo primo post")} text={t("Apparirà sul tuo profilo.")} />;
   }
 
   const peekPost = peek?.post;
@@ -424,12 +425,12 @@ export function MyProfile() {
                 </View>
                 <Image source={{ uri: peekPost.image || peekPost.src }} style={{ width: "100%", aspectRatio: 4 / 5 }} contentFit="cover" />
                 <View style={[styles.peekActions, { borderTopColor: theme.line }]}>
-                  <PeekAction icon={Heart} label="Mi piace" on={liked} onPress={() => store.toggleLike(peekPost.id)} />
-                  <PeekAction icon={MessageCircle} label="Apri" onPress={() => { setPeek(null); openTile(peekPost); }} />
+                  <PeekAction icon={Heart} label={t("Mi piace")} on={liked} onPress={() => store.toggleLike(peekPost.id)} />
+                  <PeekAction icon={MessageCircle} label={t("Apri")} onPress={() => { setPeek(null); openTile(peekPost); }} />
                   {peek.board === "posts" ? (
-                    <PeekAction icon={Pin} label={pinned.includes(peekPost.id) ? "Togli" : "Fissa"} on={pinned.includes(peekPost.id)} tone="text" onPress={() => { store.togglePin(peekPost.id); say(pinned.includes(peekPost.id) ? "Rimosso dai fissati" : "Fissato sul profilo"); setPeek(null); }} />
+                    <PeekAction icon={Pin} label={pinned.includes(peekPost.id) ? t("Togli") : t("Fissa")} on={pinned.includes(peekPost.id)} tone="text" onPress={() => { store.togglePin(peekPost.id); say(pinned.includes(peekPost.id) ? t("Rimosso dai fissati") : t("Fissato sul profilo")); setPeek(null); }} />
                   ) : null}
-                  <PeekAction icon={Archive} label="Archivia" onPress={() => { store.toggleArchive(peekPost.id); setPeek(null); say("Archiviato"); }} />
+                  <PeekAction icon={Archive} label={t("Archivia")} onPress={() => { store.toggleArchive(peekPost.id); setPeek(null); say(t("Archiviato")); }} />
                 </View>
               </Pressable>
             </Animated.View>
@@ -444,7 +445,7 @@ export function MyProfile() {
         hasNote={Boolean(profile.note)}
         onClose={() => setNoteOpen(false)}
         onDelete={() => { store.setProfile({ note: "" }); setNoteOpen(false); }}
-        onShare={() => { store.setProfile({ note: noteDraft.trim() }); setNoteOpen(false); say("Nota condivisa"); }}
+        onShare={() => { store.setProfile({ note: noteDraft.trim() }); setNoteOpen(false); say(t("Nota condivisa")); }}
       />
       {toast}
     </View>
@@ -461,25 +462,25 @@ function NoteSheet({ open, draft, setDraft, src, hasNote, onClose, onDelete, onS
         <View style={[styles.noteSheet, { backgroundColor: theme.scheme === "dark" ? "#1c1c1e" : theme.bg, paddingBottom: insets.bottom + 16 }]}>
           <View style={[styles.grab, { backgroundColor: theme.line }]} />
           <View style={{ alignItems: "center", paddingTop: 8 }}>
-            <View style={[styles.noteBubble, { backgroundColor: theme.fill }]}><T size={13} color={draft ? theme.text : theme.text2}>{draft || "Condividi un pensiero…"}</T></View>
+            <View style={[styles.noteBubble, { backgroundColor: theme.fill }]}><T size={13} color={draft ? theme.text : theme.text2}>{draft || t("Condividi un pensiero…")}</T></View>
             <Image source={{ uri: src }} style={{ width: 64, height: 64, borderRadius: 32, marginTop: 6 }} />
           </View>
           <TextInput
             value={draft}
             maxLength={60}
             autoFocus
-            placeholder="Condividi un pensiero…"
+            placeholder={t("Condividi un pensiero…")}
             placeholderTextColor={theme.text2}
-            accessibilityLabel="Nota"
+            accessibilityLabel={t("Nota")}
             onChangeText={setDraft}
             onSubmitEditing={() => draft.trim() && onShare()}
             returnKeyType="done"
             style={[styles.noteInput, { backgroundColor: theme.fill, color: theme.text }]}
           />
-          <T size={12.5} color={theme.text2} style={{ textAlign: "center", marginTop: 8 }}>La nota è visibile per 24 ore a chi ti segue e segui. · {60 - draft.length}</T>
+          <T size={12.5} color={theme.text2} style={{ textAlign: "center", marginTop: 8 }}>{t("La nota è visibile per 24 ore a chi ti segue e segui. · {n}", { n: 60 - draft.length })}</T>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
-            {hasNote ? <Btn title="Elimina" flex={1} height={40} onPress={onDelete} /> : null}
-            <Btn title="Condividi" kind="primary" flex={1} height={40} disabled={!draft.trim()} onPress={onShare} />
+            {hasNote ? <Btn title={t("Elimina")} flex={1} height={40} onPress={onDelete} /> : null}
+            <Btn title={t("Condividi")} kind="primary" flex={1} height={40} disabled={!draft.trim()} onPress={onShare} />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -523,10 +524,10 @@ export function PersonProfile({ person, menu, setMenu }) {
   const shop = useShop(person.name);
   const boards = ["grid", ...(shop ? ["shop"] : []), "reels", "thoughts"];
   const tabs = [
-    { key: "grid", label: "Post", icon: LayoutGrid },
-    ...(shop ? [{ key: "shop", label: "Shop", icon: Bag }] : []),
-    { key: "reels", label: "Reels", icon: SquarePlay },
-    { key: "thoughts", label: "Pensieri", icon: Feather },
+    { key: "grid", label: t("Post"), icon: LayoutGrid },
+    ...(shop ? [{ key: "shop", label: t("Shop"), icon: Bag }] : []),
+    { key: "reels", label: t("Reels"), icon: SquarePlay },
+    { key: "thoughts", label: t("Pensieri"), icon: Feather },
   ];
   const current = boards[Math.min(board, boards.length - 1)];
   const rows = useMemo(() => thoughtRows(store, { name: person.name }), [person.name, store.myThoughts, store.thoughtReplies, store.prefs]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -553,7 +554,7 @@ export function PersonProfile({ person, menu, setMenu }) {
           {[[shownPosts, "post"], [compact(shownFollowers), "follower"], [compact(person.following || 0), "seguiti"]].map(([value, label]) => (
             <View key={label} style={{ flex: 1, alignItems: "center" }}>
               <T size={17} weight="700" style={{ fontVariant: ["tabular-nums"] }}>{value}</T>
-              <T size={13}>{label}</T>
+              <T size={13}>{t(label)}</T>
             </View>
           ))}
         </View>
@@ -565,7 +566,7 @@ export function PersonProfile({ person, menu, setMenu }) {
         {shop ? null : (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
             <MapPin size={13} weight="fill" color={theme.text2} />
-            <T size={13} color={theme.text2}>{person.city}, Italia</T>
+            <T size={13} color={theme.text2}>{t("{city}, Italia", { city: person.city })}</T>
           </View>
         )}
         {mutual.length ? (
@@ -574,7 +575,7 @@ export function PersonProfile({ person, menu, setMenu }) {
               {mutual.map((item, index) => <Image key={item.handle} source={{ uri: item.src }} style={[styles.mutual, { borderColor: theme.bg, marginLeft: index ? -7 : 0 }]} />)}
             </View>
             <T size={12.5} color={theme.text2} style={{ flexShrink: 1 }}>
-              Seguito da <T size={12.5} weight="600">{mutual[0].handle}</T>{mutual[1] ? <> e <T size={12.5} weight="600">{mutual[1].handle}</T></> : null}
+              {t("Seguito da")}{" "}<T size={12.5} weight="600">{mutual[0].handle}</T>{mutual[1] ? <>{" "}{t("e")}{" "}<T size={12.5} weight="600">{mutual[1].handle}</T></> : null}
             </T>
           </View>
         ) : null}
@@ -582,13 +583,13 @@ export function PersonProfile({ person, menu, setMenu }) {
       {shop ? <View style={{ paddingTop: 6 }}><BusinessCard shop={shop} /></View> : null}
       <View style={styles.psActions}>
         <Pressable onPress={() => { tap(); store.toggleFollow(person.name); }} style={({ pressed }) => [styles.psBtn, { backgroundColor: following ? theme.btn : theme.blue, opacity: pressed ? 0.7 : 1 }]}>
-          <T size={14} weight="600" color={following ? theme.text : "#fff"}>{following ? "Segui già" : "Segui"}</T>
+          <T size={14} weight="600" color={following ? theme.text : "#fff"}>{following ? t("Segui già") : t("Segui")}</T>
           {following ? <ChevronDown size={14} weight="bold" color={theme.text} /> : null}
         </Pressable>
         <Pressable onPress={() => { tap(); message(); }} style={({ pressed }) => [styles.psBtn, { backgroundColor: theme.btn, opacity: pressed ? 0.7 : 1 }]}>
-          <T size={14} weight="600">Messaggio</T>
+          <T size={14} weight="600">{t("Messaggio")}</T>
         </Pressable>
-        <Pressable accessibilityLabel="Suggeriti" onPress={() => tap()} style={({ pressed }) => [styles.psBtn, { flex: 0, width: 34, backgroundColor: theme.btn, opacity: pressed ? 0.7 : 1 }]}>
+        <Pressable accessibilityLabel={t("Suggeriti")} onPress={() => tap()} style={({ pressed }) => [styles.psBtn, { flex: 0, width: 34, backgroundColor: theme.btn, opacity: pressed ? 0.7 : 1 }]}>
           <UserPlus size={14} weight="bold" color={theme.text} />
         </Pressable>
       </View>
@@ -599,8 +600,8 @@ export function PersonProfile({ person, menu, setMenu }) {
     if (item.type === "row" || item.type === "tallrow") return <GridRow items={item.items} tall={item.tall} reelMark={item.board === "reels"} onOpen={openGridItem} />;
     if (item.type === "thought") return <ThoughtEntry thought={item.row.thought} />;
     if (item.type === "shop") return <ShopGrid shop={shop} onOpen={(product) => router.push(`/product/${encodeURIComponent(person.name)}/${product.id}`)} />;
-    if (current === "thoughts") return <IgEmpty icon={Feather} title="Ancora nessun pensiero" />;
-    return <IgEmpty icon={current === "grid" ? Camera : SquarePlay} title={current === "grid" ? "Ancora nessun post" : "Ancora nessun reel"} />;
+    if (current === "thoughts") return <IgEmpty icon={Feather} title={t("Ancora nessun pensiero")} />;
+    return <IgEmpty icon={current === "grid" ? Camera : SquarePlay} title={current === "grid" ? t("Ancora nessun post") : t("Ancora nessun reel")} />;
   }
 
   return (
@@ -610,9 +611,9 @@ export function PersonProfile({ person, menu, setMenu }) {
         open={menu}
         onClose={() => setMenu(false)}
         items={[
-          { icon: LinkIcon, label: "Copia URL del profilo", onPress: () => { Clipboard.setStringAsync(`https://space.app/${person.handle}`).catch(() => {}); setMenu(false); } },
-          { icon: Send, label: "Invia messaggio", onPress: () => { setMenu(false); message(); } },
-          following ? { icon: UserMinus, label: "Non seguire più", onPress: () => { store.toggleFollow(person.name); setMenu(false); } } : null,
+          { icon: LinkIcon, label: t("Copia URL del profilo"), onPress: () => { Clipboard.setStringAsync(`https://space.app/${person.handle}`).catch(() => {}); setMenu(false); } },
+          { icon: Send, label: t("Invia messaggio"), onPress: () => { setMenu(false); message(); } },
+          following ? { icon: UserMinus, label: t("Non seguire più"), onPress: () => { store.toggleFollow(person.name); setMenu(false); } } : null,
         ]}
       />
     </View>

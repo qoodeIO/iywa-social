@@ -11,10 +11,11 @@ import { Empty, Header, T, tap } from "../../ui/kit";
 import { openPost } from "../../ui/feed";
 import { ThoughtEntry, useThoughts } from "../../ui/thoughts";
 import { hashtagPool, hashtagsOf } from "../../ui/feedData";
+import { t, tk } from "../../lib/i18n";
 
 const W = Dimensions.get("window").width;
 const TILE = (W - 4) / 3;
-const TABS = [["top", "Più popolari"], ["recent", "Recenti"], ["thoughts", "Pensieri"]];
+const TABS = [["top", tk("Più popolari")], ["recent", tk("Recenti")], ["thoughts", tk("Pensieri")]];
 
 // Every post and thought with a #tag (web HashtagScreen).
 export default function HashtagScreen() {
@@ -41,16 +42,16 @@ export default function HashtagScreen() {
         </View>
         <View style={{ flex: 1, alignItems: "flex-start", gap: 3 }}>
           <T size={20} weight="700">#{key}</T>
-          <T size={14} color={theme.text2}>{posts.length} post · {thoughts.length} pensieri</T>
+          <T size={14} color={theme.text2}>{t("{posts} post · {thoughts} pensieri", { posts: posts.length, thoughts: thoughts.length })}</T>
           <Pressable onPress={() => { tap(); store.toggleFollow(`#${key}`); }} style={({ pressed }) => [styles.follow, { backgroundColor: following ? theme.btn : theme.blue, opacity: pressed ? 0.75 : 1 }]}>
-            <T size={14} weight="600" color={following ? theme.text : "#fff"}>{following ? "Segui già" : "Segui"}</T>
+            <T size={14} weight="600" color={following ? theme.text : "#fff"}>{following ? t("Segui già") : t("Segui")}</T>
           </Pressable>
         </View>
       </View>
       <View style={[styles.tabs, { borderBottomColor: theme.line }]}>
         {TABS.map(([id, label]) => (
           <Pressable key={id} onPress={() => { tap(); setTab(id); }} style={styles.tab}>
-            <T size={14} weight="600" color={tab === id ? theme.text : theme.text2}>{label}</T>
+            <T size={14} weight="600" color={tab === id ? theme.text : theme.text2}>{t(label)}</T>
             {tab === id ? <View style={[styles.tabBar, { backgroundColor: theme.text }]} /> : null}
           </Pressable>
         ))}
@@ -68,7 +69,7 @@ export default function HashtagScreen() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={head}
           renderItem={({ item }) => <ThoughtEntry thought={item} />}
-          ListEmptyComponent={<Empty icon={Feather} title="Nessun pensiero con questo tag" />}
+          ListEmptyComponent={<Empty icon={Feather} title={t("Nessun pensiero con questo tag")} />}
         />
       ) : (
         <FlashList
@@ -78,7 +79,7 @@ export default function HashtagScreen() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={head}
           renderItem={({ item, index }) => <Tile post={item} index={index} />}
-          ListEmptyComponent={<Empty icon={Hash} title="Ancora nessun post" text="Usa tu per primo questo tag." />}
+          ListEmptyComponent={<Empty icon={Hash} title={t("Ancora nessun post")} text={t("Usa tu per primo questo tag.")} />}
         />
       )}
     </View>
@@ -88,7 +89,7 @@ export default function HashtagScreen() {
 const Tile = memo(function Tile({ post, index }) {
   const theme = useTheme();
   return (
-    <Pressable onPress={() => openPost(post.id)} accessibilityLabel={`Post, ${post.name}`} style={{ width: TILE, height: TILE, marginLeft: index % 3 ? 2 : 0, marginTop: 2, backgroundColor: theme.fill }}>
+    <Pressable onPress={() => openPost(post.id)} accessibilityLabel={t("Post, {name}", { name: post.name })} style={{ width: TILE, height: TILE, marginLeft: index % 3 ? 2 : 0, marginTop: 2, backgroundColor: theme.fill }}>
       <Image source={{ uri: post.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={post.image} />
       {post.kind === "reel" ? <View style={styles.badge}><ReelGlyph size={18} weight="fill" color="#fff" /></View> : post.images?.length > 1 ? <View style={styles.badge}><CarouselGlyph size={18} weight="fill" color="#fff" /></View> : null}
     </Pressable>

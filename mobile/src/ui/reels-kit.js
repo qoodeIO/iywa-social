@@ -10,6 +10,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { router } from "expo-router";
 import { WORKS } from "../data";
 import { T } from "./kit";
+import { t, tk } from "../lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Constants copied from the web app
@@ -29,16 +30,16 @@ export const STORY_MUSIC = [
 // The web uses CSS filter() strings. Native views have no CSS filters, so each look is
 // rebuilt from colour layers blended over the picture (mixBlendMode), close to the web.
 export const STORY_FILTERS = [
-  { id: "normal", label: "Normale", layers: [] },
-  { id: "alba", label: "Alba", layers: [{ color: "rgba(255,190,140,0.22)", mode: "soft-light" }, { color: "rgba(255,255,255,0.06)", mode: "screen" }] },
-  { id: "nord", label: "Nord", layers: [{ color: "rgba(128,128,128,0.28)", mode: "saturation" }, { color: "rgba(110,160,255,0.2)", mode: "soft-light" }] },
-  { id: "terra", label: "Terracotta", layers: [{ color: "rgba(200,105,55,0.32)", mode: "soft-light" }, { color: "rgba(150,90,40,0.12)", mode: "color" }] },
-  { id: "pastello", label: "Pastello", layers: [{ color: "rgba(255,255,255,0.16)", mode: "screen" }, { color: "rgba(128,128,128,0.18)", mode: "saturation" }] },
-  { id: "vivido", label: "Vivido", layers: [{ color: "rgba(128,128,128,0.32)", mode: "overlay" }, { color: "rgba(255,60,80,0.08)", mode: "soft-light" }] },
-  { id: "miele", label: "Miele", layers: [{ color: "rgba(230,165,60,0.34)", mode: "soft-light" }, { color: "rgba(160,110,40,0.12)", mode: "color" }] },
-  { id: "cinema", label: "Cinema", layers: [{ color: "rgba(128,128,128,0.35)", mode: "saturation" }, { color: "rgba(20,40,60,0.3)", mode: "soft-light" }, { color: "rgba(0,0,0,0.08)", mode: "normal" }] },
-  { id: "noir", label: "Noir", layers: [{ color: "rgb(128,128,128)", mode: "saturation" }, { color: "rgba(128,128,128,0.35)", mode: "overlay" }] },
-  { id: "polvere", label: "Polvere", layers: [{ color: "rgba(170,130,90,0.45)", mode: "color" }, { color: "rgba(255,255,255,0.08)", mode: "screen" }] },
+  { id: "normal", label: tk("Normale"), layers: [] },
+  { id: "alba", label: tk("Alba"), layers: [{ color: "rgba(255,190,140,0.22)", mode: "soft-light" }, { color: "rgba(255,255,255,0.06)", mode: "screen" }] },
+  { id: "nord", label: tk("Nord"), layers: [{ color: "rgba(128,128,128,0.28)", mode: "saturation" }, { color: "rgba(110,160,255,0.2)", mode: "soft-light" }] },
+  { id: "terra", label: tk("Terracotta"), layers: [{ color: "rgba(200,105,55,0.32)", mode: "soft-light" }, { color: "rgba(150,90,40,0.12)", mode: "color" }] },
+  { id: "pastello", label: tk("Pastello"), layers: [{ color: "rgba(255,255,255,0.16)", mode: "screen" }, { color: "rgba(128,128,128,0.18)", mode: "saturation" }] },
+  { id: "vivido", label: tk("Vivido"), layers: [{ color: "rgba(128,128,128,0.32)", mode: "overlay" }, { color: "rgba(255,60,80,0.08)", mode: "soft-light" }] },
+  { id: "miele", label: tk("Miele"), layers: [{ color: "rgba(230,165,60,0.34)", mode: "soft-light" }, { color: "rgba(160,110,40,0.12)", mode: "color" }] },
+  { id: "cinema", label: tk("Cinema"), layers: [{ color: "rgba(128,128,128,0.35)", mode: "saturation" }, { color: "rgba(20,40,60,0.3)", mode: "soft-light" }, { color: "rgba(0,0,0,0.08)", mode: "normal" }] },
+  { id: "noir", label: tk("Noir"), layers: [{ color: "rgb(128,128,128)", mode: "saturation" }, { color: "rgba(128,128,128,0.35)", mode: "overlay" }] },
+  { id: "polvere", label: tk("Polvere"), layers: [{ color: "rgba(170,130,90,0.45)", mode: "color" }, { color: "rgba(255,255,255,0.08)", mode: "screen" }] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -386,7 +387,7 @@ export function DarkSheet({ open, onClose, title, children, height, clear, botto
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 20 }]}>
       <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { backgroundColor: clear ? "transparent" : "rgba(0,0,0,0.35)" }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Chiudi" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t("Chiudi")} />
       </Animated.View>
       {keyboard ? (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.kav} pointerEvents="box-none">

@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
 import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { DEMO_GALLERY } from "../../lib/profile-data";
 import { ImageIcon, Plus, X } from "../../ui/icons-profile";
 import { T, tap } from "../../ui/kit";
@@ -61,7 +62,7 @@ export default function ProductEditor() {
       id: product?.id || `p-${Date.now().toString(36)}`,
       name: form.name.trim(),
       price,
-      category: form.category.trim() || "Altro",
+      category: form.category.trim() || t("Altro"),
       description: form.description.trim(),
       materials: form.materials.trim(),
       size: form.size.trim(),
@@ -102,20 +103,20 @@ export default function ProductEditor() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: st.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.headRow, { marginTop: insets.top }]}>
-        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 80 }}><T size={15.5}>Annulla</T></Pressable>
-        <T size={17} weight="700" style={{ flex: 1, textAlign: "center" }}>{fresh ? "Nuovo prodotto" : "Modifica prodotto"}</T>
+        <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 80 }}><T size={15.5}>{t("Annulla")}</T></Pressable>
+        <T size={17} weight="700" style={{ flex: 1, textAlign: "center" }}>{fresh ? t("Nuovo prodotto") : t("Modifica prodotto")}</T>
         <Pressable hitSlop={8} disabled={!valid} onPress={save} style={{ width: 80, alignItems: "flex-end" }}>
-          <T size={15.5} weight="700" color={theme.blue} style={{ opacity: valid ? 1 : 0.35 }}>Salva</T>
+          <T size={15.5} weight="700" color={theme.blue} style={{ opacity: valid ? 1 : 0.35 }}>{t("Salva")}</T>
         </Pressable>
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingBottom: insets.bottom + 34 }}>
-        <Cap>Foto · {form.images.length}/6</Cap>
+        <Cap>{t("Foto · {n}/6", { n: form.images.length })}</Cap>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: INSET }}>
           {form.images.map((src, index) => (
             <Animated.View key={`${index}-${String(src).slice(-12)}`} entering={ZoomIn.duration(220)} style={[styles.photo, { backgroundColor: st.card }]}>
               <Image source={{ uri: src }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              {index === 0 ? <View style={styles.cover}><T size={10} weight="700" color="#fff">Copertina</T></View> : null}
-              <Pressable accessibilityLabel="Rimuovi" hitSlop={6} onPress={() => setForm((prev) => ({ ...prev, images: prev.images.filter((_, at) => at !== index) }))} style={styles.photoX}>
+              {index === 0 ? <View style={styles.cover}><T size={10} weight="700" color="#fff">{t("Copertina")}</T></View> : null}
+              <Pressable accessibilityLabel={t("Rimuovi")} hitSlop={6} onPress={() => setForm((prev) => ({ ...prev, images: prev.images.filter((_, at) => at !== index) }))} style={styles.photoX}>
                 <X size={11} weight="bold" color="#fff" />
               </Pressable>
             </Animated.View>
@@ -123,7 +124,7 @@ export default function ProductEditor() {
           {form.images.length < 6 ? (
             <Pressable onPress={() => { tap(); setTray((value) => !value); }} style={[styles.photo, styles.photoAdd, { borderColor: "rgba(0,149,246,0.55)" }]}>
               <Plus size={22} weight="bold" color={theme.blue} />
-              <T size={12} weight="600" color={theme.blue}>Aggiungi</T>
+              <T size={12} weight="600" color={theme.blue}>{t("Aggiungi")}</T>
             </Pressable>
           ) : null}
         </ScrollView>
@@ -131,7 +132,7 @@ export default function ProductEditor() {
           <Animated.View entering={FadeIn.duration(200)}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: INSET, paddingTop: 10 }}>
               <Pressable onPress={fromDevice} style={[styles.trayItem, { backgroundColor: theme.fill, alignItems: "center", justifyContent: "center", gap: 4 }]}>
-                <ImageIcon size={22} color={theme.text} /><T size={11.5} weight="600">Libreria</T>
+                <ImageIcon size={22} color={theme.text} /><T size={11.5} weight="600">{t("Libreria")}</T>
               </Pressable>
               {DEMO_GALLERY.slice(0, 10).map((src) => (
                 <Pressable key={src} onPress={() => { tap(); setForm((prev) => ({ ...prev, images: [...prev.images, src].slice(0, 6) })); }} style={({ pressed }) => [styles.trayItem, { backgroundColor: theme.fill, opacity: pressed ? 0.8 : 1 }]}>
@@ -142,17 +143,17 @@ export default function ProductEditor() {
           </Animated.View>
         ) : null}
 
-        <Cap>Prodotto</Cap>
+        <Cap>{t("Prodotto")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card }]}>
-          {row("Nome", "name", { first: true, max: 60, placeholder: "es. Coppa rossa" })}
-          {row("Prezzo", "price", { prefix: "€", placeholder: "0", keyboard: "decimal-pad" })}
-          {row("Categoria", "category", { max: 30, placeholder: "es. Tazze" })}
+          {row(t("Nome"), "name", { first: true, max: 60, placeholder: t("es. Coppa rossa") })}
+          {row(t("Prezzo"), "price", { prefix: "€", placeholder: "0", keyboard: "decimal-pad" })}
+          {row(t("Categoria"), "category", { max: 30, placeholder: t("es. Tazze") })}
         </View>
 
-        <Cap>Disponibilità</Cap>
+        <Cap>{t("Disponibilità")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card }]}>
           <View style={[styles.seg, { backgroundColor: theme.fill }]}>
-            {[["stock", "Pronto"], ["order", "Su ordinazione"]].map(([mode, label]) => {
+            {[["stock", t("Pronto")], ["order", t("Su ordinazione")]].map(([mode, label]) => {
               const on = form.mode === mode;
               return (
                 <Pressable key={mode} onPress={() => { tap(); setForm((prev) => ({ ...prev, mode })); }} style={[styles.segBtn, on ? { backgroundColor: st.card, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } } : null]}>
@@ -161,14 +162,14 @@ export default function ProductEditor() {
               );
             })}
           </View>
-          {form.mode === "stock" ? row("Pezzi", "stock", { keyboard: "number-pad" }) : row("Settimane", "weeks", { keyboard: "number-pad" })}
-          {row("Varianti", "variants", { placeholder: "Rosso, Blu, Avorio" })}
+          {form.mode === "stock" ? row(t("Pezzi"), "stock", { keyboard: "number-pad" }) : row(t("Settimane"), "weeks", { keyboard: "number-pad" })}
+          {row(t("Varianti"), "variants", { placeholder: t("Rosso, Blu, Avorio") })}
         </View>
 
-        <Cap>Dettagli</Cap>
+        <Cap>{t("Dettagli")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card }]}>
-          {row("Materiali", "materials", { first: true, placeholder: "es. Gres" })}
-          {row("Misure", "size", { placeholder: "Ø 12 cm" })}
+          {row(t("Materiali"), "materials", { first: true, placeholder: t("es. Gres") })}
+          {row(t("Misure"), "size", { placeholder: t("Ø 12 cm") })}
         </View>
         <View style={[styles.card, { backgroundColor: st.card, marginTop: 12, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 26 }]}>
           <TextInput
@@ -176,7 +177,7 @@ export default function ProductEditor() {
             maxLength={500}
             multiline
             onChangeText={set("description")}
-            placeholder="Racconta la storia di questo pezzo…"
+            placeholder={t("Racconta la storia di questo pezzo…")}
             placeholderTextColor={theme.text3}
             style={{ minHeight: 88, color: theme.text, fontSize: 15.5, lineHeight: 22, textAlignVertical: "top", padding: 0 }}
           />
@@ -184,16 +185,16 @@ export default function ProductEditor() {
         </View>
         {!fresh ? (
           <Pressable onPress={() => setConfirm(true)} style={({ pressed }) => [styles.card, styles.delete, { backgroundColor: pressed ? theme.fill : st.card }]}>
-            <T size={15.5} weight="500" color={theme.red}>Elimina prodotto</T>
+            <T size={15.5} weight="500" color={theme.red}>{t("Elimina prodotto")}</T>
           </Pressable>
         ) : null}
-        <T size={12.5} color={theme.text2} style={styles.note}>Chi compra te lo chiede nel Direct: prezzo, pagamento e spedizione li concordate in chat.</T>
+        <T size={12.5} color={theme.text2} style={styles.note}>{t("Chi compra te lo chiede nel Direct: prezzo, pagamento e spedizione li concordate in chat.")}</T>
       </ScrollView>
       <ActionSheet
         open={confirm}
         onClose={() => setConfirm(false)}
-        hint={`Eliminare «${product?.name || ""}» dallo shop?`}
-        items={[{ label: "Elimina prodotto", danger: true, onPress: remove }]}
+        hint={t("Eliminare «{name}» dallo shop?", { name: product?.name || "" })}
+        items={[{ label: t("Elimina prodotto"), danger: true, onPress: remove }]}
       />
     </KeyboardAvoidingView>
   );

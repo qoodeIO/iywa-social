@@ -9,6 +9,7 @@ import { AVATAR } from "../../data";
 import { Feather, ImageIcon } from "../../ui/icons-profile";
 import { Header, T, tap } from "../../ui/kit";
 import { IgEmpty } from "../../ui/profile-kit";
+import { t } from "../../lib/i18n";
 import { ThoughtCard, buildThoughts, composeThought } from "../../ui/thoughts";
 
 const LIMIT = 500;
@@ -26,8 +27,8 @@ export default function ThoughtScreen() {
   if (!thought) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.bg }}>
-        <Header title="Pensiero" />
-        <IgEmpty icon={Feather} title="Questo pensiero è stato eliminato" />
+        <Header title={t("Pensiero")} />
+        <IgEmpty icon={Feather} title={t("Questo pensiero è stato eliminato")} />
       </View>
     );
   }
@@ -50,17 +51,17 @@ export default function ThoughtScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <Header title="Pensiero" />
+      <Header title={t("Pensiero")} />
       <ScrollView ref={scrollRef} keyboardDismissMode="interactive" contentContainerStyle={{ paddingBottom: 24 }}>
         {thought.parentId ? (
           <Pressable onPress={() => router.push(`/thought/${thought.parentId}`)} style={{ alignItems: "center", paddingTop: 10, paddingBottom: 6 }}>
-            <T size={14} weight="600" color={theme.blue}>Mostra il pensiero originale</T>
+            <T size={14} weight="600" color={theme.blue}>{t("Mostra il pensiero originale")}</T>
           </Pressable>
         ) : null}
         <ThoughtCard thought={thought} big line={chain.length > 0} replyCount={others.length} onDeleted={() => router.back()} />
         {chain.map((item, index) => <ThoughtCard key={item.id} thought={item} lineUp line={index < chain.length - 1} replyCount={0} onOpen={() => {}} />)}
         <View style={styles.repliesHead}>
-          <T size={15} weight="700">Risposte</T>
+          <T size={15} weight="700">{t("Risposte")}</T>
           <T size={14} color={theme.text3}>{others.length ? `${others.length}` : ""}</T>
         </View>
         {others.length ? others.map((item) => (
@@ -68,7 +69,7 @@ export default function ThoughtScreen() {
             <ThoughtCard thought={item} replyCount={repliesOf(item.id).length} />
           </View>
         )) : (
-          <T size={14} color={theme.text2} style={{ textAlign: "center", marginVertical: 18, marginHorizontal: INSET }}>Ancora nessuna risposta. Inizia tu la conversazione.</T>
+          <T size={14} color={theme.text2} style={{ textAlign: "center", marginVertical: 18, marginHorizontal: INSET }}>{t("Ancora nessuna risposta. Inizia tu la conversazione.")}</T>
         )}
       </ScrollView>
       {canReply ? (
@@ -80,20 +81,20 @@ export default function ThoughtScreen() {
             onChangeText={setDraft}
             onSubmitEditing={send}
             returnKeyType="send"
-            placeholder={`Rispondi a ${thought.handle}…`}
+            placeholder={t("Rispondi a {handle}…", { handle: thought.handle })}
             placeholderTextColor={theme.text2}
-            accessibilityLabel="Rispondi"
+            accessibilityLabel={t("Rispondi")}
             style={{ flex: 1, height: 36, color: theme.text, fontSize: 15 }}
           />
           {draft.trim() ? (
-            <Pressable onPress={send} hitSlop={6} style={{ paddingHorizontal: 8 }}><T size={15} weight="700" color={theme.blue}>Pubblica</T></Pressable>
+            <Pressable onPress={send} hitSlop={6} style={{ paddingHorizontal: 8 }}><T size={15} weight="700" color={theme.blue}>{t("Pubblica")}</T></Pressable>
           ) : (
-            <Pressable accessibilityLabel="Apri editor" onPress={() => composeThought({ reply: thought.id })} style={styles.expand}><ImageIcon size={21} color={theme.text2} /></Pressable>
+            <Pressable accessibilityLabel={t("Apri editor")} onPress={() => composeThought({ reply: thought.id })} style={styles.expand}><ImageIcon size={21} color={theme.text2} /></Pressable>
           )}
         </View>
       ) : (
         <View style={[styles.locked, { backgroundColor: theme.fill, marginBottom: Math.max(14, insets.bottom) }]}>
-          <T size={13.5} color={theme.text2} style={{ textAlign: "center" }}>Possono rispondere solo i profili menzionati.</T>
+          <T size={13.5} color={theme.text2} style={{ textAlign: "center" }}>{t("Possono rispondere solo i profili menzionati.")}</T>
         </View>
       )}
     </KeyboardAvoidingView>

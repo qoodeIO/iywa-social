@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { CONTACTS } from "../../data";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
 import { personHidden, seenText } from "../../live/format";
 import { EmptyState, Face, Hint, SubHead, Toast, useChatTheme, useFlash } from "../../ui/chat";
@@ -40,7 +41,7 @@ export default function NewMessage() {
     setBusy(true);
     live.openDm(person.handle)
       .then((id) => router.replace(`/chat/${id}`))
-      .catch(() => flash("Chat live non raggiungibile. Riprova.", 2200))
+      .catch(() => flash(t("Chat live non raggiungibile. Riprova."), 2200))
       .finally(() => setBusy(false));
   }
 
@@ -50,14 +51,14 @@ export default function NewMessage() {
       <Pressable onPress={() => { tap(); router.replace("/chat/group"); }} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}>
         <View style={[styles.round, { backgroundColor: theme.fill }]}><Users size={22} color={theme.text} /></View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <T size={14.5} weight="600">Crea una chat di gruppo</T>
-          <T size={13.5} color={theme.text2}>Chatta e chiama insieme</T>
+          <T size={14.5} weight="600">{t("Crea una chat di gruppo")}</T>
+          <T size={13.5} color={theme.text2}>{t("Chatta e chiama insieme")}</T>
         </View>
         <ChevronRight size={16} color={theme.text2} />
       </Pressable>
       {online ? (
         <>
-          <T size={15} weight="700" style={styles.section}>Su Space</T>
+          <T size={15} weight="700" style={styles.section}>{t("Su Space")}</T>
           {livePeople.length ? livePeople.map((person) => (
             <Pressable key={person.handle} disabled={busy} onPress={() => startLiveChat(person)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }, busy && { opacity: 0.5 }]}>
               <Face src={person.src} name={person.name} size={46} online={person.online} dot={13} />
@@ -66,8 +67,8 @@ export default function NewMessage() {
                 <T size={13.5} color={theme.text2} lines={1}>@{person.handle} · {seenText(person)}</T>
               </View>
             </Pressable>
-          )) : <Hint>{needle ? "Nessuno con questo nome su Space." : "Ancora nessun altro iscritto. Accedi con un secondo account su un altro telefono per provare chat e chiamate dal vivo."}</Hint>}
-          <T size={15} weight="700" style={styles.section}>Suggeriti</T>
+          )) : <Hint>{needle ? t("Nessuno con questo nome su Space.") : t("Ancora nessun altro iscritto. Accedi con un secondo account su un altro telefono per provare chat e chiamate dal vivo.")}</Hint>}
+          <T size={15} weight="700" style={styles.section}>{t("Suggeriti")}</T>
         </>
       ) : null}
     </View>
@@ -75,10 +76,10 @@ export default function NewMessage() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <SubHead title="Nuovo messaggio" />
+      <SubHead title={t("Nuovo messaggio")} />
       <View style={[styles.to, { borderBottomColor: theme.line }]}>
-        <T size={15} weight="600">A:</T>
-        <TextInput value={query} onChangeText={setQuery} autoFocus placeholder="Cerca…" placeholderTextColor={theme.text2} autoCorrect={false} autoCapitalize="none" accessibilityLabel="Cerca persone" style={{ flex: 1, height: 34, color: theme.text, fontSize: 15 }} />
+        <T size={15} weight="600">{t("A:")}</T>
+        <TextInput value={query} onChangeText={setQuery} autoFocus placeholder={t("Cerca…")} placeholderTextColor={theme.text2} autoCorrect={false} autoCapitalize="none" accessibilityLabel={t("Cerca persone")} style={{ flex: 1, height: 34, color: theme.text, fontSize: 15 }} />
       </View>
       <FlatList
         data={people}
@@ -95,7 +96,7 @@ export default function NewMessage() {
             </View>
           </Pressable>
         )}
-        ListEmptyComponent={!livePeople.length ? <EmptyState icon={Search} title="Nessun account trovato" /> : null}
+        ListEmptyComponent={!livePeople.length ? <EmptyState icon={Search} title={t("Nessun account trovato")} /> : null}
         contentContainerStyle={{ paddingBottom: 30 }}
       />
       <Toast text={hint} />

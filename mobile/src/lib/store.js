@@ -1,4 +1,5 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { applyDirection, resolveLanguage, setLanguage, t } from "./i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { relinkMedia } from "./media-store";
 import { BUSINESS, CHATS, MY_PRODUCTS, NOTIFICATIONS, PROFILE, THOUGHTS } from "../data";
@@ -6,6 +7,7 @@ import { BUSINESS, CHATS, MY_PRODUCTS, NOTIFICATIONS, PROFILE, THOUGHTS } from "
 // Same preferences as the web app's settings, kept on the phone.
 export const DEFAULT_PREFS = {
   appearance: "auto",
+  language: "auto",
   private: false,
   activity: true,
   readReceipts: true,
@@ -78,6 +80,8 @@ const INITIAL = {
 
 const Store = createContext(null);
 
+setLanguage(resolveLanguage("auto"));
+
 const toggle = (list, value) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
 export function StoreProvider({ children }) {
@@ -133,25 +137,25 @@ export function StoreProvider({ children }) {
       viewProduct: (ref) => set((s) => ({ recentProducts: [ref, ...s.recentProducts.filter((item) => item.key !== ref.key)].slice(0, 12) })),
       addReview: (key, review) => set((s) => ({ reviews: { ...s.reviews, [key]: [{ ...review, at: Date.now() }, ...(s.reviews[key] || [])] } })),
       sendMessage: (chatId, message) => set((s) => ({
-        chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: false, preview: message.text || "Foto", time: "ora", at: Date.now(), messages: [...chat.messages, { from: "me", time: clock(), ...message }] } : chat)),
+        chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: false, preview: message.text || t("Foto"), time: t("ora"), at: Date.now(), messages: [...chat.messages, { from: "me", time: clock(), ...message }] } : chat)),
       })),
       receiveMessage: (chatId, text) => set((s) => ({
-        chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: true, preview: text, time: "ora", at: Date.now(), messages: [...chat.messages, { from: "them", text, time: clock() }] } : chat)),
+        chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: true, preview: text, time: t("ora"), at: Date.now(), messages: [...chat.messages, { from: "them", text, time: clock() }] } : chat)),
       })),
       readChat: (chatId) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: false } : chat)) })),
       ensureChat: (person) => {
         const found = stateRef.current.chats.find((chat) => chat.name === person.name);
         if (found) return found.id;
         const id = `c-${Date.now()}`;
-        const chat = { id, name: person.name, src: person.src, kind: "", preview: "", time: "ora", at: Date.now(), messages: [] };
+        const chat = { id, name: person.name, src: person.src, kind: "", preview: "", time: t("ora"), at: Date.now(), messages: [] };
         stateRef.current = { ...stateRef.current, chats: [chat, ...stateRef.current.chats] };
         setState((prev) => (prev.chats.some((item) => item.id === id) ? prev : { ...prev, chats: [chat, ...prev.chats] }));
         return id;
       },
       markNotesRead: () => set(() => ({ readNotes: true })),
       // Messages (demo threads are addressed by message position, like the web app)
-      addChatMessage: (chatId, message) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: false, time: "ora", at: Date.now(), messages: [...(chat.messages || []), { from: "me", time: clock(), ...message }] } : chat)) })),
-      receiveChatMessage: (chatId, text, read) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: !read, preview: text, time: "ora", at: Date.now(), messages: [...(chat.messages || []), { from: "them", kind: "text", text, time: clock() }] } : chat)) })),
+      addChatMessage: (chatId, message) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: false, time: t("ora"), at: Date.now(), messages: [...(chat.messages || []), { from: "me", time: clock(), ...message }] } : chat)) })),
+      receiveChatMessage: (chatId, text, read) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, unread: !read, preview: text, time: t("ora"), at: Date.now(), messages: [...(chat.messages || []), { from: "them", kind: "text", text, time: clock() }] } : chat)) })),
       reactChatMessage: (chatId, index, emoji) => set((s) => ({ chats: s.chats.map((chat) => (chat.id !== chatId ? chat : { ...chat, messages: chat.messages.map((m, at) => { if (at !== index) return m; const reactions = { ...(m.reactions || {}) }; if (emoji) reactions.me = emoji; else delete reactions.me; return { ...m, reactions: Object.keys(reactions).length ? reactions : undefined }; }) })) })),
       editChatMessage: (chatId, index, text) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, messages: chat.messages.map((m, at) => (at === index ? { ...m, orig: m.orig ?? m.text, text, edited: Date.now() } : m)) } : chat)) })),
       unsendChatMessage: (chatId, index) => set((s) => ({ chats: s.chats.map((chat) => (chat.id === chatId ? { ...chat, messages: chat.messages.map((m, at) => (at === index ? { ...m, unsent: true, reactions: undefined } : m)) } : chat)) })),
@@ -201,7 +205,11 @@ export function StoreProvider({ children }) {
     };
   }, []);
 
-  const value = useMemo(() => ({ ...state, ready, ...api }), [state, ready, api]);
+  // Strings are looked up while rendering, so switch the dictionary before children render.
+  const language = resolveLanguage(state.prefs?.language);
+  setLanguage(language);
+  useEffect(() => { if (ready) applyDirection(language); }, [ready, language]);
+  const value = useMemo(() => ({ ...state, ready, language, ...api }), [state, ready, language, api]);
   return createElement(Store.Provider, { value }, children);
 }
 

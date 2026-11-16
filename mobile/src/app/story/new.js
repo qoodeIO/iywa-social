@@ -24,6 +24,7 @@ import {
 import { Avatar, T, tap } from "../../ui/kit";
 import { DrawingLayer, LoopClip, StickerFace, StoryMedia, StrokePath, textBox, textStyle } from "../../ui/story";
 import { keepMedia } from "../../lib/media-store";
+import { t, tk } from "../../lib/i18n";
 
 const EASE = Easing.bezier(0.32, 0.72, 0, 1);
 const KIT_ICONS = { music: Music, place: MapPin, tag: At, product: Bag, hash: Hash, emoji: Smile, poll: BarChart, ask: MessageCircle, quiz: HelpCircle, slider: Heart, link: LinkIcon, count: Timer, yours: Plus, notify: Bell };
@@ -159,13 +160,13 @@ export default function StoryCamera() {
 
   async function startClip() {
     if (!canShoot || !camRef.current) {
-      note("Video non disponibile qui");
+      note(t("Video non disponibile qui"));
       return;
     }
     if (!micPerm?.granted) {
       const answer = await requestMic();
       if (!answer?.granted) {
-        note("Serve il microfono per il video");
+        note(t("Serve il microfono per il video"));
         return;
       }
     }
@@ -184,7 +185,7 @@ export default function StoryCamera() {
         const clip = await camRef.current?.recordAsync({ maxDuration: MAX_CLIP });
         if (clip?.uri) openEditor({ type: "video", src: await keepMedia(clip.uri, "story") });
       } catch {
-        note("Video non disponibile qui");
+        note(t("Video non disponibile qui"));
       } finally {
         holdRef.current.recording = false;
         setRecording(0);
@@ -310,19 +311,19 @@ export default function StoryCamera() {
   async function saveToDevice() {
     const uri = media?.type === "image" || media?.type === "video" ? media.src : media?.type === "layout" ? media.cells[0] : null;
     if (!uri || !/^file:/.test(uri)) {
-      note("Non si può salvare questa storia");
+      note(t("Non si può salvare questa storia"));
       return;
     }
     try {
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) {
-        note("Permesso negato");
+        note(t("Permesso negato"));
         return;
       }
       await MediaLibrary.saveToLibraryAsync(uri);
-      note("Salvata");
+      note(t("Salvata"));
     } catch {
-      note("Non si può salvare questa storia");
+      note(t("Non si può salvare questa storia"));
     }
   }
 
@@ -350,13 +351,13 @@ export default function StoryCamera() {
   // The finished story flies into "La tua storia" in the rail, then the camera closes.
   const fly = useSharedValue(0);
   const flyStyle = useAnimatedStyle(() => {
-    const t = fly.value;
-    const tx = (10 + 40 - W / 2) * t;
-    const ty = (insets.top + 100 - H / 2) * t;
+    const k = fly.value;
+    const tx = (10 + 40 - W / 2) * k;
+    const ty = (insets.top + 100 - H / 2) * k;
     return {
-      opacity: t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45,
-      borderRadius: t * W,
-      transform: [{ translateX: tx }, { translateY: ty }, { scale: 1 - t * 0.83 }],
+      opacity: k < 0.55 ? 1 : 1 - (k - 0.55) / 0.45,
+      borderRadius: k * W,
+      transform: [{ translateX: tx }, { translateY: ty }, { scale: 1 - k * 0.83 }],
     };
   });
 
@@ -378,17 +379,17 @@ export default function StoryCamera() {
     if (!media || sending) return;
     const picked = targets.people;
     if (picked.length) {
-      if (media.type === "video") note("I video non si possono ancora inviare in chat");
+      if (media.type === "video") note(t("I video non si possono ancora inviare in chat"));
       else {
         const image = media.type === "image" ? media.src : media.type === "layout" ? media.cells[0] : "";
-        picked.forEach((chatId) => store.sendMessage(chatId, image ? { kind: "image", image, text: "Ti ha inviato una storia" } : { text: "Ti ha inviato una storia" }));
+        picked.forEach((chatId) => store.sendMessage(chatId, image ? { kind: "image", image, text: t("Ti ha inviato una storia") } : { text: t("Ti ha inviato una storia") }));
       }
     }
     if (targets.story || targets.close) {
       flyAndPublish(storyItem(!targets.story && targets.close));
       return;
     }
-    note("Inviata");
+    note(t("Inviata"));
     setSheet(null);
     setTimeout(finish, 600);
   }
@@ -400,8 +401,8 @@ export default function StoryCamera() {
   if (!media) {
     const ringTotal = 2 * Math.PI * 46;
     const tip = mode === "story"
-      ? (handsFree ? "Tocca per iniziare e fermare" : "Tocca per la foto, tieni premuto per il video")
-      : mode === "layout" ? `Ancora ${layout - cells.length}` : "Tocca ovunque per scrivere";
+      ? (handsFree ? t("Tocca per iniziare e fermare") : t("Tocca per la foto, tieni premuto per il video"))
+      : mode === "layout" ? t("Ancora {n}", { n: layout - cells.length }) : t("Tocca ovunque per scrivere");
     const permDenied = camPerm && !camPerm.granted;
     return (
       <View style={styles.root}>
@@ -409,7 +410,7 @@ export default function StoryCamera() {
         {mode === "create" ? (
           <Pressable style={StyleSheet.absoluteFill} onPress={shoot}>
             <LinearGradient colors={CREATE_GRADIENTS[gradient]} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={[StyleSheet.absoluteFill, { alignItems: "center", justifyContent: "center" }]}>
-              <T size={26 * u} weight="700" color="rgba(255,255,255,0.85)">Tocca per scrivere</T>
+              <T size={26 * u} weight="700" color="rgba(255,255,255,0.85)">{t("Tocca per scrivere")}</T>
             </LinearGradient>
           </Pressable>
         ) : (
@@ -430,10 +431,10 @@ export default function StoryCamera() {
             ) : null}
             {permDenied ? (
               <View style={styles.permBox}>
-                <T size={15} weight="700" color="#fff" style={{ textAlign: "center" }}>Consenti l'accesso alla fotocamera</T>
-                <T size={13} color="rgba(255,255,255,0.75)" style={{ textAlign: "center" }}>Oppure scegli una foto dalla galleria.</T>
+                <T size={15} weight="700" color="#fff" style={{ textAlign: "center" }}>{t("Consenti l'accesso alla fotocamera")}</T>
+                <T size={13} color="rgba(255,255,255,0.75)" style={{ textAlign: "center" }}>{t("Oppure scegli una foto dalla galleria.")}</T>
                 {camPerm.canAskAgain ? (
-                  <Pressable style={styles.permBtn} onPress={requestCam}><T size={14} weight="700" color="#111">Consenti</T></Pressable>
+                  <Pressable style={styles.permBtn} onPress={requestCam}><T size={14} weight="700" color="#111">{t("Consenti")}</T></Pressable>
                 ) : null}
               </View>
             ) : null}
@@ -463,19 +464,19 @@ export default function StoryCamera() {
         {!recording ? (
           <>
             <View style={[styles.top, { top: insets.top + 8 }]}>
-              <GlassBtn label="Chiudi" onPress={finish}><Close size={22} color="#fff" /></GlassBtn>
-              <GlassBtn label="Flash" on={flash} onPress={() => setFlash((value) => !value)}>
+              <GlassBtn label={t("Chiudi")} onPress={finish}><Close size={22} color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Flash")} on={flash} onPress={() => setFlash((value) => !value)}>
                 {flash ? <Flash size={22} weight="fill" color="#111" /> : <FlashOff size={22} color="#fff" />}
               </GlassBtn>
             </View>
 
             <View style={[styles.rail, { top: insets.top + 70 }]}>
-              <RailBtn icon={TextIcon} label="Crea" on={mode === "create"} onPress={() => setMode(mode === "create" ? "story" : "create")} />
-              <RailBtn icon={layout === 2 ? Rows : Grid4} label="Layout" on={mode === "layout"} onPress={() => { setMode(mode === "layout" ? "story" : "layout"); setCells([]); }} />
+              <RailBtn icon={TextIcon} label={t("Crea")} on={mode === "create"} onPress={() => setMode(mode === "create" ? "story" : "create")} />
+              <RailBtn icon={layout === 2 ? Rows : Grid4} label={t("Layout")} on={mode === "layout"} onPress={() => { setMode(mode === "layout" ? "story" : "layout"); setCells([]); }} />
               {mode === "create" ? (
                 <Pressable style={styles.railRow} onPress={() => { tap(); setGradient((value) => (value + 1) % CREATE_GRADIENTS.length); }}>
                   <LinearGradient colors={CREATE_GRADIENTS[(gradient + 1) % CREATE_GRADIENTS.length]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.railSub, { borderWidth: 2, borderColor: "#fff" }]} />
-                  <T size={13.5} weight="600" color="#fff" style={styles.shadow}>Colore</T>
+                  <T size={13.5} weight="600" color="#fff" style={styles.shadow}>{t("Colore")}</T>
                 </Pressable>
               ) : null}
               {mode === "layout" ? (
@@ -484,19 +485,19 @@ export default function StoryCamera() {
                   <T size={13.5} weight="600" color="#fff" style={styles.shadow}>{layout === 2 ? "4" : "2"}</T>
                 </Pressable>
               ) : null}
-              <RailBtn icon={Hand} label="Mani libere" on={handsFree} onPress={() => setHandsFree((value) => !value)} />
-              <RailBtn icon={Timer} label="Timer" on={Boolean(timer)} badge={timer || null} onPress={() => setTimer((value) => (value === 0 ? 3 : value === 3 ? 10 : 0))} />
+              <RailBtn icon={Hand} label={t("Mani libere")} on={handsFree} onPress={() => setHandsFree((value) => !value)} />
+              <RailBtn icon={Timer} label={t("Timer")} on={Boolean(timer)} badge={timer || null} onPress={() => setTimer((value) => (value === 0 ? 3 : value === 3 ? 10 : 0))} />
             </View>
           </>
         ) : null}
 
         <View style={[styles.bottom, { bottom: insets.bottom + 64 }]}>
           <View style={{ flex: 1, alignItems: "flex-start", opacity: recording ? 0 : 1 }}>
-            <Pressable style={({ pressed }) => [styles.roll, { transform: [{ scale: pressed ? 0.9 : 1 }] }]} accessibilityLabel="Galleria" onPress={fromLibrary} disabled={Boolean(recording)}>
+            <Pressable style={({ pressed }) => [styles.roll, { transform: [{ scale: pressed ? 0.9 : 1 }] }]} accessibilityLabel={t("Galleria")} onPress={fromLibrary} disabled={Boolean(recording)}>
               <Image source={{ uri: WORKS[(cells.length + 1) % WORKS.length].src }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
             </Pressable>
           </View>
-          <View {...shutter} accessibilityRole="button" accessibilityLabel="Scatta, tieni premuto per il video" style={[styles.shutter, { transform: [{ scale: recording ? 1.22 : 1 }] }]}>
+          <View {...shutter} accessibilityRole="button" accessibilityLabel={t("Scatta, tieni premuto per il video")} style={[styles.shutter, { transform: [{ scale: recording ? 1.22 : 1 }] }]}>
             <Svg width={84} height={84} viewBox="0 0 100 100" style={[StyleSheet.absoluteFill, { transform: [{ rotate: "-90deg" }] }]}>
               <Circle cx="50" cy="50" r="46" fill="none" stroke={recording ? "rgba(255,255,255,0.35)" : "#fff"} strokeWidth={5} />
               {recording ? <Circle cx="50" cy="50" r="46" fill="none" stroke="#ff3040" strokeWidth={6} strokeLinecap="round" strokeDasharray={`${ringTotal}`} strokeDashoffset={ringTotal * (1 - Math.min(1, recSeconds / MAX_CLIP))} /> : null}
@@ -504,7 +505,7 @@ export default function StoryCamera() {
             <View style={{ width: 68, height: 68, borderRadius: handsFree && recording ? 10 : 34, backgroundColor: recording || handsFree ? "#ff3040" : "#fff", transform: [{ scale: recording ? 0.5 : 1 }] }} />
           </View>
           <View style={{ flex: 1, alignItems: "flex-end", opacity: recording ? 0 : 1 }}>
-            <GlassBtn label="Gira fotocamera" onPress={() => { if (camPerm?.granted) setFacing((value) => (value === "back" ? "front" : "back")); }}>
+            <GlassBtn label={t("Gira fotocamera")} onPress={() => { if (camPerm?.granted) setFacing((value) => (value === "back" ? "front" : "back")); }}>
               <SpinIcon turn={facing}><SwitchCamera size={22} color="#fff" /></SpinIcon>
             </GlassBtn>
           </View>
@@ -512,9 +513,9 @@ export default function StoryCamera() {
         {!recording ? (
           <>
             <View style={[styles.modes, { bottom: insets.bottom + 22 }]}>
-              {[["create", "CREA"], ["story", "STORIA"], ["layout", "LAYOUT"]].map(([id, label]) => (
+              {[["create", tk("CREA")], ["story", tk("STORIA")], ["layout", tk("LAYOUT")]].map(([id, label]) => (
                 <Pressable key={id} hitSlop={8} onPress={() => { tap(); setMode(id); setCells([]); }}>
-                  <T size={13} weight="700" color={mode === id ? "#fff" : "rgba(255,255,255,0.55)"} style={{ letterSpacing: 0.8, transform: [{ scale: mode === id ? 1.06 : 1 }] }}>{label}</T>
+                  <T size={13} weight="700" color={mode === id ? "#fff" : "rgba(255,255,255,0.55)"} style={{ letterSpacing: 0.8, transform: [{ scale: mode === id ? 1.06 : 1 }] }}>{t(label)}</T>
                 </Pressable>
               ))}
             </View>
@@ -546,7 +547,7 @@ export default function StoryCamera() {
         </SwipeFilters>
         <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.38)", "transparent"]} locations={[0, 0.16]} style={[StyleSheet.absoluteFill, { opacity: busyUi ? 0.6 : 1 }]} />
         <LinearGradient pointerEvents="none" colors={["transparent", "rgba(0,0,0,0.5)"]} locations={[0.72, 1]} style={[StyleSheet.absoluteFill, { opacity: busyUi ? 0.6 : 1 }]} />
-        {filterHint ? <FilterName key={filterHint} label={filterNow.label} u={u} /> : null}
+        {filterHint ? <FilterName key={filterHint} label={t(filterNow.label)} u={u} /> : null}
 
         {draws.map((item) => <DrawingLayer key={item.uid} item={item} w={W} h={H} />)}
         {movable.map((item) => (
@@ -572,21 +573,21 @@ export default function StoryCamera() {
 
         {!busyUi ? (
           <View style={[styles.top, { top: insets.top + 8 }]}>
-            <GlassBtn label="Indietro" onPress={() => (stickers.length ? setSheet("discard") : leaveEditor())}><ChevronLeft size={22} color="#fff" /></GlassBtn>
+            <GlassBtn label={t("Indietro")} onPress={() => (stickers.length ? setSheet("discard") : leaveEditor())}><ChevronLeft size={22} color="#fff" /></GlassBtn>
             <View style={{ flexDirection: "row", gap: 6 }}>
-              <GlassBtn label="Testo" onPress={() => setEditor({ open: Date.now(), text: "", color: "#ffffff", font: "classic", bg: "" })}><TextIcon size={22} color="#fff" /></GlassBtn>
-              <GlassBtn label="Sticker" onPress={() => setTool("tray")}><StickerIcon size={22} color="#fff" /></GlassBtn>
-              <GlassBtn label="Musica" onPress={() => setTool("music")}><Music size={22} color="#fff" /></GlassBtn>
-              <GlassBtn label="Filtri" onPress={() => setTool("filters")}><Sparkle size={22} color="#fff" /></GlassBtn>
-              <GlassBtn label="Disegna" onPress={() => setTool("draw")}><Scribble size={22} color="#fff" /></GlassBtn>
-              <GlassBtn label="Altro" onPress={() => setSheet("more")}><More size={22} weight="bold" color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Testo")} onPress={() => setEditor({ open: Date.now(), text: "", color: "#ffffff", font: "classic", bg: "" })}><TextIcon size={22} color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Sticker")} onPress={() => setTool("tray")}><StickerIcon size={22} color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Musica")} onPress={() => setTool("music")}><Music size={22} color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Filtri")} onPress={() => setTool("filters")}><Sparkle size={22} color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Disegna")} onPress={() => setTool("draw")}><Scribble size={22} color="#fff" /></GlassBtn>
+              <GlassBtn label={t("Altro")} onPress={() => setSheet("more")}><More size={22} weight="bold" color="#fff" /></GlassBtn>
             </View>
           </View>
         ) : null}
 
         {media.type === "video" && !busyUi ? (
           <View style={{ position: "absolute", top: insets.top + 58, left: 10 }}>
-            <GlassBtn label={muted ? "Attiva audio" : "Silenzia"} onPress={() => setMuted((value) => !value)}>
+            <GlassBtn label={muted ? t("Attiva audio") : t("Silenzia")} onPress={() => setMuted((value) => !value)}>
               {muted ? <SoundOff size={22} color="#fff" /> : <SoundOn size={22} color="#fff" />}
             </GlassBtn>
           </View>
@@ -603,12 +604,12 @@ export default function StoryCamera() {
                     <View style={{ width: 58, height: 58, borderRadius: 29, overflow: "hidden", borderWidth: 2, borderColor: on ? "#fff" : "transparent", transform: [{ scale: on ? 1.12 : 1 }] }}>
                       {media.type === "gradient" ? <LinearGradient colors={media.gradient} style={StyleSheet.absoluteFill} /> : <StoryMedia frame={{ id: `f-${item.id}`, image: thumb, filter: item.id }} />}
                     </View>
-                    <T size={11.5} weight="600" color="#fff">{item.label}</T>
+                    <T size={11.5} weight="600" color="#fff">{t(item.label)}</T>
                   </Pressable>
                 );
               })}
             </ScrollView>
-            <Pressable onPress={() => setTool(null)} style={styles.done}><T size={16} weight="700" color="#fff">Fine</T></Pressable>
+            <Pressable onPress={() => setTool(null)} style={styles.done}><T size={16} weight="700" color="#fff">{t("Fine")}</T></Pressable>
           </LinearGradient>
         ) : null}
 
@@ -626,13 +627,13 @@ export default function StoryCamera() {
           <View style={[styles.share, { bottom: insets.bottom + 18 }]}>
             <Pressable style={styles.pill} disabled={sending} onPress={() => flyAndPublish(storyItem(false))}>
               <Image source={{ uri: store.profile.src }} style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: "#fff" }} />
-              <T size={13.5} weight="600" color="#fff" lines={1}>La tua storia</T>
+              <T size={13.5} weight="600" color="#fff" lines={1}>{t("La tua storia")}</T>
             </Pressable>
             <Pressable style={styles.pill} disabled={sending} onPress={() => flyAndPublish(storyItem(true))}>
               <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "#1fcf5c", alignItems: "center", justifyContent: "center" }}><Star size={14} weight="fill" color="#fff" /></View>
-              <T size={13.5} weight="600" color="#fff" lines={1}>Amici stretti</T>
+              <T size={13.5} weight="600" color="#fff" lines={1}>{t("Amici stretti")}</T>
             </Pressable>
-            <Pressable style={styles.go} accessibilityLabel="Condividi con" disabled={sending} onPress={() => { tap(); setSheet("share"); }}>
+            <Pressable style={styles.go} accessibilityLabel={t("Condividi con")} disabled={sending} onPress={() => { tap(); setSheet("share"); }}>
               <ChevronRight size={22} weight="bold" color="#111" />
             </Pressable>
           </View>
@@ -641,28 +642,28 @@ export default function StoryCamera() {
 
       {sheet === "more" ? (
         <DarkSheet onClose={() => setSheet(null)} bottom={insets.bottom}>
-          <SheetRow icon={Download} label="Salva sul dispositivo" onPress={() => { setSheet(null); saveToDevice(); }} />
-          <SheetRow icon={At} label="Menziona qualcuno" onPress={() => { setSheet(null); setTool("tag"); }} />
-          <SheetRow icon={MapPin} label="Aggiungi luogo" onPress={() => { setSheet(null); setTool("place"); }} />
-          {media.type === "video" ? <SheetRow icon={muted ? SoundOn : SoundOff} label={muted ? "Attiva audio" : "Silenzia"} onPress={() => { setSheet(null); setMuted((value) => !value); }} /> : null}
-          <SheetRow icon={Close} warn label="Scarta" onPress={() => setSheet("discard")} />
+          <SheetRow icon={Download} label={t("Salva sul dispositivo")} onPress={() => { setSheet(null); saveToDevice(); }} />
+          <SheetRow icon={At} label={t("Menziona qualcuno")} onPress={() => { setSheet(null); setTool("tag"); }} />
+          <SheetRow icon={MapPin} label={t("Aggiungi luogo")} onPress={() => { setSheet(null); setTool("place"); }} />
+          {media.type === "video" ? <SheetRow icon={muted ? SoundOn : SoundOff} label={muted ? t("Attiva audio") : t("Silenzia")} onPress={() => { setSheet(null); setMuted((value) => !value); }} /> : null}
+          <SheetRow icon={Close} warn label={t("Scarta")} onPress={() => setSheet("discard")} />
         </DarkSheet>
       ) : null}
 
       {sheet === "discard" ? (
         <DarkSheet onClose={() => setSheet(null)} bottom={insets.bottom}>
-          <T size={14} color="rgba(255,255,255,0.7)" style={{ textAlign: "center", paddingHorizontal: 24, paddingVertical: 12 }}>Scartare questa storia? Le modifiche andranno perse.</T>
-          <SheetRow warn label="Scarta" onPress={leaveEditor} />
-          <SheetRow label="Continua a modificare" onPress={() => setSheet(null)} />
+          <T size={14} color="rgba(255,255,255,0.7)" style={{ textAlign: "center", paddingHorizontal: 24, paddingVertical: 12 }}>{t("Scartare questa storia? Le modifiche andranno perse.")}</T>
+          <SheetRow warn label={t("Scarta")} onPress={leaveEditor} />
+          <SheetRow label={t("Continua a modificare")} onPress={() => setSheet(null)} />
         </DarkSheet>
       ) : null}
 
       {sheet === "share" ? (
         <DarkSheet onClose={() => setSheet(null)} bottom={insets.bottom} tall>
-          <T size={16} weight="700" color="#fff" style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 }}>Condividi</T>
-          <Target on={targets.story} label="La tua storia" lead={<Avatar src={store.profile.src} size={44} />} onPress={() => setTargets((prev) => ({ ...prev, story: !prev.story }))} />
-          <Target on={targets.close} label="Amici stretti" lead={<View style={styles.star}><Star size={20} weight="fill" color="#fff" /></View>} onPress={() => setTargets((prev) => ({ ...prev, close: !prev.close }))} />
-          {store.chats.length ? <T size={13} weight="600" color="rgba(255,255,255,0.55)" style={{ marginHorizontal: 20, marginTop: 10, marginBottom: 4 }}>Invia a</T> : null}
+          <T size={16} weight="700" color="#fff" style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 }}>{t("Condividi")}</T>
+          <Target on={targets.story} label={t("La tua storia")} lead={<Avatar src={store.profile.src} size={44} />} onPress={() => setTargets((prev) => ({ ...prev, story: !prev.story }))} />
+          <Target on={targets.close} label={t("Amici stretti")} lead={<View style={styles.star}><Star size={20} weight="fill" color="#fff" /></View>} onPress={() => setTargets((prev) => ({ ...prev, close: !prev.close }))} />
+          {store.chats.length ? <T size={13} weight="600" color="rgba(255,255,255,0.55)" style={{ marginHorizontal: 20, marginTop: 10, marginBottom: 4 }}>{t("Invia a")}</T> : null}
           <ScrollView style={{ maxHeight: H * 0.34 }}>
             {store.chats.slice(0, 12).map((chat) => {
               const on = targets.people.includes(chat.id);
@@ -683,7 +684,7 @@ export default function StoryCamera() {
             onPress={shareSelected}
             style={[styles.shareGo, { opacity: !targets.story && !targets.close && !targets.people.length ? 0.4 : 1 }]}
           >
-            <T size={15} weight="700" color="#fff">Condividi</T>
+            <T size={15} weight="700" color="#fff">{t("Condividi")}</T>
           </Pressable>
         </DarkSheet>
       ) : null}
@@ -749,10 +750,10 @@ function CountPop({ value, u }) {
     v.value = withTiming(1, { duration: 1000 });
   }, [v]);
   const style = useAnimatedStyle(() => {
-    const t = v.value;
+    const k = v.value;
     return {
-      opacity: t < 0.2 ? t / 0.2 : t > 0.85 ? (1 - t) / 0.15 : 1,
-      transform: [{ scale: t < 0.2 ? 1.6 - 3 * t : t > 0.85 ? 1 - ((t - 0.85) / 0.15) * 0.2 : 1 }],
+      opacity: k < 0.2 ? k / 0.2 : k > 0.85 ? (1 - k) / 0.15 : 1,
+      transform: [{ scale: k < 0.2 ? 1.6 - 3 * k : k > 0.85 ? 1 - ((k - 0.85) / 0.15) * 0.2 : 1 }],
     };
   });
   return (
@@ -768,10 +769,10 @@ function FilterName({ label, u }) {
     v.value = withTiming(1, { duration: 1100 });
   }, [v]);
   const style = useAnimatedStyle(() => {
-    const t = v.value;
+    const k = v.value;
     return {
-      opacity: t < 0.15 ? t / 0.15 : t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1,
-      transform: [{ scale: t < 0.15 ? 0.9 + (t / 0.15) * 0.1 : 1 }],
+      opacity: k < 0.15 ? k / 0.15 : k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1,
+      transform: [{ scale: k < 0.15 ? 0.9 + (k / 0.15) * 0.1 : 1 }],
     };
   });
   return (
@@ -977,7 +978,7 @@ function DrawPad({ w, h, top, bottom, onDone }) {
         </Svg>
       </View>
       <View style={[styles.drawTop, { top: top + 8 }]}>
-        <Pressable disabled={!history.length} onPress={() => { tap(); undo(); }} style={[styles.glassBtn, { opacity: history.length ? 1 : 0.35 }]} accessibilityLabel="Annulla">
+        <Pressable disabled={!history.length} onPress={() => { tap(); undo(); }} style={[styles.glassBtn, { opacity: history.length ? 1 : 0.35 }]} accessibilityLabel={t("Annulla")}>
           <Undo size={22} color="#fff" />
         </Pressable>
         <View style={styles.brushes}>
@@ -985,13 +986,13 @@ function DrawPad({ w, h, top, bottom, onDone }) {
             const Icon = BRUSH_ICONS[item.id];
             const on = brush === item.id;
             return (
-              <Pressable key={item.id} accessibilityLabel={item.label} onPress={() => { tap(); setBrush(item.id); }} style={[styles.brush, on ? { backgroundColor: "#fff" } : null]}>
+              <Pressable key={item.id} accessibilityLabel={t(item.label)} onPress={() => { tap(); setBrush(item.id); }} style={[styles.brush, on ? { backgroundColor: "#fff" } : null]}>
                 <Icon size={20} weight={on ? "fill" : "regular"} color={on ? "#111" : "#fff"} />
               </Pressable>
             );
           })}
         </View>
-        <Pressable onPress={done} style={styles.done}><T size={16} weight="700" color="#fff">Fine</T></Pressable>
+        <Pressable onPress={done} style={styles.done}><T size={16} weight="700" color="#fff">{t("Fine")}</T></Pressable>
       </View>
       <SizeSlider value={size} onChange={setSize} top={h * 0.3} />
       <View style={[styles.swatches, { bottom: bottom + 26 }]}>
@@ -1035,13 +1036,13 @@ function TextEditor({ draft, setDraft, onDone, u, top }) {
       <Pressable style={StyleSheet.absoluteFill} onPress={onDone} />
       <View style={[styles.teTop, { top: top + 10 }]}>
         <Pressable
-          accessibilityLabel="Sfondo testo"
+          accessibilityLabel={t("Sfondo testo")}
           onPress={() => { tap(); setDraft((prev) => ({ ...prev, bg: prev.bg === "" ? "solid" : prev.bg === "solid" ? "soft" : "" })); }}
           style={[styles.teBg, draft.bg ? { backgroundColor: "#fff" } : null]}
         >
           <T size={17} weight="800" color={draft.bg ? "#111" : "#fff"}>A</T>
         </Pressable>
-        <Pressable onPress={onDone} style={styles.done}><T size={16} weight="700" color="#fff">Fine</T></Pressable>
+        <Pressable onPress={onDone} style={styles.done}><T size={16} weight="700" color="#fff">{t("Fine")}</T></Pressable>
       </View>
       <View pointerEvents="box-none" style={{ position: "absolute", left: 16, right: 16, top: top + 60, bottom: keyboard + 110, alignItems: "center", justifyContent: "center" }}>
         <View style={[textBox(draft, u), { alignSelf: "center", maxWidth: "100%" }]}>
@@ -1050,10 +1051,10 @@ function TextEditor({ draft, setDraft, onDone, u, top }) {
             multiline
             value={draft.text}
             onChangeText={(text) => setDraft((prev) => ({ ...prev, text }))}
-            placeholder="Scrivi…"
+            placeholder={t("Scrivi…")}
             placeholderTextColor="rgba(255,255,255,0.55)"
             selectionColor="#fff"
-            accessibilityLabel="Testo della storia"
+            accessibilityLabel={t("Testo della storia")}
             style={[look, { minWidth: 40, padding: 0, textAlignVertical: "center" }]}
           />
         </View>
@@ -1064,7 +1065,7 @@ function TextEditor({ draft, setDraft, onDone, u, top }) {
             const on = draft.font === font.id;
             return (
               <Pressable key={font.id} onPress={() => { tap(); setDraft((prev) => ({ ...prev, font: font.id })); }} style={[styles.font, on ? { backgroundColor: "#fff", borderColor: "#fff", transform: [{ scale: 1.05 }] } : null]}>
-                <T size={13} color={on ? "#111" : "#fff"} style={fontChip(font.id)}>{font.label}</T>
+                <T size={13} color={on ? "#111" : "#fff"} style={fontChip(font.id)}>{t(font.label)}</T>
               </Pressable>
             );
           })}
@@ -1097,7 +1098,7 @@ function Tray({ tool, setTool, find, setFind, addSticker, bottom }) {
   const people = CONTACTS.filter((person) => !blocked.has(person.name) && `${person.name} ${person.meta}`.toLowerCase().includes(q));
   const hashes = STORY_HASH.filter((tag) => tag.toLowerCase().includes(q));
   const songs = STORY_MUSIC.filter((song) => `${song.title} ${song.artist}`.toLowerCase().includes(q));
-  const kit = STORY_KIT.filter((item) => !q || item.label.toLowerCase().includes(q));
+  const kit = STORY_KIT.filter((item) => !q || t(item.label).toLowerCase().includes(q));
   const close = () => { setTool(null); setFind(""); };
 
   let body = null;
@@ -1112,7 +1113,7 @@ function Tray({ tool, setTool, find, setFind, addSticker, bottom }) {
             return (
               <Pressable key={item.id} onPress={() => { tap(); setTool(item.id); }} style={({ pressed }) => [styles.kitBtn, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
                 <Icon size={17} weight="bold" color="#7c3aed" />
-                <T size={13} weight="700" color="#111" lines={1}>{item.label}</T>
+                <T size={13} weight="700" color="#111" lines={1}>{t(item.label)}</T>
               </Pressable>
             );
           })}
@@ -1153,32 +1154,32 @@ function Tray({ tool, setTool, find, setFind, addSticker, bottom }) {
       </View>
     );
   } else if (tool === "poll") {
-    body = <Row title="Il rosso regge?" sub="Sì · Ancora no" onPress={() => addSticker({ type: "poll", question: "Il rosso regge?", a: "Sì", b: "Ancora no", av: 12, bv: 4 })} />;
+    body = <Row title={t("Il rosso regge?")} sub={t("Sì · Ancora no")} onPress={() => addSticker({ type: "poll", question: t("Il rosso regge?"), a: t("Sì"), b: t("Ancora no"), av: 12, bv: 4 })} />;
   } else if (tool === "ask") {
-    body = <Row title="Che ne pensi?" sub="Chi guarda può rispondere" onPress={() => addSticker({ type: "ask", prompt: "Che ne pensi?" })} />;
+    body = <Row title={t("Che ne pensi?")} sub={t("Chi guarda può rispondere")} onPress={() => addSticker({ type: "ask", prompt: t("Che ne pensi?") })} />;
   } else if (tool === "quiz") {
-    body = <Row title="Il secondo fuoco?" sub="1200 · 1400 · 1600" onPress={() => addSticker({ type: "quiz", question: "Il secondo fuoco?", options: ["1200", "1400", "1600"], answer: 1 })} />;
+    body = <Row title={t("Il secondo fuoco?")} sub="1200 · 1400 · 1600" onPress={() => addSticker({ type: "quiz", question: t("Il secondo fuoco?"), options: ["1200", "1400", "1600"], answer: 1 })} />;
   } else if (tool === "slider") {
-    body = <Row title="Quanto ti piace?" sub="Slider con il cuore" onPress={() => addSticker({ type: "slider", prompt: "Quanto ti piace?", char: "❤️", value: 62 })} />;
+    body = <Row title={t("Quanto ti piace?")} sub={t("Slider con il cuore")} onPress={() => addSticker({ type: "slider", prompt: t("Quanto ti piace?"), char: "❤️", value: 62 })} />;
   } else if (tool === "link") {
     body = <Row title="space.app/forno" onPress={() => addSticker({ type: "link", label: "space.app/forno" })} />;
   } else if (tool === "count") {
-    body = <Row title="Apertura" sub="Sabato" onPress={() => addSticker({ type: "count", label: "Apertura", when: "Sabato" })} />;
+    body = <Row title={t("Apertura")} sub={t("Sabato")} onPress={() => addSticker({ type: "count", label: t("Apertura"), when: t("Sabato") })} />;
   } else if (tool === "yours") {
-    body = <Row title="Il tuo rosso" sub="Chi guarda aggiunge il suo" onPress={() => addSticker({ type: "yours", prompt: "Il tuo rosso" })} />;
+    body = <Row title={t("Il tuo rosso")} sub={t("Chi guarda aggiunge il suo")} onPress={() => addSticker({ type: "yours", prompt: t("Il tuo rosso") })} />;
   } else if (tool === "notify") {
-    body = <Row title="Avvisa chi ti segue" sub="Finisce nella campanella" onPress={() => addSticker({ type: "notify" })} />;
+    body = <Row title={t("Avvisa chi ti segue")} sub={t("Finisce nella campanella")} onPress={() => addSticker({ type: "notify" })} />;
   } else if (tool === "product") {
-    const mine = store.accountType === "business" ? (store.myProducts || []).map((product) => ({ product, owner: null, shop: "Il tuo shop" })) : [];
+    const mine = store.accountType === "business" ? (store.myProducts || []).map((product) => ({ product, owner: null, shop: t("Il tuo shop") })) : [];
     const others = Object.entries(SHOPS).flatMap(([owner, shop]) => shop.products.map((product) => ({ product, owner, shop: shop.title })));
     const match = ({ product, shop }) => !q || `${product.name} ${shop}`.toLowerCase().includes(q);
     const mineShown = mine.filter(match);
     const othersShown = others.filter(match);
     body = (
       <>
-        {mine.length ? <T size={12} weight="700" color="rgba(255,255,255,0.55)" style={styles.trayLabel}>Il tuo shop</T> : null}
+        {mine.length ? <T size={12} weight="700" color="rgba(255,255,255,0.55)" style={styles.trayLabel}>{t("Il tuo shop")}</T> : null}
         {mineShown.map((entry) => <ProductRow key={`me-${entry.product.id}`} entry={entry} onPress={addSticker} />)}
-        {mine.length ? <T size={12} weight="700" color="rgba(255,255,255,0.55)" style={styles.trayLabel}>Dalle botteghe</T> : null}
+        {mine.length ? <T size={12} weight="700" color="rgba(255,255,255,0.55)" style={styles.trayLabel}>{t("Dalle botteghe")}</T> : null}
         {othersShown.map((entry) => <ProductRow key={`${entry.owner}-${entry.product.id}`} entry={entry} onPress={addSticker} />)}
       </>
     );
@@ -1191,12 +1192,12 @@ function Tray({ tool, setTool, find, setFind, addSticker, bottom }) {
         <View style={styles.grab} />
         <View style={styles.search}>
           <Search size={17} color="rgba(255,255,255,0.6)" />
-          <TextInput value={find} onChangeText={setFind} placeholder="Cerca" placeholderTextColor="rgba(255,255,255,0.5)" style={{ flex: 1, height: 38, color: "#fff", fontSize: 15, padding: 0 }} accessibilityLabel="Cerca sticker" />
+          <TextInput value={find} onChangeText={setFind} placeholder={t("Cerca")} placeholderTextColor="rgba(255,255,255,0.5)" style={{ flex: 1, height: 38, color: "#fff", fontSize: 15, padding: 0 }} accessibilityLabel={t("Cerca sticker")} />
         </View>
         {tool !== "tray" ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Pressable hitSlop={8} onPress={() => setTool("tray")} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }} accessibilityLabel="Indietro"><ChevronLeft size={20} color="#fff" /></Pressable>
-            <T size={16} weight="700" color="#fff">{STORY_KIT.find((item) => item.id === tool)?.label}</T>
+            <Pressable hitSlop={8} onPress={() => setTool("tray")} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }} accessibilityLabel={t("Indietro")}><ChevronLeft size={20} color="#fff" /></Pressable>
+            <T size={16} weight="700" color="#fff">{t(STORY_KIT.find((item) => item.id === tool)?.label)}</T>
           </View>
         ) : null}
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, paddingBottom: bottom + 14 }} showsVerticalScrollIndicator={false}>

@@ -1,6 +1,7 @@
 import { FlatList, View } from "react-native";
 import { router } from "expo-router";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
 import { useInboxRules, useThreads } from "../../live/threads";
 import { demoTime, listTime, tickFor } from "../../live/format";
@@ -27,13 +28,13 @@ export default function ArchivedChats() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <SubHead title="Chat archiviate" meta={`${archived.length}`} />
+      <SubHead title={t("Chat archiviate")} meta={`${archived.length}`} />
       <FlatList
         data={archived}
         keyExtractor={(item) => item.id}
         style={{ backgroundColor: theme.page }}
-        ListHeaderComponent={<Hint>Le chat archiviate restano qui. Quelle non silenziate tornano quando arriva un nuovo messaggio.</Hint>}
-        ListEmptyComponent={<EmptyState icon={Archive} title="Nessuna chat archiviata" />}
+        ListHeaderComponent={<Hint>{t("Le chat archiviate restano qui. Quelle non silenziate tornano quando arriva un nuovo messaggio.")}</Hint>}
+        ListEmptyComponent={<EmptyState icon={Archive} title={t("Nessuna chat archiviata")} />}
         renderItem={({ item }) => (
           <InboxRow
             item={item}
@@ -49,7 +50,7 @@ export default function ArchivedChats() {
             onLongPress={() => {}}
             onMute={() => store.setDmFlag(item.id, "muted", !isMuted(item))}
             onDelete={() => (item.live ? store.setDmFlag(item.id, "hiddenAt", Date.now()) : store.deleteChat(item.id))}
-            onUnarchive={() => { store.setDmFlags([item.id], "archivedAt", null); flash("Riportata nelle chat", 2200); }}
+            onUnarchive={() => { store.setDmFlags([item.id], "archivedAt", null); flash(t("Riportata nelle chat"), 2200); }}
           />
         )}
       />

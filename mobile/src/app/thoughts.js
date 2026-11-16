@@ -7,6 +7,7 @@ import { TIME } from "../lib/profile-data";
 import { Feather } from "../ui/icons-profile";
 import { Header, T, tap } from "../ui/kit";
 import { IgEmpty, SlideTabs } from "../ui/profile-kit";
+import { t } from "../lib/i18n";
 import { ComposePrompt, ThoughtEntry, buildThoughts, composeThought } from "../ui/thoughts";
 
 // Pensieri: "Per te" and "Seguiti", with a floating pen that hides while you scroll down.
@@ -34,21 +35,21 @@ export default function ThoughtsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <Header title={<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><Feather size={18} weight="fill" color={theme.text} /><T size={17} weight="700">Pensieri</T></View>} />
-      <SlideTabs tabs={[{ key: "foryou", label: "Per te" }, { key: "following", label: "Seguiti" }]} active={tab} onChange={setTab} height={42} size={15} dim="text3" />
+      <Header title={<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><Feather size={18} weight="fill" color={theme.text} /><T size={17} weight="700">{t("Pensieri")}</T></View>} />
+      <SlideTabs tabs={[{ key: "foryou", label: t("Per te") }, { key: "following", label: t("Seguiti") }]} active={tab} onChange={setTab} height={42} size={15} dim="text3" />
       <FlashList
         key={tab}
         data={list}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ThoughtEntry thought={item} />}
         ListHeaderComponent={<ComposePrompt />}
-        ListEmptyComponent={<IgEmpty icon={Feather} title="Ancora niente qui" text="Segui qualcuno per vedere i suoi pensieri." />}
+        ListEmptyComponent={<IgEmpty icon={Feather} title={t("Ancora niente qui")} text={t("Segui qualcuno per vedere i suoi pensieri.")} />}
         onScroll={onScroll}
         scrollEventThrottle={32}
         contentContainerStyle={{ paddingBottom: 90 }}
       />
       <Animated.View style={[styles.fabWrap, { opacity: fab, transform: [{ translateY: fab.interpolate({ inputRange: [0, 1], outputRange: [110, 0] }) }, { scale: fab.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}>
-        <Pressable accessibilityLabel="Nuovo pensiero" onPress={() => { tap(); composeThought(); }} style={({ pressed }) => [styles.fab, { backgroundColor: theme.text, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+        <Pressable accessibilityLabel={t("Nuovo pensiero")} onPress={() => { tap(); composeThought(); }} style={({ pressed }) => [styles.fab, { backgroundColor: theme.text, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
           <Feather size={26} weight="bold" color={theme.bg} />
         </Pressable>
       </Animated.View>

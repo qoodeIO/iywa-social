@@ -12,6 +12,7 @@ import seed from "../../data/seed.json";
 import { CONTACTS, PEOPLE, PORTRAIT, POSTS, WORKS, compact } from "../../data";
 import { INSET } from "../../theme";
 import { useStore } from "../../lib/store";
+import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
 import { useThreads, personOf } from "../../live/threads";
 import { DM_REACTIONS, clockOf, dayOf, nameIn, seenText, textHidden, tickFor } from "../../live/format";
@@ -142,8 +143,8 @@ export default function Chat() {
   const rows = useMemo(() => {
     if (!thread) return [];
     const out = [];
-    if (!thread.live && entries.length) out.push({ type: "pill", key: "today", text: "Oggi" });
-    if (thread.live && !entries.length) out.push({ type: "pill", key: "hello", text: "Saluta 👋 I messaggi arrivano in tempo reale." });
+    if (!thread.live && entries.length) out.push({ type: "pill", key: "today", text: t("Oggi") });
+    if (thread.live && !entries.length) out.push({ type: "pill", key: "hello", text: t("Saluta 👋 I messaggi arrivano in tempo reale.") });
     const far = (a, b) => Boolean(a?.created && b?.created && b.created - a.created > 30 * 60 * 1000);
     const solo = (item) => item && item.from !== "system" && item.kind !== "call";
     entries.forEach((entry, at) => {
@@ -200,14 +201,14 @@ export default function Chat() {
   const inThisCall = live?.call.convId === thread.id && live?.call.phase !== "idle";
   const muted = Boolean(flags[thread.id]?.muted);
   const subtitle = thread.typing?.length
-    ? (thread.group ? `${thread.typing.join(", ")} sta scrivendo…` : "sta scrivendo…")
+    ? (thread.group ? t("{names} sta scrivendo…", { names: thread.typing.join(", ") }) : t("sta scrivendo…"))
     : thread.live
       ? (thread.group
-        ? `${thread.conv.members.length} membri · ${thread.people.filter((p) => p.online).length} online`
-        : (prefs.activity === false ? "" : thread.online ? "Attivo/a ora" : seenText(thread.other)))
+        ? t("{n} membri · {online} online", { n: thread.conv.members.length, online: thread.people.filter((p) => p.online).length })
+        : (prefs.activity === false ? "" : thread.online ? t("Attivo/a ora") : seenText(thread.other)))
       : thread.members
         ? thread.members.map((member) => member.name.split(" ")[0]).join(", ")
-        : (prefs.activity === false ? "" : "Attivo/a 12 min fa");
+        : (prefs.activity === false ? "" : t("Attivo/a 12 min fa"));
   const subtitleBlue = Boolean(thread.typing?.length) || (thread.online && prefs.activity !== false);
   const otherUnread = threads.filter((item) => item.id !== thread.id && !flags[item.id]?.muted).reduce((sum, item) => sum + (item.live ? item.unread || 0 : item.unread ? 1 : 0), 0);
   const showIntro = !(thread.live && thread.conv.hasMore);
@@ -216,7 +217,7 @@ export default function Chat() {
     ? entries.find((entry) => entry.message.id && entry.message.id === thread.pinned?.id)
     : entries.find((entry) => entry.index === flags[thread.id]?.pin);
   const pinnedRaw = pinnedEntry?.message || (thread.live ? thread.pinned : null);
-  const pinnedText = pinnedRaw ? (pinnedRaw.text || (pinnedRaw.kind === "image" ? "📷 Foto" : pinnedRaw.kind === "audio" ? "🎤 Messaggio vocale" : "…")) : "";
+  const pinnedText = pinnedRaw ? (pinnedRaw.text || (pinnedRaw.kind === "image" ? `📷 ${t("Foto")}` : pinnedRaw.kind === "audio" ? `🎤 ${t("Messaggio vocale")}` : "…")) : "";
   const isPinned = (entry) => (thread.live ? Boolean(thread.pinned?.id) && thread.pinned.id === entry.message.id : flags[thread.id]?.pin === entry.index);
   const mention = isGroup ? mentionOf(draft) : null;
   const mentionList = mention
@@ -234,13 +235,13 @@ export default function Chat() {
   function quoteName(reply, mineMessage) {
     const fromMe = thread.live ? reply.from === me : reply.from === "me";
     const other = thread.live ? nameIn(thread.conv, reply.from, me).split(" ")[0] : (reply.name || thread.name || "").split(" ")[0];
-    if (mineMessage) return fromMe ? "Hai risposto a te stesso" : `Hai risposto a ${other}`;
-    return fromMe ? "Ha risposto a te" : `Ha risposto a ${other}`;
+    if (mineMessage) return fromMe ? t("Hai risposto a te stesso") : t("Hai risposto a {name}", { name: other });
+    return fromMe ? t("Ha risposto a te") : t("Ha risposto a {name}", { name: other });
   }
 
   async function deliver(payload) {
     if (payload.kind === "text" && textHidden(prefs, payload.text)) {
-      flash("Il messaggio contiene una parola nascosta.");
+      flash(t("Il messaggio contiene una parola nascosta."));
       return;
     }
     setDraft("");
@@ -248,7 +249,7 @@ export default function Chat() {
     try {
       await sendTo({ live, store }, thread, payload);
     } catch (error) {
-      flash(String(error?.message) === "too-big" ? "File troppo grande per la chat live." : "Impossibile inviare il file.");
+      flash(String(error?.message) === "too-big" ? t("File troppo grande per la chat live.") : t("Impossibile inviare il file."));
       return;
     }
     if (!thread.live && !thread.members) live.answerLater(thread, payload);
@@ -292,7 +293,7 @@ export default function Chat() {
       key: entry.key,
       id: message.id,
       from: thread.live ? message.sender : message.from,
-      name: message.from === "me" ? "te stesso" : (message.senderName || thread.name || ""),
+      name: message.from === "me" ? t("te stesso") : (message.senderName || thread.name || ""),
       kind: message.kind || "text",
       text: message.kind === "text" || !message.kind ? message.text : (message.text || ""),
     });
@@ -324,7 +325,7 @@ export default function Chat() {
   async function forwardTo(target) {
     const message = forwarding;
     if (!message || !target) return;
-    const origin = message.fwd?.name || (message.from === "me" ? (live?.me?.name || store.profile?.name || "Tu") : (message.senderName || thread.name || ""));
+    const origin = message.fwd?.name || (message.from === "me" ? (live?.me?.name || store.profile?.name || t("Tu")) : (message.senderName || thread.name || ""));
     const base = message.kind === "image"
       ? { kind: "image", image: message.image, ...(message.text ? { text: message.text } : {}) }
       : message.kind === "audio"
@@ -334,9 +335,9 @@ export default function Chat() {
     setForwardQuery("");
     try {
       await sendTo({ live, store }, target, { ...base, fwd: { name: origin } });
-      flash(`Inoltrato a ${target.name}`);
+      flash(t("Inoltrato a {name}", { name: target.name }));
     } catch {
-      flash("Impossibile inoltrare.");
+      flash(t("Impossibile inoltrare."));
     }
   }
 
@@ -347,7 +348,7 @@ export default function Chat() {
       if (result.canceled || !result.assets?.[0]) return;
       deliver({ kind: "image", image: await keepMedia(result.assets[0].uri, "chat") });
     } catch {
-      flash("Impossibile aprire la foto.");
+      flash(t("Impossibile aprire la foto."));
     }
   }
 
@@ -363,7 +364,7 @@ export default function Chat() {
         recRef.current.started = 0;
         recRef.current.denied = true;
         setRec(null);
-        flash("Consenti il microfono per i messaggi vocali.");
+        flash(t("Consenti il microfono per i messaggi vocali."));
       }
     });
   }
@@ -386,7 +387,7 @@ export default function Chat() {
     const duration = Math.max(1, Math.min(120, Math.round(held / 1000)));
     r.started = 0;
     setRec(null);
-    if (held < 450) flash("Tieni premuto");
+    if (held < 450) flash(t("Tieni premuto"));
     const result = await voice.stop(!cancel);
     if (cancel || !result) return;
     deliver({ kind: "audio", audio: result.uri, duration, wave: result.wave });
@@ -438,7 +439,7 @@ export default function Chat() {
     <View>
       {thread.live && thread.conv.hasMore ? (
         <Pressable disabled={thread.conv.loading} onPress={() => { tap(); live.fetchOlder(thread.id); }} style={[styles.more, { backgroundColor: theme.fill }]}>
-          <T size={13} weight="600">{thread.conv.loading ? "Caricamento…" : "Messaggi precedenti"}</T>
+          <T size={13} weight="600">{thread.conv.loading ? t("Caricamento…") : t("Messaggi precedenti")}</T>
         </Pressable>
       ) : null}
       {showIntro ? (
@@ -449,13 +450,13 @@ export default function Chat() {
           <T size={17} weight="700" color={wall.night ? "#fff" : theme.text} style={{ textAlign: "center" }}>{thread.name}</T>
           <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2} style={{ textAlign: "center" }}>
             {isGroup
-              ? `${(thread.members || thread.people || []).length + 1} membri`
-              : person?.live ? `@${person.handle} · Space` : `${person?.handle || ""} · ${person?.followers ? `${compact(person.followers)} follower` : "Space"}`}
+              ? t("{n} membri", { n: (thread.members || thread.people || []).length + 1 })
+              : person?.live ? `@${person.handle} · Space` : `${person?.handle || ""} · ${person?.followers ? t("{n} follower", { n: compact(person.followers) }) : "Space"}`}
           </T>
           {!isGroup && person?.craft ? <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2}>{person.craft}{person.city ? ` · ${person.city}` : ""}</T> : null}
           {isGroup && thread.about ? <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2} style={{ marginTop: 4, textAlign: "center", lineHeight: 18 }}>{thread.about}</T> : null}
           <Pressable onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.introBtn, { backgroundColor: wall.night ? "rgba(120,160,255,0.18)" : "rgba(0,149,246,0.12)", transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-            <T size={13.5} weight="600" color={wall.night ? "#9cc0ff" : theme.blue}>{isGroup ? "Info gruppo" : "Info chat"}</T>
+            <T size={13.5} weight="600" color={wall.night ? "#9cc0ff" : theme.blue}>{isGroup ? t("Info gruppo") : t("Info chat")}</T>
           </Pressable>
         </Animated.View>
       ) : null}
@@ -465,7 +466,7 @@ export default function Chat() {
   const typingRow = thread.typing?.length ? (
     <Animated.View entering={FadeInDown.duration(220)} style={[styles.line, { marginTop: 9 }]}>
       <View style={styles.face}><Face src={thread.src} name={thread.name} size={28} /></View>
-      <View style={[styles.typing, { backgroundColor: theme.them }]} accessibilityLabel="sta scrivendo"><TypingDots color={theme.text2} /></View>
+      <View style={[styles.typing, { backgroundColor: theme.them }]} accessibilityLabel={t("sta scrivendo")}><TypingDots color={theme.text2} /></View>
     </Animated.View>
   ) : null;
 
@@ -505,7 +506,7 @@ export default function Chat() {
         />
         {below ? (
           <Animated.View entering={ZoomIn.duration(200)} style={styles.downWrap}>
-            <Pressable accessibilityLabel="Ultimi messaggi" onPress={() => { tap(); listRef.current?.scrollToOffset({ offset: 0, animated: true }); }} style={[styles.down, { backgroundColor: theme.elev }]}>
+            <Pressable accessibilityLabel={t("Ultimi messaggi")} onPress={() => { tap(); listRef.current?.scrollToOffset({ offset: 0, animated: true }); }} style={[styles.down, { backgroundColor: theme.elev }]}>
               <ArrowDown size={18} weight="bold" color={theme.text} />
               {unseen ? <View style={[styles.downBadge, { backgroundColor: theme.blue }]}><T size={11} weight="700" color="#fff">{unseen}</T></View> : null}
             </Pressable>
@@ -517,27 +518,27 @@ export default function Chat() {
           <BlurView intensity={50} tint={theme.dark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: headBg }]} />
           <View style={{ paddingTop: insets.top }}>
             <View style={[styles.head, { borderBottomColor: theme.line }]}>
-              <Pressable accessibilityLabel="Torna alle chat" hitSlop={8} onPress={() => { tap(); router.canGoBack() ? router.back() : router.replace("/messages"); }} style={styles.back}>
+              <Pressable accessibilityLabel={t("Torna alle chat")} hitSlop={8} onPress={() => { tap(); router.canGoBack() ? router.back() : router.replace("/messages"); }} style={styles.back}>
                 <ChevronLeft size={24} weight="bold" color={theme.blue} />
                 {otherUnread ? <View style={[styles.backBadge, { backgroundColor: theme.blue }]}><T size={12} weight="600" color="#fff">{otherUnread > 99 ? "99+" : otherUnread}</T></View> : null}
               </Pressable>
-              <Pressable accessibilityLabel="Info chat" onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.title, pressed && { backgroundColor: theme.fill }]}>
+              <Pressable accessibilityLabel={t("Info chat")} onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.title, pressed && { backgroundColor: theme.fill }]}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "100%" }}>
                   <T size={16} weight="700" lines={1} style={{ letterSpacing: -0.16, flexShrink: 1 }}>{thread.name}</T>
                   {muted ? <BellOff size={13} weight="fill" color={theme.text3} /> : null}
                 </View>
                 {subtitle ? <T size={12.5} lines={1} color={subtitleBlue ? theme.blue : theme.text2}>{subtitle}</T> : null}
               </Pressable>
-              <Pressable accessibilityLabel="Info chat" onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.headFace, { transform: [{ scale: pressed ? 0.92 : 1 }] }]}>
+              <Pressable accessibilityLabel={t("Info chat")} onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.headFace, { transform: [{ scale: pressed ? 0.92 : 1 }] }]}>
                 <ThreadFace thread={thread} size={38} />
               </Pressable>
               {finding ? (
                 <Animated.View entering={FadeIn.duration(180)} style={[styles.find, { backgroundColor: theme.bg }]}>
                   <SearchField autoFocus value={finding.q} onChangeText={(q) => setFinding({ q, at: 0 })} onSubmit={() => setFinding((prev) => ({ ...prev, at: Math.min(prev.at + 1, Math.max(0, matches.length - 1)) }))} style={{ flex: 1, height: 34 }} />
-                  <T size={12} color={theme.text2} style={{ minWidth: 34, textAlign: "center", fontVariant: ["tabular-nums"] }}>{finding.q.trim() ? (matches.length ? `${matches.length - finding.at} / ${matches.length}` : "Nessun risultato") : ""}</T>
-                  <Pressable accessibilityLabel="Precedente" disabled={finding.at >= matches.length - 1} onPress={() => setFinding((prev) => ({ ...prev, at: prev.at + 1 }))} style={{ padding: 6, opacity: finding.at >= matches.length - 1 ? 0.3 : 1 }}><ChevronUp size={18} weight="bold" color={theme.text} /></Pressable>
-                  <Pressable accessibilityLabel="Successivo" disabled={finding.at <= 0} onPress={() => setFinding((prev) => ({ ...prev, at: prev.at - 1 }))} style={{ padding: 6, opacity: finding.at <= 0 ? 0.3 : 1 }}><ChevronDown size={18} weight="bold" color={theme.text} /></Pressable>
-                  <Pressable onPress={() => setFinding(null)} hitSlop={6} style={{ paddingHorizontal: 4 }}><T size={15} weight="600" color={theme.blue}>Fine</T></Pressable>
+                  <T size={12} color={theme.text2} style={{ minWidth: 34, textAlign: "center", fontVariant: ["tabular-nums"] }}>{finding.q.trim() ? (matches.length ? `${matches.length - finding.at} / ${matches.length}` : t("Nessun risultato")) : ""}</T>
+                  <Pressable accessibilityLabel={t("Precedente")} disabled={finding.at >= matches.length - 1} onPress={() => setFinding((prev) => ({ ...prev, at: prev.at + 1 }))} style={{ padding: 6, opacity: finding.at >= matches.length - 1 ? 0.3 : 1 }}><ChevronUp size={18} weight="bold" color={theme.text} /></Pressable>
+                  <Pressable accessibilityLabel={t("Successivo")} disabled={finding.at <= 0} onPress={() => setFinding((prev) => ({ ...prev, at: prev.at - 1 }))} style={{ padding: 6, opacity: finding.at <= 0 ? 0.3 : 1 }}><ChevronDown size={18} weight="bold" color={theme.text} /></Pressable>
+                  <Pressable onPress={() => setFinding(null)} hitSlop={6} style={{ paddingHorizontal: 4 }}><T size={15} weight="600" color={theme.blue}>{t("Fine")}</T></Pressable>
                 </Animated.View>
               ) : null}
             </View>
@@ -546,7 +547,7 @@ export default function Chat() {
             <Pressable onPress={() => (pinnedEntry ? jumpTo(pinnedEntry.key) : null)} style={[styles.pinned, { backgroundColor: theme.bg, borderBottomColor: theme.line }]}>
               <View style={[styles.pinnedBar, { backgroundColor: theme.blue }]} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <T size={13} weight="700" color={theme.blue}>Messaggio fissato</T>
+                <T size={13} weight="700" color={theme.blue}>{t("Messaggio fissato")}</T>
                 <T size={13.5} lines={1}>{pinnedText}</T>
               </View>
               <View style={{ transform: [{ rotate: "45deg" }] }}><Pin size={16} weight="fill" color={theme.text3} /></View>
@@ -555,8 +556,8 @@ export default function Chat() {
           {room && !inThisCall ? (
             <Pressable onPress={() => { tap(); live.calls.join(thread.id); }} style={[styles.join, { backgroundColor: theme.dark ? "#0a2a13" : "#e4f9ea" }]}>
               <View style={styles.joinIcon}>{room.video ? <Video size={16} weight="fill" color="#fff" /> : <Phone size={16} weight="fill" color="#fff" />}</View>
-              <T size={14} style={{ flex: 1 }}>Chiamata in corso · {room.participants.length} in chiamata</T>
-              <T size={14} weight="700" color="#1cd14f">Entra</T>
+              <T size={14} style={{ flex: 1 }}>{t("Chiamata in corso · {n} in chiamata", { n: room.participants.length })}</T>
+              <T size={14} weight="700" color="#1cd14f">{t("Entra")}</T>
             </Pressable>
           ) : null}
         </View>
@@ -565,8 +566,8 @@ export default function Chat() {
       {tray ? (
         <Animated.View entering={FadeInDown.duration(260)} style={[styles.tray, { borderTopColor: theme.line, backgroundColor: theme.bg }]}>
           <View style={styles.trayHead}>
-            <T size={14} weight="700">Recenti</T>
-            <Pressable onPress={pickPhoto} hitSlop={8}><T size={14} weight="600" color={theme.blue}>Libreria</T></Pressable>
+            <T size={14} weight="700">{t("Recenti")}</T>
+            <Pressable onPress={pickPhoto} hitSlop={8}><T size={14} weight="600" color={theme.blue}>{t("Libreria")}</T></Pressable>
           </View>
           <ScrollView style={{ maxHeight: 180, borderRadius: 10 }} contentContainerStyle={styles.trayGrid}>
             {DEMO_GALLERY.slice(0, 12).map((src) => (
@@ -578,7 +579,7 @@ export default function Chat() {
         </Animated.View>
       ) : null}
       {hint ? <Animated.View entering={FadeIn.duration(200)}><T size={12.5} color={theme.text2} style={styles.hint}>{hint}</T></Animated.View> : null}
-      {thread.live && live.status !== "open" ? <T size={12.5} color={theme.text2} style={styles.hint}>Riconnessione… i messaggi partiranno appena torni online.</T> : null}
+      {thread.live && live.status !== "open" ? <T size={12.5} color={theme.text2} style={styles.hint}>{t("Riconnessione… i messaggi partiranno appena torni online.")}</T> : null}
 
       <View style={[styles.composer, { paddingBottom: (keyboard ? 0 : insets.bottom) + 10, borderTopColor: theme.line, backgroundColor: theme.bg }]}>
         {mentionList.length ? (
@@ -595,20 +596,20 @@ export default function Chat() {
           <Animated.View entering={FadeInDown.duration(220)} style={styles.replybar}>
             <PenLine size={20} weight="fill" color={theme.blue} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <T size={13} weight="600" color={theme.blue}>Modifica messaggio</T>
+              <T size={13} weight="600" color={theme.blue}>{t("Modifica messaggio")}</T>
               <T size={13} color={theme.text2} lines={1}>{editing.text}</T>
             </View>
-            <Pressable accessibilityLabel="Annulla modifica" hitSlop={8} onPress={() => { setEditing(null); setDraft(""); }} style={styles.replyClose}><Close size={16} weight="bold" color={theme.text2} /></Pressable>
+            <Pressable accessibilityLabel={t("Annulla modifica")} hitSlop={8} onPress={() => { setEditing(null); setDraft(""); }} style={styles.replyClose}><Close size={16} weight="bold" color={theme.text2} /></Pressable>
           </Animated.View>
         ) : null}
         {replyTo ? (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.replybar}>
             <Reply size={20} weight="bold" color={theme.blue} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <T size={13} weight="600" color={theme.blue}>Stai rispondendo a {replyTo.name.split(" ")[0]}</T>
-              <T size={13} color={theme.text2} lines={1}>{replyTo.text || (replyTo.kind === "image" ? "Foto" : "Messaggio vocale")}</T>
+              <T size={13} weight="600" color={theme.blue}>{t("Stai rispondendo a {name}", { name: replyTo.name.split(" ")[0] })}</T>
+              <T size={13} color={theme.text2} lines={1}>{replyTo.text || (replyTo.kind === "image" ? t("Foto") : t("Messaggio vocale"))}</T>
             </View>
-            <Pressable accessibilityLabel="Annulla risposta" hitSlop={8} onPress={() => setReplyTo(null)} style={styles.replyClose}><Close size={16} weight="bold" color={theme.text2} /></Pressable>
+            <Pressable accessibilityLabel={t("Annulla risposta")} hitSlop={8} onPress={() => setReplyTo(null)} style={styles.replyClose}><Close size={16} weight="bold" color={theme.text2} /></Pressable>
           </Animated.View>
         ) : null}
         {emojiOpen ? (
@@ -621,14 +622,14 @@ export default function Chat() {
           </ScrollView>
         ) : null}
         <View style={[styles.pillRow, { backgroundColor: theme.fill }]}>
-          <Pressable accessibilityLabel="Foto" accessibilityState={{ selected: tray }} onPress={() => { tap(); Keyboard.dismiss(); setTray((value) => !value); setEmojiOpen(false); }} style={({ pressed }) => [styles.cam, { backgroundColor: theme.blue, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+          <Pressable accessibilityLabel={t("Foto")} accessibilityState={{ selected: tray }} onPress={() => { tap(); Keyboard.dismiss(); setTray((value) => !value); setEmojiOpen(false); }} style={({ pressed }) => [styles.cam, { backgroundColor: theme.blue, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
             <Camera size={20} weight="fill" color="#fff" />
           </Pressable>
           {rec ? (
             <View style={styles.rec}>
               <Blink />
               <T size={14} weight="600" style={{ fontVariant: ["tabular-nums"] }}>{stamp}</T>
-              <T size={13} color={rec.cancel ? theme.red : theme.text2} lines={1} style={{ flex: 1 }}>{rec.cancel ? "Lascia per annullare" : "‹ Scorri per annullare"}</T>
+              <T size={13} color={rec.cancel ? theme.red : theme.text2} lines={1} style={{ flex: 1 }}>{rec.cancel ? t("Lascia per annullare") : t("‹ Scorri per annullare")}</T>
             </View>
           ) : (
             <TextInput
@@ -641,22 +642,22 @@ export default function Chat() {
                 if (thread.live && value.trim()) live.typing(thread.id);
               }}
               onFocus={() => setTray(false)}
-              placeholder="Messaggio…"
+              placeholder={t("Messaggio…")}
               placeholderTextColor={theme.text2}
-              accessibilityLabel={`Messaggio ${thread.name}`}
+              accessibilityLabel={t("Messaggio {name}", { name: thread.name })}
               style={[styles.input, { color: theme.text }]}
             />
           )}
           {draft.trim() && !rec ? (
             editing ? (
-              <Pressable accessibilityLabel="Salva" onPress={submit} style={[styles.sendEdit, { backgroundColor: theme.blue }]}><Check size={17} weight="bold" color="#fff" /></Pressable>
+              <Pressable accessibilityLabel={t("Salva")} onPress={submit} style={[styles.sendEdit, { backgroundColor: theme.blue }]}><Check size={17} weight="bold" color="#fff" /></Pressable>
             ) : (
-              <Pressable accessibilityLabel="Invia" onPress={submit} hitSlop={6} style={styles.send}><T size={15} weight="700" color={theme.blue}>Invia</T></Pressable>
+              <Pressable accessibilityLabel={t("Invia")} onPress={submit} hitSlop={6} style={styles.send}><T size={15} weight="700" color={theme.blue}>{t("Invia")}</T></Pressable>
             )
           ) : (
             <>
               <View
-                accessibilityLabel="Tieni premuto per registrare"
+                accessibilityLabel={t("Tieni premuto per registrare")}
                 onStartShouldSetResponder={() => true}
                 onResponderTerminationRequest={() => false}
                 onResponderGrant={(event) => beginRec(event.nativeEvent.pageX)}
@@ -669,8 +670,8 @@ export default function Chat() {
               </View>
               {!rec ? (
                 <>
-                  <Pressable accessibilityLabel="Libreria" onPress={pickPhoto} style={styles.tool}><ImageIcon size={24} color={theme.text} /></Pressable>
-                  <Pressable accessibilityLabel="Emoji" onPress={() => { tap(); setEmojiOpen((value) => !value); setTray(false); }} style={styles.tool}><Smile size={24} color={theme.text} /></Pressable>
+                  <Pressable accessibilityLabel={t("Libreria")} onPress={pickPhoto} style={styles.tool}><ImageIcon size={24} color={theme.text} /></Pressable>
+                  <Pressable accessibilityLabel={t("Emoji")} onPress={() => { tap(); setEmojiOpen((value) => !value); setTray(false); }} style={styles.tool}><Smile size={24} color={theme.text} /></Pressable>
                 </>
               ) : null}
             </>
@@ -699,13 +700,13 @@ export default function Chat() {
               <T size={12} color={theme.text2} style={{ paddingHorizontal: 8 }}>{focusEntry.message.time || ""}</T>
               <Animated.View entering={ZoomIn.delay(40).springify().damping(16)} style={[styles.focusMenu, { backgroundColor: theme.elev }]}>
                 {[
-                  { label: "Rispondi", icon: Reply, run: () => startReply(focusEntry) },
-                  focusEntry.message.from === "me" && (focusEntry.message.kind || "text") === "text" && (!thread.live || focusEntry.message.id) ? { label: "Modifica", icon: PenLine, run: () => startEdit(focusEntry) } : null,
-                  !thread.live || focusEntry.message.id ? { label: isPinned(focusEntry) ? "Togli dai fissati" : "Fissa", icon: Pin, run: () => togglePinned(focusEntry) } : null,
-                  { label: "Inoltra", icon: Forward, run: () => setForwarding(focusEntry.message) },
-                  focusEntry.message.text ? { label: "Copia", icon: Copy, run: () => { Clipboard.setStringAsync(focusEntry.message.text).catch(() => {}); flash("Copiato"); } } : null,
-                  focusEntry.message.kind === "image" ? { label: "Visualizza", icon: Eye, run: () => setZoom(focusEntry.message.image) } : null,
-                  focusEntry.message.from === "me" && (!thread.live || focusEntry.message.id) ? { label: "Annulla l'invio", icon: RotateCcw, warn: true, run: () => unsend(focusEntry) } : null,
+                  { label: t("Rispondi"), icon: Reply, run: () => startReply(focusEntry) },
+                  focusEntry.message.from === "me" && (focusEntry.message.kind || "text") === "text" && (!thread.live || focusEntry.message.id) ? { label: t("Modifica"), icon: PenLine, run: () => startEdit(focusEntry) } : null,
+                  !thread.live || focusEntry.message.id ? { label: isPinned(focusEntry) ? t("Togli dai fissati") : t("Fissa"), icon: Pin, run: () => togglePinned(focusEntry) } : null,
+                  { label: t("Inoltra"), icon: Forward, run: () => setForwarding(focusEntry.message) },
+                  focusEntry.message.text ? { label: t("Copia"), icon: Copy, run: () => { Clipboard.setStringAsync(focusEntry.message.text).catch(() => {}); flash(t("Copiato")); } } : null,
+                  focusEntry.message.kind === "image" ? { label: t("Visualizza"), icon: Eye, run: () => setZoom(focusEntry.message.image) } : null,
+                  focusEntry.message.from === "me" && (!thread.live || focusEntry.message.id) ? { label: t("Annulla l'invio"), icon: RotateCcw, warn: true, run: () => unsend(focusEntry) } : null,
                 ].filter(Boolean).map((item, index) => (
                   <Pressable key={item.label} onPress={() => { tap(); setFocus(null); item.run(); }} style={({ pressed }) => [styles.focusItem, index && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line }, pressed && { backgroundColor: theme.fill }]}>
                     <T size={15} color={item.warn ? theme.red : theme.text}>{item.label}</T>
@@ -718,7 +719,7 @@ export default function Chat() {
         ) : null}
       </Modal>
 
-      <Sheet open={Boolean(forwarding)} onClose={() => { setForwarding(null); setForwardQuery(""); }} title="Inoltra a…">
+      <Sheet open={Boolean(forwarding)} onClose={() => { setForwarding(null); setForwardQuery(""); }} title={t("Inoltra a…")}>
         <SearchField value={forwardQuery} onChangeText={setForwardQuery} />
         <ScrollView style={{ maxHeight: 420, marginTop: 10 }} keyboardShouldPersistTaps="handled">
           {threads.filter((item) => !forwardQuery.trim() || item.name.toLowerCase().includes(forwardQuery.trim().toLowerCase())).map((item) => (
@@ -726,7 +727,7 @@ export default function Chat() {
               <ThreadFace thread={item} size={44} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <T size={15} weight="600" lines={1}>{item.name}</T>
-                <T size={13} color={theme.text2}>{item.group || item.members ? "Gruppo" : item.live ? "Su Space" : "Chat"}</T>
+                <T size={13} color={theme.text2}>{item.group || item.members ? t("Gruppo") : item.live ? t("Su Space") : t("Chat")}</T>
               </View>
             </Pressable>
           ))}
@@ -736,7 +737,7 @@ export default function Chat() {
       <Modal visible={Boolean(zoom)} transparent animationType="fade" onRequestClose={() => setZoom(null)} statusBarTranslucent>
         <Pressable style={{ flex: 1, backgroundColor: "#000" }} onPress={() => setZoom(null)}>
           {zoom ? <Animated.View entering={ZoomIn.springify().damping(16)} style={{ flex: 1 }}><Image source={{ uri: zoom }} style={{ flex: 1 }} contentFit="contain" transition={120} /></Animated.View> : null}
-          <Pressable accessibilityLabel="Chiudi" onPress={() => setZoom(null)} style={[styles.zoomClose, { top: insets.top + 6 }]}><Close size={25} weight="bold" color="#fff" /></Pressable>
+          <Pressable accessibilityLabel={t("Chiudi")} onPress={() => setZoom(null)} style={[styles.zoomClose, { top: insets.top + 6 }]}><Close size={25} weight="bold" color="#fff" /></Pressable>
         </Pressable>
       </Modal>
     </KeyboardAvoidingView>
@@ -754,7 +755,7 @@ function FocusBubble({ message, theme }) {
       </View>
     );
   }
-  const body = <T size={15} color={fg} style={{ lineHeight: 19.8 }}>{message.kind === "audio" ? "🎤 Messaggio vocale" : message.kind === "call" ? (message.call === "video" ? "Videochiamata" : "Chiamata vocale") : message.text}</T>;
+  const body = <T size={15} color={fg} style={{ lineHeight: 19.8 }}>{message.kind === "audio" ? `🎤 ${t("Messaggio vocale")}` : message.kind === "call" ? (message.call === "video" ? t("Videochiamata") : t("Chiamata vocale")) : message.text}</T>;
   if (mine) {
     return <LinearGradientBox>{body}</LinearGradientBox>;
   }

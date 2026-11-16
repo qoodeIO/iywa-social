@@ -9,6 +9,7 @@ import { AVATAR, avatarFor } from "../data";
 import { Checked, ChevronDown, Menu, Plus, Ring, SquarePlus } from "../ui/icons-profile";
 import { IconBtn, Sheet, T, tap } from "../ui/kit";
 import { MyProfile } from "../ui/profile";
+import { t } from "../lib/i18n";
 
 export default function Profile() {
   const theme = useTheme();
@@ -24,8 +25,8 @@ export default function Profile() {
           <ChevronDown size={16} weight="bold" color={theme.text} />
         </Pressable>
         <View style={{ flexDirection: "row" }}>
-          <IconBtn icon={SquarePlus} label="Crea" onPress={() => router.push("/create")} />
-          <IconBtn icon={Menu} label="Impostazioni" onPress={() => router.push("/settings")} />
+          <IconBtn icon={SquarePlus} label={t("Crea")} onPress={() => router.push("/create")} />
+          <IconBtn icon={Menu} label={t("Impostazioni")} onPress={() => router.push("/settings")} />
         </View>
       </View>
       <MyProfile />
@@ -49,7 +50,7 @@ export default function Profile() {
         })}
         <Pressable onPress={() => { setAccounts(false); store.addAccount(); }} style={({ pressed }) => [styles.account, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
           <View style={[styles.addAcc, { borderColor: theme.text3 }]}><Plus size={20} color={theme.text} /></View>
-          <T size={15} weight="600">Aggiungi account</T>
+          <T size={15} weight="600">{t("Aggiungi account")}</T>
         </Pressable>
       </Sheet>
     </View>
