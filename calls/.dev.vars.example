@@ -1,0 +1,9 @@
+# Optional: Cloudflare Realtime TURN key. Without it calls use STUN only
+# (works on most networks; strict NAT/corporate networks need TURN).
+TURN_KEY_ID=
+TURN_KEY_API_TOKEN=
+
+# Direct purchases (Stripe Connect). Use TEST keys until Space has real login.
+# STRIPE_SECRET_KEY=sk_test_...
+# STRIPE_WEBHOOK_SECRET=whsec_...   (from `stripe listen --forward-to localhost:8787/calls/api/stripe/webhook`)
+# PLATFORM_FEE_PERCENT=5

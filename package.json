@@ -6,15 +6,18 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4173 --strictPort",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "calls": "wrangler dev --config calls/wrangler.jsonc --port 8787 --ip 127.0.0.1"
   },
   "dependencies": {
-    "lucide-react": "^0.544.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "qrcode-generator": "^1.4.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "wrangler": "^4.160.1"
   }
 }

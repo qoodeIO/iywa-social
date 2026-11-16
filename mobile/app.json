@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Space",
+    "slug": "space",
+    "scheme": "space",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.qoode.space",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Space usa la fotocamera per storie e post.",
+        "NSPhotoLibraryUsageDescription": "Space usa le foto per storie, post e prodotti.",
+        "NSMicrophoneUsageDescription": "Space usa il microfono per video e messaggi vocali.",
+        "UIBackgroundModes": [
+          "audio",
+          "voip"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.qoode.space",
+      "adaptiveIcon": {
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      "expo-font",
+      "expo-image",
+      "expo-video",
+      "expo-audio",
+      "expo-sharing",
+      "@config-plugins/react-native-webrtc",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Space usa la fotocamera per storie, reel e videochiamate.",
+          "microphonePermission": "Space usa il microfono per video, chiamate e messaggi vocali.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Space usa le foto per storie, post e prodotti."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Space usa le foto per storie, post e prodotti.",
+          "savePhotosPermission": "Space salva le tue storie nella libreria."
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "hubUrl": "wss://space-calls.qoode-dev.workers.dev/calls/hub",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "73488b6a-3a9a-47ac-a9fe-02b7e537a852"
+      }
+    },
+    "owner": "qoode"
+  }
+}

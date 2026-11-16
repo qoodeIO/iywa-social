@@ -1,0 +1,2274 @@
+{
+ "PORTRAIT": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+ "DEFAULT_AVATAR": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+ "SHOT_FIRE": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+ "SHOT_CUPS": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+ "VOICE_WAVE": [
+  28,
+  46,
+  72,
+  40,
+  90,
+  58,
+  34,
+  76,
+  96,
+  48,
+  36,
+  82,
+  62,
+  42,
+  88,
+  54,
+  32,
+  70,
+  44,
+  84,
+  38,
+  66,
+  50,
+  78,
+  34,
+  60
+ ],
+ "PEOPLE": [
+  {
+   "name": "Marta Colle",
+   "meta": "Cucina · Torino",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Leo Bassi",
+   "meta": "Liuteria · Cremona",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Adele Romano",
+   "meta": "Tessuti · Prato",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Nico Serra",
+   "meta": "Ricerca · Bologna",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80"
+  }
+ ],
+ "THREADS": [
+  {
+   "id": "t1",
+   "name": "Leo Bassi",
+   "kind": "Riferimento",
+   "preview": "Il bordo regge se lo lasci raffreddare.",
+   "time": "2h",
+   "unread": true,
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Ho visto il bordo. Il rosso regge.",
+     "time": "13:40"
+    },
+    {
+     "from": "them",
+     "kind": "image",
+     "image": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Da vicino.",
+     "time": "13:41"
+    },
+    {
+     "from": "me",
+     "text": "L'ho lasciato raffreddare tutta la notte.",
+     "time": "13:58"
+    },
+    {
+     "from": "them",
+     "text": "Il bordo regge se lo lasci raffreddare.",
+     "time": "14:11"
+    }
+   ]
+  },
+  {
+   "id": "t2",
+   "name": "Marta Colle",
+   "kind": "Domanda",
+   "preview": "Che temperatura per il secondo fuoco?",
+   "time": "5h",
+   "unread": true,
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Che temperatura per il secondo fuoco?",
+     "time": "09:12"
+    },
+    {
+     "from": "me",
+     "text": "Millequattro, lento. Il rosso non brucia.",
+     "time": "09:18"
+    },
+    {
+     "from": "them",
+     "kind": "audio",
+     "audio": "",
+     "duration": 2,
+     "wave": [
+      28,
+      46,
+      72,
+      40,
+      90,
+      58,
+      34,
+      76,
+      96,
+      48,
+      36,
+      82,
+      62,
+      42,
+      88,
+      54,
+      32,
+      70,
+      44,
+      84,
+      38,
+      66,
+      50,
+      78,
+      34,
+      60
+     ],
+     "time": "09:19"
+    }
+   ]
+  },
+  {
+   "id": "t3",
+   "name": "Adele Romano",
+   "kind": "Offerta",
+   "preview": "Ho un rosso di Prato, se ti serve.",
+   "time": "Ieri",
+   "unread": false,
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Ho un rosso di Prato, se ti serve.",
+     "time": "18:40"
+    },
+    {
+     "from": "me",
+     "kind": "image",
+     "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Queste, se ci sta.",
+     "time": "18:44"
+    },
+    {
+     "from": "them",
+     "text": "Te lo tengo da parte, vicino al telaio.",
+     "time": "18:51"
+    }
+   ]
+  },
+  {
+   "id": "t4",
+   "name": "Nico Serra",
+   "kind": "Domanda",
+   "preview": "Posso passare dal forno giovedì?",
+   "time": "3g",
+   "unread": false,
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Posso passare dal forno giovedì?",
+     "time": "11:02"
+    },
+    {
+     "from": "me",
+     "text": "Giovedì il forno è acceso. Vieni dopo le quattro.",
+     "time": "11:16"
+    }
+   ]
+  },
+  {
+   "id": "t5",
+   "name": "Chiara Valli",
+   "kind": "Offerta",
+   "preview": "Il lino sul banco.",
+   "time": "4g",
+   "unread": false,
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Ho del lino grezzo, se ti serve per il banco.",
+     "time": "16:20"
+    },
+    {
+     "from": "me",
+     "text": "Sì. Lo passo a prendere sabato.",
+     "time": "16:28"
+    },
+    {
+     "from": "them",
+     "kind": "image",
+     "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Il lino sul banco.",
+     "time": "16:30"
+    }
+   ]
+  },
+  {
+   "id": "t6",
+   "name": "Pietro Lama",
+   "kind": "Domanda",
+   "preview": "Il forno regge una teglia larga?",
+   "time": "5g",
+   "unread": true,
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Il forno regge una teglia larga?",
+     "time": "12:04"
+    },
+    {
+     "from": "me",
+     "text": "Sì, se la infili dopo il primo calore.",
+     "time": "12:11"
+    }
+   ]
+  },
+  {
+   "id": "t7",
+   "name": "Sara Conte",
+   "kind": "Riferimento",
+   "preview": "A Faenza il rosso si ferma un tono sotto.",
+   "time": "1sett",
+   "unread": false,
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "A Faenza il rosso si ferma un tono sotto.",
+     "time": "15:33"
+    },
+    {
+     "from": "me",
+     "text": "Lo segno. Grazie del riferimento.",
+     "time": "15:40"
+    }
+   ]
+  },
+  {
+   "id": "t8",
+   "name": "Elena Marini",
+   "kind": "Domanda",
+   "preview": "Posso citare il forno nella nota di Padova?",
+   "time": "1sett",
+   "unread": false,
+   "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=480&h=480&q=80",
+   "messages": [
+    {
+     "from": "them",
+     "text": "Posso citare il forno nella nota di Padova?",
+     "time": "10:18"
+    },
+    {
+     "from": "me",
+     "text": "Certo. Scrivi solo che il rosso regge.",
+     "time": "10:26"
+    }
+   ]
+  }
+ ],
+ "CONTACTS": [
+  {
+   "name": "Marta Colle",
+   "meta": "Cucina · Torino",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Leo Bassi",
+   "meta": "Liuteria · Cremona",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Adele Romano",
+   "meta": "Tessuti · Prato",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Nico Serra",
+   "meta": "Ricerca · Bologna",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Chiara Valli",
+   "meta": "Tessuti · Firenze",
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Pietro Lama",
+   "meta": "Cucina · Genova",
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Sara Conte",
+   "meta": "Ceramica · Faenza",
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Elena Marini",
+   "meta": "Ricerca · Padova",
+   "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Irene Fossati",
+   "meta": "Ceramica · Venezia",
+   "src": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Marco Dente",
+   "meta": "Liuteria · Napoli",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=480&h=480&q=80"
+  }
+ ],
+ "WORKS": [
+  {
+   "src": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+   "caption": "Smalto rosso"
+  },
+  {
+   "src": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+   "caption": "Secondo fuoco"
+  },
+  {
+   "src": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+   "caption": "Coppe"
+  },
+  {
+   "src": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+   "caption": "Argilla"
+  }
+ ],
+ "HERO": {
+  "id": "hero",
+  "name": "Giulia Neri",
+  "handle": "@forno.neri",
+  "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+  "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+  "text": "Prima prova del nuovo smalto con @bassi.liuteria. Il rosso regge. #ceramica #secondoFuoco",
+  "likes": "1.8k",
+  "saves": "98",
+  "kind": "post",
+  "mine": true,
+  "tags": [
+   "Leo Bassi",
+   "Sara Conte"
+  ],
+  "thread": [
+   {
+    "name": "Leo Bassi",
+    "text": "Il bordo tiene. #ceramica"
+   },
+   {
+    "name": "Marta Colle",
+    "text": "Lo voglio sul banco. @forno.neri quando lo porti?"
+   },
+   {
+    "name": "Adele Romano",
+    "text": "@forno.neri guarda questo rosso! #ceramica"
+   }
+  ]
+ },
+ "POSTS": [
+  {
+   "id": "hero",
+   "name": "Giulia Neri",
+   "handle": "@forno.neri",
+   "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+   "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+   "text": "Prima prova del nuovo smalto con @bassi.liuteria. Il rosso regge. #ceramica #secondoFuoco",
+   "likes": "1.8k",
+   "saves": "98",
+   "kind": "post",
+   "mine": true,
+   "tags": [
+    "Leo Bassi",
+    "Sara Conte"
+   ],
+   "thread": [
+    {
+     "name": "Leo Bassi",
+     "text": "Il bordo tiene. #ceramica"
+    },
+    {
+     "name": "Marta Colle",
+     "text": "Lo voglio sul banco. @forno.neri quando lo porti?"
+    },
+    {
+     "name": "Adele Romano",
+     "text": "@forno.neri guarda questo rosso! #ceramica"
+    }
+   ]
+  },
+  {
+   "id": "w2",
+   "name": "Giulia Neri",
+   "handle": "@forno.neri",
+   "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+   "image": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+   "text": "Secondo fuoco, lento.",
+   "likes": "640",
+   "saves": "40",
+   "kind": "post",
+   "mine": true,
+   "thread": [
+    {
+     "name": "Nico Serra",
+     "text": "La temperatura è giusta."
+    }
+   ]
+  },
+  {
+   "id": "w3",
+   "name": "Giulia Neri",
+   "handle": "@forno.neri",
+   "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+   "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+   "text": "Le coppe hanno tenuto.",
+   "likes": "410",
+   "saves": "22",
+   "kind": "post",
+   "mine": true,
+   "thread": [
+    {
+     "name": "Pietro Lama",
+     "text": "Le voglio a tavola."
+    }
+   ]
+  },
+  {
+   "id": "w4",
+   "name": "Giulia Neri",
+   "handle": "@forno.neri",
+   "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+   "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+   "text": "Argilla ancora aperta.",
+   "likes": "220",
+   "saves": "18",
+   "kind": "post",
+   "mine": true,
+   "thread": [
+    {
+     "name": "Sara Conte",
+     "text": "Un tono sotto."
+    }
+   ]
+  },
+  {
+   "id": "p-marta",
+   "name": "Marta Colle",
+   "handle": "@cucina.colle",
+   "avatar": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+   "text": "Prima prova a tavola.",
+   "likes": "612",
+   "saves": "88",
+   "kind": "post",
+   "tagged": true,
+   "thread": [
+    {
+     "name": "Giulia Neri",
+     "text": "Il fuoco era lento, giusto."
+    }
+   ]
+  },
+  {
+   "id": "p-adele",
+   "name": "Adele Romano",
+   "handle": "@romano.tessuti",
+   "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "image": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "text": "Il rosso di Prato, sul telaio.",
+   "likes": "2.4k",
+   "saves": "140",
+   "kind": "post",
+   "tagged": true,
+   "thread": [
+    {
+     "name": "Giulia Neri",
+     "text": "Tienilo lontano dal forno."
+    }
+   ]
+  }
+ ],
+ "STORY_DECKS": [
+  {
+   "id": "marta",
+   "name": "Marta",
+   "full": "Marta Colle",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "frames": [
+    {
+     "id": "st-marta-1",
+     "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Impasto del mattino.",
+     "time": "2h",
+     "stickers": [
+      {
+       "type": "music",
+       "title": "Impasto",
+       "artist": "Marta Colle",
+       "x": 50,
+       "y": 20
+      },
+      {
+       "type": "place",
+       "name": "Torino",
+       "x": 50,
+       "y": 32
+      }
+     ]
+    },
+    {
+     "id": "st-marta-2",
+     "image": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Secondo fuoco, lento.",
+     "time": "2h",
+     "stickers": [
+      {
+       "type": "poll",
+       "question": "Il secondo fuoco?",
+       "a": "1400",
+       "b": "1600",
+       "av": 28,
+       "bv": 9,
+       "x": 50,
+       "y": 64
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "adele",
+   "name": "Adele",
+   "full": "Adele Romano",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "frames": [
+    {
+     "id": "st-adele-1",
+     "image": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+     "text": "Rosso di Prato.",
+     "time": "4h",
+     "stickers": [
+      {
+       "type": "music",
+       "title": "Rosso di Prato",
+       "artist": "Adele Romano",
+       "x": 50,
+       "y": 20
+      },
+      {
+       "type": "tag",
+       "name": "Giulia Neri",
+       "x": 50,
+       "y": 33
+      },
+      {
+       "type": "product",
+       "owner": "Adele Romano",
+       "productId": "ar1",
+       "name": "Camicia in lino",
+       "price": 120,
+       "image": "https://images.unsplash.com/photo-1558171813-4c088753af8f?auto=format&fit=crop&w=200&h=200&q=80",
+       "x": 50,
+       "y": 70
+      }
+     ]
+    },
+    {
+     "id": "st-adele-2",
+     "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+     "text": "Il telaio tiene il colore.",
+     "time": "4h",
+     "stickers": [
+      {
+       "type": "hash",
+       "tag": "rosso",
+       "x": 50,
+       "y": 22
+      },
+      {
+       "type": "gif",
+       "label": "ROSSO",
+       "tone": "red",
+       "x": 50,
+       "y": 36
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "leo",
+   "name": "Leo",
+   "full": "Leo Bassi",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "frames": [
+    {
+     "id": "st-leo-0",
+     "image": "https://images.unsplash.com/photo-1465821185615-20b3c2fbf41b?auto=format&fit=crop&w=900&h=1125&q=80",
+     "text": "Pronto per la vernice.",
+     "time": "5h",
+     "stickers": [
+      {
+       "type": "product",
+       "owner": "Leo Bassi",
+       "productId": "lb1",
+       "name": "Violino su misura",
+       "price": 6800,
+       "image": "https://images.unsplash.com/photo-1465821185615-20b3c2fbf41b?auto=format&fit=crop&w=200&h=200&q=80",
+       "x": 50,
+       "y": 72
+      }
+     ]
+    },
+    {
+     "id": "st-leo-1",
+     "image": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+     "text": "Il bordo, da vicino.",
+     "time": "6h",
+     "stickers": [
+      {
+       "type": "ask",
+       "prompt": "Che temperatura usi?",
+       "x": 50,
+       "y": 62
+      }
+     ]
+    },
+    {
+     "id": "st-leo-2",
+     "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Ancora umido.",
+     "time": "6h",
+     "stickers": [
+      {
+       "type": "slider",
+       "prompt": "Quanto è umido?",
+       "char": "💧",
+       "value": 70,
+       "x": 50,
+       "y": 64
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "nico",
+   "name": "Nico",
+   "full": "Nico Serra",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+   "frames": [
+    {
+     "id": "st-nico-1",
+     "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Argilla di Bologna.",
+     "time": "8h",
+     "stickers": [
+      {
+       "type": "quiz",
+       "question": "L'argilla è di?",
+       "options": [
+        "Faenza",
+        "Bologna",
+        "Prato"
+       ],
+       "answer": 1,
+       "x": 50,
+       "y": 62
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "chiara",
+   "name": "Chiara",
+   "full": "Chiara Valli",
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+   "frames": [
+    {
+     "id": "st-chiara-1",
+     "image": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+     "text": "Lino grezzo.",
+     "time": "12h",
+     "stickers": [
+      {
+       "type": "place",
+       "name": "Firenze",
+       "x": 50,
+       "y": 22
+      },
+      {
+       "type": "link",
+       "label": "Il lino",
+       "x": 50,
+       "y": 34
+      }
+     ]
+    },
+    {
+     "id": "st-chiara-2",
+     "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Taglio del mattino.",
+     "time": "12h",
+     "stickers": [
+      {
+       "type": "count",
+       "label": "Taglio",
+       "when": "Domani",
+       "x": 50,
+       "y": 22
+      },
+      {
+       "type": "emoji",
+       "char": "✨",
+       "x": 30,
+       "y": 42
+      },
+      {
+       "type": "notify",
+       "x": 50,
+       "y": 68
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "HIGHLIGHTS": [
+  {
+   "id": "h-forno",
+   "name": "Forno",
+   "full": "Giulia Neri",
+   "src": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+   "mine": true,
+   "frames": [
+    {
+     "id": "h-forno-1",
+     "image": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Secondo fuoco, lento.",
+     "time": "3g"
+    },
+    {
+     "id": "h-forno-2",
+     "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+     "text": "Il rosso regge.",
+     "time": "3g"
+    }
+   ]
+  },
+  {
+   "id": "h-rosso",
+   "name": "Rosso",
+   "full": "Giulia Neri",
+   "src": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+   "mine": true,
+   "frames": [
+    {
+     "id": "h-rosso-1",
+     "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+     "text": "Prima prova dello smalto.",
+     "time": "1sett"
+    },
+    {
+     "id": "h-rosso-2",
+     "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+     "text": "Un tono sotto.",
+     "time": "1sett"
+    }
+   ]
+  },
+  {
+   "id": "h-banco",
+   "name": "Banco",
+   "full": "Giulia Neri",
+   "src": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+   "mine": true,
+   "frames": [
+    {
+     "id": "h-banco-1",
+     "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Coppe sul banco.",
+     "time": "2sett"
+    },
+    {
+     "id": "h-banco-2",
+     "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+     "text": "Argilla ancora aperta.",
+     "time": "2sett"
+    }
+   ]
+  },
+  {
+   "id": "h-lino",
+   "name": "Lino",
+   "full": "Giulia Neri",
+   "src": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+   "mine": true,
+   "frames": [
+    {
+     "id": "h-lino-1",
+     "image": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+     "text": "Il telaio tiene il colore.",
+     "time": "1m"
+    }
+   ]
+  }
+ ],
+ "REELS": [
+  {
+   "id": "r1",
+   "name": "Adele Romano",
+   "handle": "@romano.tessuti",
+   "caption": "Il rosso di Prato, sul telaio.",
+   "audio": "Telaio",
+   "length": "0:12",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "likes": "2.4k",
+   "comments": "86",
+   "saves": "140",
+   "thread": [
+    {
+     "name": "Giulia Neri",
+     "text": "Quel rosso tiene anche sul banco."
+    },
+    {
+     "name": "Leo Bassi",
+     "text": "Lo voglio vedere da vicino."
+    }
+   ]
+  },
+  {
+   "id": "r2",
+   "name": "Giulia Neri",
+   "handle": "@forno.neri",
+   "caption": "Secondo fuoco, lento. Il rosso non brucia.",
+   "audio": "Forno",
+   "length": "0:18",
+   "src": "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces",
+   "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+   "likes": "8.1k",
+   "comments": "347",
+   "saves": "980",
+   "thread": [
+    {
+     "name": "Marta Colle",
+     "text": "Millequattro, giusto."
+    },
+    {
+     "name": "Nico Serra",
+     "text": "Il bordo resta aperto."
+    }
+   ]
+  },
+  {
+   "id": "r3",
+   "name": "Marta Colle",
+   "handle": "@cucina.colle",
+   "caption": "Impasto del mattino. Il fuoco era lento.",
+   "audio": "Impasto",
+   "length": "0:09",
+   "src": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+   "avatar": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "likes": "3.2k",
+   "comments": "64",
+   "saves": "210",
+   "thread": [
+    {
+     "name": "Pietro Lama",
+     "text": "Le coppe hanno tenuto."
+    },
+    {
+     "name": "Adele Romano",
+     "text": "Lo voglio a tavola."
+    }
+   ]
+  },
+  {
+   "id": "r4",
+   "name": "Leo Bassi",
+   "handle": "@bassi.liuteria",
+   "caption": "Il bordo, da vicino. Un tono sotto, e tiene.",
+   "audio": "Bordo",
+   "length": "0:21",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "likes": "1.6k",
+   "comments": "41",
+   "saves": "88",
+   "thread": [
+    {
+     "name": "Giulia Neri",
+     "text": "Non forzare il rosso."
+    },
+    {
+     "name": "Sara Conte",
+     "text": "A Faenza si ferma lì."
+    }
+   ]
+  },
+  {
+   "id": "r5",
+   "name": "Nico Serra",
+   "handle": "@serra.ricerca",
+   "caption": "Argilla di Bologna, ancora aperta.",
+   "audio": "Argilla",
+   "length": "0:15",
+   "src": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+   "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+   "likes": "903",
+   "comments": "54",
+   "saves": "120",
+   "thread": [
+    {
+     "name": "Elena Marini",
+     "text": "La cito nella nota di Padova."
+    },
+    {
+     "name": "Leo Bassi",
+     "text": "Giovedì il forno è acceso."
+    }
+   ]
+  },
+  {
+   "id": "r6",
+   "name": "Chiara Valli",
+   "handle": "@valli.lino",
+   "caption": "Lino grezzo, prima del taglio.",
+   "audio": "Lino",
+   "length": "0:11",
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+   "avatar": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+   "likes": "740",
+   "comments": "19",
+   "saves": "66",
+   "thread": [
+    {
+     "name": "Adele Romano",
+     "text": "Tienilo lontano dal forno."
+    },
+    {
+     "name": "Marta Colle",
+     "text": "Sul banco ci sta."
+    }
+   ]
+  }
+ ],
+ "MEET": [
+  {
+   "name": "Chiara Valli",
+   "meta": "Tessuti · Firenze",
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Pietro Lama",
+   "meta": "Cucina · Genova",
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Sara Conte",
+   "meta": "Ceramica · Faenza",
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Elena Marini",
+   "meta": "Ricerca · Padova",
+   "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=480&h=480&q=80"
+  },
+  {
+   "name": "Marta Colle",
+   "meta": "Cucina · Torino",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Leo Bassi",
+   "meta": "Liuteria · Cremona",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Adele Romano",
+   "meta": "Tessuti · Prato",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80"
+  },
+  {
+   "name": "Nico Serra",
+   "meta": "Ricerca · Bologna",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80"
+  }
+ ],
+ "FEED_PAGES": [
+  [
+   {
+    "id": "tw1",
+    "type": "tweet",
+    "name": "Leo Bassi",
+    "handle": "@bassi.liuteria",
+    "time": "2h",
+    "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+    "text": "Il bordo regge se lo lasci raffreddare. Non forzare il rosso: un tono sotto, e tiene.",
+    "likes": "248",
+    "comments": "36",
+    "saves": "19"
+   },
+   {
+    "id": "ph1",
+    "type": "post",
+    "name": "Marta Colle",
+    "handle": "@cucina.colle",
+    "time": "5h",
+    "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+    "image": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80",
+    "text": "Prima prova a tavola. Il fuoco era lento, le coppe hanno tenuto.",
+    "likes": "612",
+    "comments": "41",
+    "saves": "88"
+   }
+  ],
+  [
+   {
+    "id": "rl1",
+    "type": "reel",
+    "name": "Nico Serra",
+    "handle": "@serra.ricerca",
+    "time": "1g",
+    "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+    "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80",
+    "text": "Argilla di Bologna, ancora aperta.",
+    "length": "0:15",
+    "likes": "903",
+    "comments": "54",
+    "saves": "120"
+   },
+   {
+    "id": "tw2",
+    "type": "tweet",
+    "name": "Adele Romano",
+    "handle": "@romano.tessuti",
+    "time": "1g",
+    "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+    "text": "Ho un rosso di Prato, se ti serve. Sta vicino al telaio, non al forno.",
+    "likes": "176",
+    "comments": "22",
+    "saves": "64"
+   }
+  ],
+  [
+   {
+    "id": "ph2",
+    "type": "post",
+    "name": "Sara Conte",
+    "handle": "@conte.faenza",
+    "time": "3g",
+    "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+    "image": "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+    "text": "A Faenza il rosso si ferma un tono sotto. Seconda cottura domani.",
+    "likes": "390",
+    "comments": "18",
+    "saves": "47"
+   },
+   {
+    "id": "tw3",
+    "type": "tweet",
+    "name": "Pietro Lama",
+    "handle": "@lama.cucina",
+    "time": "4g",
+    "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80",
+    "text": "Il forno regge una teglia larga, se la infili dopo il primo calore. Non prima.",
+    "likes": "128",
+    "comments": "15",
+    "saves": "9"
+   }
+  ]
+ ],
+ "SEARCH_PEOPLE": [
+  {
+   "name": "Marta Colle",
+   "handle": "cucina.colle",
+   "craft": "Cucina",
+   "city": "Torino",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "followers": 12400,
+   "following": 318,
+   "bio": "Cucina di stagione, a mano. Pasta tirata col mattarello ogni mattina.",
+   "verified": true
+  },
+  {
+   "name": "Leo Bassi",
+   "handle": "bassi.liuteria",
+   "craft": "Musica",
+   "city": "Cremona",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "followers": 8650,
+   "following": 204,
+   "bio": "Liutaio a Cremona. Abete rosso, acero, e tanta pazienza."
+  },
+  {
+   "name": "Adele Romano",
+   "handle": "romano.tessuti",
+   "craft": "Tessuti",
+   "city": "Prato",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "followers": 21900,
+   "following": 512,
+   "bio": "Telai, lana cardata e il rosso di Prato.",
+   "verified": true
+  },
+  {
+   "name": "Nico Serra",
+   "handle": "serra.ricerca",
+   "craft": "Design",
+   "city": "Bologna",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+   "followers": 3120,
+   "following": 410,
+   "bio": "Ricerca sui materiali. Smalti, impasti, temperature."
+  },
+  {
+   "name": "Chiara Valli",
+   "handle": "valli.lino",
+   "craft": "Tessuti",
+   "city": "Firenze",
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+   "followers": 5480,
+   "following": 290,
+   "bio": "Lino lavato a mano, tinture vegetali."
+  },
+  {
+   "name": "Pietro Lama",
+   "handle": "lama.cucina",
+   "craft": "Cucina",
+   "city": "Genova",
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80",
+   "followers": 9730,
+   "following": 150,
+   "bio": "Pesto al mortaio, sempre. Trattoria di famiglia dal 1962."
+  },
+  {
+   "name": "Sara Conte",
+   "handle": "conte.faenza",
+   "craft": "Ceramica",
+   "city": "Faenza",
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+   "followers": 15200,
+   "following": 388,
+   "bio": "Maiolica di Faenza. Pezzi unici, cottura a legna.",
+   "verified": true
+  },
+  {
+   "name": "Elena Marini",
+   "handle": "marini.studio",
+   "craft": "Design",
+   "city": "Padova",
+   "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=480&h=480&q=80",
+   "followers": 4310,
+   "following": 620,
+   "bio": "Interni caldi, oggetti che durano."
+  }
+ ],
+ "EXPLORE_SEED": [
+  [
+   "x1",
+   6,
+   "1493106641515-6b5631de4bb9",
+   "Al tornio dalle sei. #ceramica #faenza",
+   2140,
+   "Ceramica",
+   [
+    "1590422749897-47036da0b0ff",
+    "1612196808214-b8e1d6145a8c"
+   ]
+  ],
+  [
+   "x2",
+   0,
+   "1473093295043-cdd812d0e601",
+   "Farfalle, pomodorini, basilico dell'orto. #cucina",
+   3890,
+   "Cucina"
+  ],
+  [
+   "x3",
+   1,
+   "1465821185615-20b3c2fbf41b",
+   "Prima prova del violino nuovo. #liuteria #cremona",
+   5120,
+   "Musica"
+  ],
+  [
+   "x4",
+   2,
+   "1558171813-4c088753af8f",
+   "Camicia in lino, cucita a mano. #tessuti",
+   1760,
+   "Tessuti"
+  ],
+  [
+   "x5",
+   5,
+   "1534080564583-6be75777b70a",
+   "Domenica di mare. #cucina #genova",
+   4410,
+   "Cucina"
+  ],
+  [
+   "x6",
+   7,
+   "1513519245088-0e12902e5a38",
+   "Parete nuova in studio. #design",
+   980,
+   "Design"
+  ],
+  [
+   "x7",
+   6,
+   "1576020799627-aeac74d58064",
+   "Piatti appena sfornati, smalto avorio. #ceramica",
+   2760,
+   "Ceramica"
+  ],
+  [
+   "x8",
+   0,
+   "1556910103-1c02745aae4d",
+   "Corso di cucina del giovedì. #cucina #torino",
+   1990,
+   "Cucina",
+   [
+    "1551218808-94e220e084d2"
+   ]
+  ],
+  [
+   "x9",
+   1,
+   "1507838153414-b4b713384a76",
+   "Partiture e colla di pesce. #musica",
+   860,
+   "Musica"
+  ],
+  [
+   "x10",
+   3,
+   "1597484661643-2f5fef640dd1",
+   "Campioni di colore per la nuova serie. #design",
+   1320,
+   "Design"
+  ],
+  [
+   "x11",
+   5,
+   "1565299624946-b28f40a0ae38",
+   "Focaccia? No, oggi pizza. #cucina",
+   6080,
+   "Cucina"
+  ],
+  [
+   "x12",
+   1,
+   "1520523839897-bd0b52f945a0",
+   "Accordatura del mattino. #musica",
+   2230,
+   "Musica"
+  ],
+  [
+   "x13",
+   4,
+   "1544441893-675973e31985",
+   "Denim grezzo e tela. #tessuti #firenze",
+   1450,
+   "Tessuti"
+  ],
+  [
+   "x14",
+   6,
+   "1612196808214-b8e1d6145a8c",
+   "Vaso bianco, linea semplice. #ceramica",
+   3310,
+   "Ceramica"
+  ],
+  [
+   "x15",
+   0,
+   "1498837167922-ddd27525d352",
+   "Mercato del sabato. #cucina",
+   2050,
+   "Cucina"
+  ],
+  [
+   "x16",
+   7,
+   "1519710164239-da123dc03ef4",
+   "Luce del pomeriggio. #design #padova",
+   1880,
+   "Design"
+  ],
+  [
+   "x17",
+   1,
+   "1519892300165-cb5542fb47c7",
+   "Tamburi restaurati. #musica",
+   740,
+   "Musica"
+  ],
+  [
+   "x18",
+   5,
+   "1414235077428-338989a2e8c0",
+   "Piatto del giorno. #cucina",
+   2970,
+   "Cucina"
+  ],
+  [
+   "x19",
+   3,
+   "1517248135467-4c7edcad34c4",
+   "Il ristorante che abbiamo arredato. #design",
+   1120,
+   "Design"
+  ],
+  [
+   "x20",
+   1,
+   "1511192336575-5a79af67a629",
+   "Ottoni in laboratorio. #musica",
+   1530,
+   "Musica"
+  ],
+  [
+   "x21",
+   6,
+   "1590422749897-47036da0b0ff",
+   "Tazze impilate per la cottura. #ceramica",
+   4020,
+   "Ceramica"
+  ],
+  [
+   "x22",
+   0,
+   "1504674900247-0877df9cc836",
+   "Cena per dieci. #cucina",
+   3650,
+   "Cucina"
+  ],
+  [
+   "x23",
+   7,
+   "1495474472287-4d71bcdd2085",
+   "Caffè in studio. #design",
+   2210,
+   "Design"
+  ],
+  [
+   "x24",
+   5,
+   "1551218808-94e220e084d2",
+   "Prep del mattino. #cucina",
+   1690,
+   "Cucina"
+  ],
+  [
+   "x25",
+   0,
+   "1509042239860-f550ce710b93",
+   "Pausa caffè tra un impasto e l'altro. #cucina",
+   2580,
+   "Cucina"
+  ]
+ ],
+ "EXPLORE_TOPICS": [
+  "Ceramica",
+  "Cucina",
+  "Musica",
+  "Tessuti",
+  "Design"
+ ],
+ "THOUGHT_SEED": [
+  {
+   "id": "tw1",
+   "name": "Leo Bassi",
+   "handle": "bassi.liuteria",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "verified": false,
+   "created": 1794833287183,
+   "likes": 248,
+   "reposts": 12,
+   "text": "Il bordo regge se lo lasci raffreddare. Non forzare il rosso: un tono sotto, e tiene.",
+   "replies": [
+    {
+     "id": "tw1-r1",
+     "name": "Sara Conte",
+     "handle": "conte.faenza",
+     "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+     "verified": true,
+     "created": 1794835087183,
+     "likes": 31,
+     "text": "Verissimo. A Faenza diciamo che il forno si ascolta, non si comanda. 🔥"
+    },
+    {
+     "id": "tw1-r2",
+     "name": "Marta Colle",
+     "handle": "cucina.colle",
+     "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+     "verified": true,
+     "created": 1794836287183,
+     "likes": 8,
+     "text": "@bassi.liuteria vale anche per il pane, giuro."
+    }
+   ]
+  },
+  {
+   "id": "th-poll",
+   "name": "Sara Conte",
+   "handle": "conte.faenza",
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+   "verified": true,
+   "created": 1794829687183,
+   "likes": 512,
+   "reposts": 40,
+   "text": "Domanda seria per chi lavora la ceramica: qual è il momento più bello? #ceramica",
+   "poll": {
+    "options": [
+     {
+      "text": "Al tornio",
+      "votes": 184
+     },
+     {
+      "text": "Aprire il forno",
+      "votes": 402
+     },
+     {
+      "text": "Smaltare",
+      "votes": 77
+     }
+    ],
+    "endsAt": 1795013287183
+   },
+   "replies": [
+    {
+     "id": "th-poll-r1",
+     "name": "Nico Serra",
+     "handle": "serra.ricerca",
+     "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+     "verified": false,
+     "created": 1794833287183,
+     "likes": 12,
+     "text": "Aprire il forno, senza dubbio. È come scartare un regalo che hai fatto tu."
+    }
+   ]
+  },
+  {
+   "id": "th-thread",
+   "name": "Adele Romano",
+   "handle": "romano.tessuti",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "verified": true,
+   "created": 1794822487183,
+   "likes": 1204,
+   "reposts": 96,
+   "text": "Tre cose che ho imparato in vent'anni di telaio 🧵",
+   "chain": [
+    "1. La lana ha memoria. Se la tiri troppo il primo giorno, te lo ricorda per sempre.",
+    "2. Il rosso di Prato non si compra: si fa, si sbaglia, si rifà.",
+    "3. Le mani stanche lavorano meglio di quelle nervose. Fermati prima, non dopo."
+   ],
+   "replies": [
+    {
+     "id": "th-thread-r1",
+     "name": "Chiara Valli",
+     "handle": "valli.lino",
+     "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+     "verified": false,
+     "created": 1794826087183,
+     "likes": 64,
+     "text": "La numero 3 la stampo e la appendo in laboratorio."
+    }
+   ]
+  },
+  {
+   "id": "th-photo",
+   "name": "Pietro Lama",
+   "handle": "lama.cucina",
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80",
+   "verified": false,
+   "created": 1794815287183,
+   "likes": 873,
+   "reposts": 22,
+   "text": "Pesto al mortaio, sempre. Chi usa il frullatore oggi offre la cena a tutti. #cucina #genova",
+   "images": [
+    "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=900&h=900&q=80",
+    "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=900&h=900&q=80"
+   ],
+   "replies": []
+  },
+  {
+   "id": "tw2",
+   "name": "Adele Romano",
+   "handle": "romano.tessuti",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "verified": true,
+   "created": 1794754087183,
+   "likes": 176,
+   "reposts": 5,
+   "text": "Ho un rosso di Prato, se ti serve. Sta vicino al telaio, non al forno.",
+   "replies": []
+  },
+  {
+   "id": "th-quote",
+   "name": "Nico Serra",
+   "handle": "serra.ricerca",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+   "verified": false,
+   "created": 1794746887183,
+   "likes": 95,
+   "reposts": 3,
+   "text": "Questo. E aggiungo: misurate la temperatura due volte, sempre.",
+   "quote": "tw1",
+   "replies": []
+  },
+  {
+   "id": "th-music",
+   "name": "Leo Bassi",
+   "handle": "bassi.liuteria",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "verified": false,
+   "created": 1794667687183,
+   "likes": 640,
+   "reposts": 18,
+   "text": "Un violino nuovo suona timido per i primi mesi. Poi impara la voce di chi lo suona. Non c'è niente di più bello nel mio mestiere.",
+   "images": [
+    "https://images.unsplash.com/photo-1465821185615-20b3c2fbf41b?auto=format&fit=crop&w=900&h=1100&q=80"
+   ],
+   "replies": []
+  },
+  {
+   "id": "tw3",
+   "name": "Pietro Lama",
+   "handle": "lama.cucina",
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80",
+   "verified": false,
+   "created": 1794494887183,
+   "likes": 128,
+   "reposts": 2,
+   "text": "Il forno regge una teglia larga, se la infili dopo il primo calore. Non prima.",
+   "replies": []
+  },
+  {
+   "id": "th-design",
+   "name": "Elena Marini",
+   "handle": "marini.studio",
+   "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=480&h=480&q=80",
+   "verified": false,
+   "created": 1794408487183,
+   "likes": 302,
+   "reposts": 11,
+   "text": "Gli oggetti più belli che ho in casa li ha fatti qualcuno che conosco per nome. È un buon criterio per arredare.",
+   "replies": []
+  }
+ ],
+ "NOW0": 1794840487183,
+ "NOTIFY_SEED": [
+  {
+   "id": "s1",
+   "type": "mention",
+   "name": "Adele Romano",
+   "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=700&q=80",
+   "text": "ti ha menzionato in un commento: “@forno.neri guarda questo rosso! #ceramica”",
+   "at": 1794839647183,
+   "target": {
+    "kind": "post",
+    "id": "hero"
+   }
+  },
+  {
+   "id": "s2",
+   "type": "like",
+   "name": "Marta Colle",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "text": "e altre 23 persone hanno messo mi piace al tuo post.",
+   "at": 1794838087183,
+   "target": {
+    "kind": "post",
+    "id": "hero"
+   }
+  },
+  {
+   "id": "s3",
+   "type": "story",
+   "name": "Marta Colle",
+   "src": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=700&q=80",
+   "text": "ha risposto alla tua storia: “Che colore! 😍”",
+   "at": 1794836287183,
+   "target": {
+    "kind": "story",
+    "id": "marta"
+   }
+  },
+  {
+   "id": "s4",
+   "type": "comment",
+   "name": "Leo Bassi",
+   "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=700&q=80",
+   "text": "ha commentato: “Il bordo tiene, bravissima. #secondoFuoco”",
+   "at": 1794833287183,
+   "target": {
+    "kind": "post",
+    "id": "hero"
+   }
+  },
+  {
+   "id": "s5",
+   "type": "tag",
+   "name": "Sara Conte",
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+   "text": "ti ha taggato in un post.",
+   "at": 1794822487183,
+   "target": {
+    "kind": "post",
+    "id": "x7"
+   }
+  },
+  {
+   "id": "s6",
+   "type": "follow",
+   "name": "Pietro Lama",
+   "src": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=480&q=80",
+   "text": "ha iniziato a seguirti.",
+   "at": 1794815287183,
+   "target": {
+    "kind": "person",
+    "name": "Pietro Lama"
+   }
+  },
+  {
+   "id": "s7",
+   "type": "reply",
+   "name": "Chiara Valli",
+   "src": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=480&h=480&q=80",
+   "text": "ha risposto al tuo pensiero: “La numero 3 la stampo.”",
+   "at": 1794746887183,
+   "target": {
+    "kind": "thought",
+    "id": "th-thread"
+   }
+  },
+  {
+   "id": "s8",
+   "type": "repost",
+   "name": "Nico Serra",
+   "src": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&h=700&q=80",
+   "text": "ha ripubblicato il tuo pensiero.",
+   "at": 1794581287183,
+   "target": {
+    "kind": "thought",
+    "id": "tw1"
+   }
+  },
+  {
+   "id": "s9",
+   "type": "mention",
+   "name": "Elena Marini",
+   "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=480&h=480&q=80",
+   "text": "ti ha menzionato in un pensiero: “Chi fa ceramica a Milano? @forno.neri”",
+   "at": 1794494887183,
+   "target": {
+    "kind": "thought",
+    "id": "th-design"
+   }
+  },
+  {
+   "id": "s10",
+   "type": "follow",
+   "name": "Sara Conte",
+   "src": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=480&h=480&q=80",
+   "text": "ha iniziato a seguirti.",
+   "at": 1793803687183,
+   "target": {
+    "kind": "person",
+    "name": "Sara Conte"
+   }
+  }
+ ],
+ "WEEK": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "SHOPS": {
+  "Sara Conte": {
+   "since": 2016,
+   "about": "Ceramiche tornite e smaltate a mano a Faenza. Cottura a legna, smalti nostri, ogni pezzo è unico.",
+   "shipsIn": "1–2",
+   "returns": 14,
+   "responds": "entro un'ora",
+   "sales": 1240,
+   "title": "Ceramiche Conte",
+   "category": "Bottega artigiana",
+   "address": "Via Campidori 12",
+   "city": "Faenza",
+   "phone": "+39 0546 123 456",
+   "email": "bottega@ceramicheconte.it",
+   "hours": {
+    "days": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "open": "09:00",
+    "close": "19:00"
+   },
+   "verified": true,
+   "products": [
+    {
+     "id": "sc1",
+     "name": "Tazza Avorio",
+     "price": 28,
+     "category": "Tazze",
+     "images": [
+      "https://images.unsplash.com/photo-1590422749897-47036da0b0ff?auto=format&fit=crop&w=800&h=800&q=80",
+      "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Tazza tornita a mano, smalto avorio opaco. Ogni pezzo è leggermente diverso.",
+     "materials": "Gres, smalto senza piombo",
+     "size": "Ø 8 cm · 250 ml",
+     "stock": 6,
+     "variants": [
+      "Avorio",
+      "Rosso Faenza",
+      "Blu notte"
+     ]
+    },
+    {
+     "id": "sc2",
+     "name": "Piatto Maiolica",
+     "price": 46,
+     "category": "Piatti",
+     "images": [
+      "https://images.unsplash.com/photo-1576020799627-aeac74d58064?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Piatto piano in maiolica dipinto a mano con decoro tradizionale faentino.",
+     "materials": "Maiolica",
+     "size": "Ø 27 cm",
+     "stock": 2,
+     "variants": []
+    },
+    {
+     "id": "sc3",
+     "name": "Vaso Linea",
+     "price": 85,
+     "category": "Vasi",
+     "images": [
+      "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Vaso a collo lungo, cottura a legna. Disponibile su ordinazione nelle tue misure.",
+     "materials": "Gres",
+     "size": "h 32 cm",
+     "stock": 0,
+     "madeToOrder": 3,
+     "variants": [
+      "32 cm",
+      "45 cm"
+     ]
+    },
+    {
+     "id": "sc4",
+     "name": "Corso al tornio",
+     "price": 60,
+     "category": "Corsi",
+     "images": [
+      "https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Tre ore al tornio in bottega, materiali e cottura inclusi. Massimo 4 persone.",
+     "materials": "Argilla e smalti inclusi",
+     "size": "3 ore · sabato mattina",
+     "stock": 4,
+     "variants": [
+      "Sabato 9:00",
+      "Sabato 14:00"
+     ],
+     "service": true
+    },
+    {
+     "id": "sc5",
+     "name": "Set ciotole Mare",
+     "price": 64,
+     "category": "Piatti",
+     "images": [
+      "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Quattro ciotole in gres smaltato azzurro mare, impilabili. Vanno in lavastoviglie.",
+     "materials": "Gres, smalto alimentare",
+     "size": "Ø 15 cm · set da 4",
+     "stock": 4
+    },
+    {
+     "id": "sc6",
+     "name": "Bicchieri Sabbia",
+     "price": 36,
+     "category": "Tazze",
+     "images": [
+      "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Bicchieri senza manico, esterno grezzo e interno smaltato. Perfetti per acqua e vino.",
+     "materials": "Gres",
+     "size": "250 ml · set da 2",
+     "stock": 8
+    },
+    {
+     "id": "sc7",
+     "name": "Bottiglie Nebbia",
+     "price": 98,
+     "category": "Vasi",
+     "images": [
+      "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Tre vasi a bottiglia in tre altezze, smalto bianco nebbia. Per fiori secchi o da soli.",
+     "materials": "Gres",
+     "size": "h 18 · 24 · 30 cm",
+     "madeToOrder": 2
+    },
+    {
+     "id": "sc8",
+     "name": "Vaso Menta",
+     "price": 24,
+     "category": "Vasi",
+     "images": [
+      "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Piccolo vaso con foro di drenaggio, per succulente e piante grasse.",
+     "materials": "Terracotta smaltata",
+     "size": "Ø 10 cm",
+     "stock": 12
+    },
+    {
+     "id": "sc9",
+     "name": "Candela in coppa",
+     "price": 32,
+     "category": "Casa",
+     "images": [
+      "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Cera di soia al fico in una coppa di gres che resta tua quando la candela finisce.",
+     "materials": "Gres, cera di soia",
+     "size": "40 ore",
+     "stock": 2
+    }
+   ]
+  },
+  "Pietro Lama": {
+   "since": 2019,
+   "about": "Trattoria di famiglia nei vicoli di Genova. Pasta e pesto fatti a mano ogni mattina.",
+   "shipsIn": "1",
+   "returns": 0,
+   "responds": "in poche ore",
+   "sales": 410,
+   "title": "Trattoria Lama",
+   "category": "Ristorante",
+   "address": "Vico del Fieno 7",
+   "city": "Genova",
+   "phone": "+39 010 765 4321",
+   "email": "prenota@trattorialama.it",
+   "hours": {
+    "days": [
+     2,
+     3,
+     4,
+     5,
+     6,
+     0
+    ],
+    "open": "12:00",
+    "close": "23:00"
+   },
+   "verified": false,
+   "products": [
+    {
+     "id": "pl1",
+     "name": "Pesto al mortaio",
+     "price": 9,
+     "category": "Dispensa",
+     "images": [
+      "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Basilico di Prà, pinoli, Parmigiano 24 mesi. Fatto ogni mattina, solo al mortaio.",
+     "materials": "Vasetto 180 g",
+     "size": "180 g",
+     "stock": 12,
+     "variants": []
+    },
+    {
+     "id": "pl2",
+     "name": "Corso di cucina ligure",
+     "price": 65,
+     "category": "Corsi",
+     "images": [
+      "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Una serata in cucina con Pietro: trofie a mano, pesto e cena insieme.",
+     "materials": "Ingredienti e cena inclusi",
+     "size": "3 ore · giovedì sera",
+     "stock": 6,
+     "variants": [],
+     "service": true
+    },
+    {
+     "id": "pl3",
+     "name": "Menu degustazione",
+     "price": 48,
+     "category": "Menu",
+     "images": [
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&h=800&q=80",
+      "https://images.unsplash.com/photo-1534080564583-6be75777b70a?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Cinque portate di stagione. Prenota il tavolo direttamente in chat.",
+     "materials": "Vini esclusi",
+     "size": "5 portate",
+     "stock": null,
+     "variants": [
+      "Classico",
+      "Vegetariano"
+     ],
+     "service": true
+    },
+    {
+     "id": "pl4",
+     "name": "Trofie fresche",
+     "price": 7.5,
+     "category": "Dispensa",
+     "images": [
+      "https://images.unsplash.com/photo-1517686469429-8bdb88b9f907?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Trofie tirate a mano ogni mattina, farina di grano tenero e acqua. Si conservano tre giorni in frigo.",
+     "materials": "500 g",
+     "size": "Ritiro in trattoria o spedizione refrigerata",
+     "stock": 20
+    }
+   ]
+  },
+  "Adele Romano": {
+   "since": 2012,
+   "about": "Tessiamo su telai a mano a Prato da tre generazioni. Lino, lana cardata e cotone.",
+   "shipsIn": "2–3",
+   "returns": 30,
+   "responds": "entro un'ora",
+   "sales": 2380,
+   "title": "Tessitura Romano",
+   "category": "Laboratorio tessile",
+   "address": "Via Pistoiese 210",
+   "city": "Prato",
+   "phone": "+39 0574 222 333",
+   "email": "ciao@tessituraromano.it",
+   "hours": {
+    "days": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "open": "08:30",
+    "close": "18:00"
+   },
+   "verified": true,
+   "products": [
+    {
+     "id": "ar1",
+     "name": "Camicia in lino",
+     "price": 120,
+     "category": "Abbigliamento",
+     "images": [
+      "https://images.unsplash.com/photo-1558171813-4c088753af8f?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Lino lavato, cucita a mano a Prato. Taglio morbido, bottoni in corozo.",
+     "materials": "100% lino",
+     "size": "S · M · L",
+     "stock": 3,
+     "variants": [
+      "S",
+      "M",
+      "L"
+     ]
+    },
+    {
+     "id": "ar2",
+     "name": "Tela grezza (al metro)",
+     "price": 22,
+     "category": "Tessuti",
+     "images": [
+      "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Tela pesante tessuta sul nostro telaio. Venduta al metro, altezza 140 cm.",
+     "materials": "Cotone e lino",
+     "size": "h 140 cm",
+     "stock": 40,
+     "variants": []
+    }
+   ]
+  },
+  "Leo Bassi": {
+   "since": 2009,
+   "about": "Liuteria a Cremona. Strumenti su misura, restauri e revisioni.",
+   "shipsIn": "3–5",
+   "returns": 14,
+   "responds": "entro un giorno",
+   "sales": 186,
+   "title": "Liuteria Bassi",
+   "category": "Bottega artigiana",
+   "address": "Corso Garibaldi 41",
+   "city": "Cremona",
+   "phone": "+39 0372 444 555",
+   "email": "bottega@liuteriabassi.it",
+   "hours": {
+    "days": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "open": "10:00",
+    "close": "18:30"
+   },
+   "verified": false,
+   "products": [
+    {
+     "id": "lb1",
+     "name": "Violino su misura",
+     "price": 6800,
+     "category": "Strumenti",
+     "images": [
+      "https://images.unsplash.com/photo-1465821185615-20b3c2fbf41b?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Violino costruito a mano su modello Stradivari, abete della Val di Fiemme e acero dei Balcani.",
+     "materials": "Abete, acero, ebano",
+     "size": "4/4",
+     "stock": 0,
+     "madeToOrder": 20,
+     "variants": []
+    },
+    {
+     "id": "lb2",
+     "name": "Revisione strumento",
+     "price": 90,
+     "category": "Servizi",
+     "images": [
+      "https://images.unsplash.com/photo-1507838153414-b4b713384a76?auto=format&fit=crop&w=800&h=800&q=80"
+     ],
+     "description": "Controllo anima, ponticello e corde. Ritiro e consegna in bottega.",
+     "materials": "",
+     "size": "1 settimana",
+     "stock": null,
+     "variants": [],
+     "service": true
+    }
+   ]
+  }
+ },
+ "MY_PRODUCTS_SEED": [
+  {
+   "id": "me1",
+   "name": "Coppa Rossa",
+   "price": 34,
+   "category": "Coppe",
+   "images": [
+    "https://images.unsplash.com/photo-1633527068411-d479d0b782b6?auto=format&fit=crop&w=1400&h=1800&q=85&crop=faces"
+   ],
+   "description": "La coppa del nuovo smalto rosso. Il rosso regge: secondo fuoco a 1240°.",
+   "materials": "Gres, smalto rosso",
+   "size": "Ø 12 cm",
+   "stock": 5,
+   "variants": [
+    "Rosso",
+    "Rosso scuro"
+   ]
+  },
+  {
+   "id": "me2",
+   "name": "Set tazze Secondo Fuoco",
+   "price": 72,
+   "category": "Tazze",
+   "images": [
+    "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=900&h=1200&q=80",
+    "https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&h=1200&q=80"
+   ],
+   "description": "Set di tre tazze dalla stessa infornata.",
+   "materials": "Gres",
+   "size": "3 × 220 ml",
+   "stock": 2,
+   "variants": []
+  },
+  {
+   "id": "me3",
+   "name": "Vaso su commissione",
+   "price": 140,
+   "category": "Vasi",
+   "images": [
+    "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=900&h=1200&q=80"
+   ],
+   "description": "Vaso nelle tue misure e nel tuo colore. Ti mando le foto di ogni passaggio.",
+   "materials": "Gres o terracotta",
+   "size": "Su misura",
+   "stock": 0,
+   "madeToOrder": 4,
+   "variants": []
+  }
+ ],
+ "DEFAULT_BUSINESS": {
+  "title": "Forno Neri",
+  "category": "Bottega artigiana",
+  "address": "Via Tortona 18",
+  "city": "Milano",
+  "phone": "+39 02 1234 5678",
+  "email": "ciao@fornoneri.it",
+  "hours": {
+   "days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "open": "09:30",
+   "close": "19:00"
+  },
+  "shop": true
+ },
+ "PROFILE_SEED": {
+  "name": "Giulia Neri",
+  "handle": "@forno.neri",
+  "bio": "Milano · Ceramica. Un forno, un cantiere aperto. Il rosso regge."
+ },
+ "REVIEW_LINES": [
+  "Ancora più bello dal vivo. Imballato benissimo.",
+  "Si sente che è fatto a mano, ogni dettaglio è curato.",
+  "Spedizione veloce e un biglietto scritto a mano. Tornerò!",
+  "Colore esattamente come in foto. Consigliatissimo.",
+  "Lo uso ogni giorno, regge benissimo.",
+  "Ottima comunicazione in chat, mi ha seguito passo passo."
+ ],
+ "SHOP_TOPICS": [
+  "Ceramica",
+  "Cucina",
+  "Tessuti",
+  "Musica",
+  "Corsi"
+ ],
+ "STORY_PLACES": [
+  "Milano",
+  "Torino",
+  "Prato",
+  "Cremona",
+  "Bologna",
+  "Firenze",
+  "Roma",
+  "Napoli",
+  "Venezia",
+  "Faenza",
+  "Padova",
+  "Genova"
+ ],
+ "STORY_HASH": [
+  "forno",
+  "rosso",
+  "ceramica",
+  "milano",
+  "prato",
+  "secondoFuoco",
+  "lino",
+  "impasto"
+ ],
+ "STORY_EMOJI": [
+  "😀",
+  "😂",
+  "🥰",
+  "😍",
+  "😘",
+  "😊",
+  "😉",
+  "😎",
+  "🤔",
+  "😴",
+  "🔥",
+  "❤️",
+  "✨",
+  "⭐",
+  "💯",
+  "👏",
+  "🙌",
+  "👍",
+  "👎",
+  "💪",
+  "🎉",
+  "🥂",
+  "🍷",
+  "☕️",
+  "🍕",
+  "🍝",
+  "🎶",
+  "🎵",
+  "📸",
+  "💫",
+  "🌹",
+  "💎",
+  "🖤",
+  "🤍",
+  "💛",
+  "💚",
+  "💙",
+  "💜",
+  "🌙",
+  "☀️"
+ ],
+ "AVATAR_TONES": [
+  [
+   "#ff6a5c",
+   "#7a1d3b"
+  ],
+  [
+   "#ffb347",
+   "#8a3b12"
+  ],
+  [
+   "#5ad1c9",
+   "#1d4f7a"
+  ],
+  [
+   "#9b8cff",
+   "#3b1d7a"
+  ],
+  [
+   "#7ee08a",
+   "#1d5a3b"
+  ],
+  [
+   "#ff8fc7",
+   "#7a1d5a"
+  ]
+ ],
+ "AVATAR": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=240&q=80",
+ "BOOT_AT": 1794840487183
+}

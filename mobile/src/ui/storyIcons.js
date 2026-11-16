@@ -1,0 +1,26 @@
+// Extra Phosphor icons for stories and the story camera (same names as the web app's icons.jsx).
+export { MusicNotesIcon as Music } from "phosphor-react-native/src/icons/MusicNotes";
+export { LinkIcon as LinkIcon } from "phosphor-react-native/src/icons/Link";
+export { LightningIcon as Flash } from "phosphor-react-native/src/icons/Lightning";
+export { LightningSlashIcon as FlashOff } from "phosphor-react-native/src/icons/LightningSlash";
+export { CameraRotateIcon as SwitchCamera } from "phosphor-react-native/src/icons/CameraRotate";
+export { RowsIcon as Rows } from "phosphor-react-native/src/icons/Rows";
+export { SquaresFourIcon as Grid4 } from "phosphor-react-native/src/icons/SquaresFour";
+export { TextAaIcon as TextIcon } from "phosphor-react-native/src/icons/TextAa";
+export { StickerIcon as StickerIcon } from "phosphor-react-native/src/icons/Sticker";
+export { ScribbleIcon as Scribble } from "phosphor-react-native/src/icons/Scribble";
+export { ArrowUUpLeftIcon as Undo } from "phosphor-react-native/src/icons/ArrowUUpLeft";
+export { EraserIcon as Eraser } from "phosphor-react-native/src/icons/Eraser";
+export { HighlighterIcon as Highlighter } from "phosphor-react-native/src/icons/Highlighter";
+export { PencilSimpleIcon as Pencil } from "phosphor-react-native/src/icons/PencilSimple";
+export { SpeakerSimpleHighIcon as SoundOn } from "phosphor-react-native/src/icons/SpeakerSimpleHigh";
+export { SpeakerSimpleSlashIcon as SoundOff } from "phosphor-react-native/src/icons/SpeakerSimpleSlash";
+export { CheckCircleIcon as Checked } from "phosphor-react-native/src/icons/CheckCircle";
+export { CircleIcon as Ring } from "phosphor-react-native/src/icons/Circle";
+export { ChatCircleIcon as MessageCircle } from "phosphor-react-native/src/icons/ChatCircle";
+export { QuestionIcon as HelpCircle } from "phosphor-react-native/src/icons/Question";
+export { ChartBarIcon as BarChart } from "phosphor-react-native/src/icons/ChartBar";
+export { HandPalmIcon as Hand } from "phosphor-react-native/src/icons/HandPalm";
+export { SparkleIcon as Sparkle } from "phosphor-react-native/src/icons/Sparkle";
+export { SmileyIcon as Smile } from "phosphor-react-native/src/icons/Smiley";
+export { TimerIcon as Timer } from "phosphor-react-native/src/icons/Timer";
