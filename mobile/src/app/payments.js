@@ -11,7 +11,7 @@ import { Header, T, tap } from "../ui/kit";
 import { settingsColors } from "../ui/profile-kit";
 
 // Pagamenti: connect a Stripe account to sell directly in the app (web PaymentsSetup).
-// It talks to the Space hub; when the hub is not reachable the card says so.
+// It talks to the iywa hub; when the hub is not reachable the card says so.
 export default function Payments() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -73,7 +73,7 @@ export default function Payments() {
     pending: t("Stripe ha bisogno di qualche dato prima di poterti pagare."),
     none: t("Collega il tuo account Stripe: i pagamenti arrivano lì e poi sul tuo conto in banca."),
     server: t("Aggiungi STRIPE_SECRET_KEY al server (calls/.dev.vars) per attivare i pagamenti."),
-    offline: payBase() ? t("Il server live ora non risponde.") : t("Il server live di Space non è ancora collegato a questa app (EXPO_PUBLIC_HUB_URL)."),
+    offline: payBase() ? t("Il server live ora non risponde.") : t("Il server live di iywa non è ancora collegato a questa app (EXPO_PUBLIC_HUB_URL)."),
     nouser: "",
     loading: "",
   }[state];
@@ -119,7 +119,7 @@ export default function Payments() {
           {[
             [Bag, "#0a84ff", t("“Acquista ora” sui tuoi prodotti"), t("Pagamento sicuro con Stripe, con indirizzo di spedizione.")],
             [Directions, "#34c759", t("Pagato sul tuo account"), t("Stripe versa automaticamente sul tuo conto.")],
-            [PriceTag, "#8e8e93", t("Commissione Space: {fee}%", { fee }), t("Più le commissioni carta di Stripe. Nessun costo mensile.")],
+            [PriceTag, "#8e8e93", t("Commissione iywa: {fee}%", { fee }), t("Più le commissioni carta di Stripe. Nessun costo mensile.")],
             [Bell, "#ff9500", t("Avvisi d'ordine in tempo reale"), t("Ricevi una notifica appena qualcuno compra.")],
           ].map(([Icon, color, head, sub], index) => (
             <View key={head} style={styles.row}>

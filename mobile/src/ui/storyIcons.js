@@ -24,3 +24,4 @@ export { HandPalmIcon as Hand } from "phosphor-react-native/src/icons/HandPalm";
 export { SparkleIcon as Sparkle } from "phosphor-react-native/src/icons/Sparkle";
 export { SmileyIcon as Smile } from "phosphor-react-native/src/icons/Smiley";
 export { TimerIcon as Timer } from "phosphor-react-native/src/icons/Timer";
+export { ImagesIcon as Images } from "phosphor-react-native/src/icons/Images";

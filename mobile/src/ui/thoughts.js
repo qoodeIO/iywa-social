@@ -12,6 +12,7 @@ import { Check, Feather, Heart, ImageIcon, LinkIcon, MessageCircle, MoreHorizont
 import { T, tap } from "./kit";
 import { ActionSheet, IgEmpty } from "./profile-kit";
 import { localeTag, t } from "../lib/i18n";
+import { openTab } from "../lib/tabs";
 
 const W = Dimensions.get("window").width;
 
@@ -104,7 +105,7 @@ export function openTag(tag) {
   const handle = tag.slice(1);
   const person = personByHandle(handle);
   if (person) router.push(`/person/${person.handle}`);
-  else if (handle === "forno.neri") router.push("/profile");
+  else if (handle === "forno.neri") openTab("profile");
 }
 
 // ---------------------------------------------------------------------------
@@ -265,7 +266,7 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
     taps.current.timer = setTimeout(() => { taps.current.at = 0; open(); }, 260);
   }
 
-  const goPerson = () => (thought.mine ? router.push("/profile") : openPersonByName(thought.name, store.profile.name));
+  const goPerson = () => (thought.mine ? openTab("profile") : openPersonByName(thought.name, store.profile.name));
 
   return (
     <Pressable onPress={onCardPress} style={[styles.card, { paddingTop: lineUp ? 4 : 12, paddingBottom: line ? 0 : 6, borderBottomWidth: line ? 0 : StyleSheet.hairlineWidth, borderBottomColor: theme.line }]}>

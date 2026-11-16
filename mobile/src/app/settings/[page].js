@@ -42,27 +42,27 @@ const HEROES = {
   restricted: tk("I loro commenti restano da te"),
   muted: tk("I loro post escono dal feed"),
   content: tk("Cosa mostra il feed"),
-  theme: tk("Il colore di Space"),
+  theme: tk("Il colore di iywa"),
   language: tk("Lingua dell'app"),
   accessibility: tk("Leggere l'app"),
   data: tk("Con poca rete"),
   "account-type": tk("Strumenti per il laboratorio"),
-  payments: tk("Vendere su Space"),
+  payments: tk("Vendere su iywa"),
   help: tk("Risposte brevi"),
-  "privacy-policy": "Space",
-  terms: "Space",
-  about: "Space",
+  "privacy-policy": "iywa",
+  terms: "iywa",
+  about: "iywa",
 };
 
 const LEGAL = {
   "privacy-policy": [
-    [tk("Cosa conserva Space"), tk("Nome, handle, bio, i post che pubblichi in questa anteprima e le preferenze su questo telefono.")],
+    [tk("Cosa conserva iywa"), tk("Nome, handle, bio, i post che pubblichi in questa anteprima e le preferenze su questo telefono.")],
     [tk("Chi ti vede"), tk("Un account privato nasconde post, reel e storie a chi non hai approvato. Nome, foto e bio restano visibili.")],
     [tk("Messaggi"), tk("Stato attività e conferme di lettura seguono gli interruttori in Impostazioni. Se li spegni, si nascondono da entrambe le parti.")],
     [tk("Le tue scelte"), tk("Account silenziati, bloccati e parole nascoste restano sul telefono finché non li cancelli.")],
   ],
   terms: [
-    [tk("L'anteprima"), tk("Space è una demo privata. Post, chat e account che aggiungi vivono su questo telefono.")],
+    [tk("L'anteprima"), tk("iywa è una demo privata. Post, chat e account che aggiungi vivono su questo telefono.")],
     [tk("I tuoi contenuti"), tk("Le didascalie che scrivi restano tue. Non pubblicare ciò che non hai diritto di condividere.")],
     [tk("Le altre persone"), tk("Bloccare, limitare e silenziare cambia ciò che vedi in questa anteprima.")],
     [tk("Modifiche"), tk("Questi termini descrivono l'anteprima di oggi. L'app può cambiare mentre la demo cresce.")],
@@ -72,7 +72,7 @@ const LEGAL = {
 const HELP = [
   [tk("Account privato"), tk("Chi non hai approvato smette di vedere post, storie e reel. Il nome resta visibile.")],
   [tk("Shop"), tk("Con un account azienda il profilo mostra la scheda Shop. I clienti ti mandano una richiesta d'ordine in chat.")],
-  [tk("Aspetto"), tk("Automatico segue il tema del telefono. Chiaro e Scuro lo fissano solo per Space.")],
+  [tk("Aspetto"), tk("Automatico segue il tema del telefono. Chiaro e Scuro lo fissano solo per iywa.")],
   [tk("I miei dati"), tk("Like, carrello, messaggi e impostazioni restano su questo telefono. Azzera i dati li riporta all'inizio.")],
 ];
 
@@ -226,7 +226,7 @@ function Body({ page }) {
     case "terms":
       return <Legal sections={LEGAL[page].map(([h, p]) => [t(h), t(p)])} />;
     case "about":
-      return <Legal sections={[["Space", t("Un telefono per il laboratorio. Post, storie, reel, messaggi e shop.")], [t("Versione"), t("{version} · iOS e Android", { version: Constants.expoConfig?.version || "1.0.0" })]]} />;
+      return <Legal sections={[["iywa", t("Un telefono per il laboratorio. Post, storie, reel, messaggi e shop.")], [t("Versione"), t("{version} · iOS e Android", { version: Constants.expoConfig?.version || "1.0.0" })]]} />;
     default:
       return <Empty title={t("Pagina non trovata")} text={t("Torna alle impostazioni.")} />;
   }
@@ -242,7 +242,7 @@ function LanguagePicker() {
     store.setPrefs({ language: id });
     setLanguage(next);
     if (applyDirection(next)) {
-      Alert.alert(t("Riavvia Space"), t("Chiudi e riapri l'app per completare il cambio di lingua."));
+      Alert.alert(t("Riavvia iywa"), t("Chiudi e riapri l'app per completare il cambio di lingua."));
     }
   }
   return (
@@ -252,7 +252,7 @@ function LanguagePicker() {
         { id: "auto", label: t("Lingua del telefono"), meta: device ? `${device.label} · ${t("Automatico")}` : t("Automatico") },
         ...LANGS.map((lang) => ({ id: lang.id, label: lang.label, meta: lang.en })),
       ]} />
-      <Note>{t("Space usa la lingua del telefono finché non ne scegli un'altra.")}</Note>
+      <Note>{t("iywa usa la lingua del telefono finché non ne scegli un'altra.")}</Note>
     </>
   );
 }
@@ -554,14 +554,14 @@ function Payments() {
       <Kicker>{t("Come vendi oggi")}</Kicker>
       <Card>
         <Row first label={t("Richiesta d'ordine in chat")} meta={t("Il cliente sceglie, tu confermi e concordi il pagamento.")} right={<Pick on />} />
-        <Row label={t("Pagamento con carta")} meta={t("Con Stripe, nella versione web di Space.")} />
+        <Row label={t("Pagamento con carta")} meta={t("Con Stripe, nella versione web di iywa.")} />
       </Card>
       <Note>{business ? t("Gli ordini ricevuti e quelli fatti sono in Ordini.") : t("Per vendere passa a un account Azienda in Tipo di account e shop.")}</Note>
       <View style={{ paddingHorizontal: INSET, paddingTop: 18, gap: 10 }}>
         <Btn title={t("Vedi gli ordini")} height={44} onPress={() => router.push("/shop/orders")} />
         {business ? null : <Btn title={t("Passa ad Azienda")} kind="primary" height={44} onPress={() => router.replace("/settings/account-type")} />}
       </View>
-      <T size={12} color={theme.text3} style={{ textAlign: "center", marginTop: 16 }}>{t("Nessun dato della carta passa da Space.")}</T>
+      <T size={12} color={theme.text3} style={{ textAlign: "center", marginTop: 16 }}>{t("Nessun dato della carta passa da iywa.")}</T>
     </>
   );
 }

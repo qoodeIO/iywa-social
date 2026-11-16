@@ -11,10 +11,11 @@ import { payApi, payBase } from "../../lib/pay";
 import { Box } from "../../ui/icons-profile";
 import { Btn, Header, T } from "../../ui/kit";
 import { IgEmpty, SlideTabs } from "../../ui/profile-kit";
+import { openTab } from "../../lib/tabs";
 
 const LABEL = { paid: tk("Pagato"), shipped: tk("Spedito"), pending: tk("In attesa") };
 
-// Ordini: purchases and sales paid with Stripe, from the Space hub (web OrdersScreen).
+// Ordini: purchases and sales paid with Stripe, from the iywa hub (web OrdersScreen).
 // Order requests sent in Direct stay in the chats; without the hub this list says it is not reachable.
 export default function Orders() {
   const theme = useTheme();
@@ -49,8 +50,8 @@ export default function Orders() {
             {!data && !error ? <T size={14} color={theme.text2} style={styles.info}>{t("Caricamento…")}</T> : null}
             {error ? (
               <View style={{ alignItems: "center" }}>
-                <T size={14} color={theme.text2} style={styles.info}>{payBase() ? t("Gli ordini ora non sono raggiungibili.") : t("Gli ordini pagati con Stripe arrivano quando l'app si collega al server live di Space.")}</T>
-                <Btn title={t("Apri i Messaggi")} onPress={() => router.replace("/messages")} />
+                <T size={14} color={theme.text2} style={styles.info}>{payBase() ? t("Gli ordini ora non sono raggiungibili.") : t("Gli ordini pagati con Stripe arrivano quando l'app si collega al server live di iywa.")}</T>
+                <Btn title={t("Apri i Messaggi")} onPress={() => openTab("messages")} />
               </View>
             ) : null}
             {data && !list.length ? <IgEmpty icon={Box} title={tab === 0 ? t("Ancora nessun acquisto") : t("Ancora nessuna vendita")} text={t("Qui compaiono gli ordini pagati con Stripe.")} /> : null}

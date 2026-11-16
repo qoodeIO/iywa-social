@@ -1,4 +1,4 @@
-// Stripe Connect through the Space hub (the same /calls/api endpoints as the web app).
+// Stripe Connect through the iywa hub (the same /calls/api endpoints as the web app).
 // The hub address comes from EXPO_PUBLIC_HUB_URL (ws:// or wss://, like the web's VITE_HUB_URL).
 // Without it, or when the hub is not deployed, every call fails and the screens say so.
 import { hubUrl } from "../live/config";

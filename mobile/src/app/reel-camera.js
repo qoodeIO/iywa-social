@@ -18,6 +18,7 @@ import { tap } from "../ui/kit";
 import { DarkSheet, FilterLayer, REEL_LENGTHS, REEL_RECORD_SPEEDS, ReelPlayer, STORY_FILTERS, STORY_MUSIC, Toast, clockLabel, openReel, useToast } from "../ui/reels-kit";
 import { Camera, ChevronLeft, ChevronRight, Music, Plus, Sparkle, SwitchCamera, Timer, Undo, X } from "../ui/reels-icons";
 import { keepAll, keepMedia } from "../lib/media-store";
+import { openTab } from "../lib/tabs";
 
 const SPRING_OUT = Easing.bezier(0.32, 0.72, 0, 1);
 
@@ -226,7 +227,7 @@ export default function ReelCamera() {
 
   function close() {
     if (router.canGoBack()) router.back();
-    else router.replace("/reels");
+    else openTab("reels");
   }
 
   function cycleFilter(dir) {

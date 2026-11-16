@@ -53,7 +53,7 @@ export default function StoreScreen() {
             <View style={{ flexDirection: "row", gap: 28, marginVertical: 14 }}>
               {shop.sales ? <Stat value={shop.sales.toLocaleString(localeTag())} label={t("vendite")} /> : null}
               <Stat value={shop.products.length} label={t("prodotti")} />
-              {shop.since ? <Stat value={shop.since} label={t("su Space dal")} /> : null}
+              {shop.since ? <Stat value={shop.since} label={t("su iywa dal")} /> : null}
             </View>
             <SellerBadges shop={shop} rating={rating} />
             <View style={{ flexDirection: "row", gap: 6, alignSelf: "stretch", marginTop: 14 }}>

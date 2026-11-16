@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
@@ -83,6 +82,8 @@ export function AuthScreen({ onDone, backHandle }) {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  // The last account used on this phone opens ready: only its password is needed, like Instagram.
+  const [chosen, setChosen] = useState(() => (back ? null : users.find((user) => user.handle !== back)?.handle || null));
   const passRef = useRef(null);
   const shake = useRef(new Animated.Value(0)).current;
   const enter = useRef(new Animated.Value(0)).current;
@@ -125,7 +126,7 @@ export function AuthScreen({ onDone, backHandle }) {
   const taken = mode === "join" && users.some((user) => user.handle === joinKey);
   const strength = strengthOf(password);
   const ready = mode === "login"
-    ? handle.trim().length > 1 && password.length > 0
+    ? (chosen || handle.trim().length > 1) && password.length > 0
     : mode === "join"
       ? name.trim().length > 1 && handleOk && !taken && password.length >= 4 && again.length > 0
       : mode === "forgot"
@@ -140,7 +141,7 @@ export function AuthScreen({ onDone, backHandle }) {
     // A short beat so the button can show it is working, like a real sign-in.
     setTimeout(() => {
       if (mode === "login") {
-        const user = findUser(handle);
+        const user = findUser(chosen || handle);
         if (!user) return fail(t("Nessun account con questo nome utente."));
         if (user.password !== password) return fail(t("Password errata. Riprova."));
         setBusy(false);
@@ -188,27 +189,52 @@ export function AuthScreen({ onDone, backHandle }) {
   ) : null;
   const strengthColors = ["", a.red, "#ff9f0a", "#ffd60a", a.green];
 
+  const picked = mode === "login" && chosen ? users.find((user) => user.handle === chosen) : null;
+  const others = saved.filter((user) => user.handle !== chosen);
+  const faceOf = (user) => ({ uri: user.handle === DEMO_USER.handle ? store.profile?.src || AVATAR : avatarFor(user.name || user.handle) || AVATAR });
+  const language = LANGS.find((lang) => lang.id === currentLanguage())?.label || "Italiano";
+
+  function choose(next) {
+    tap();
+    setChosen(next);
+    setHandle("");
+    setPassword("");
+    setError("");
+    if (next) setTimeout(() => passRef.current?.focus(), 60);
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: a.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={[styles.top, { paddingTop: insets.top }]}>
+      <View style={{ paddingTop: insets.top }}>
+      <View style={styles.top}>
         {mode !== "login" ? (
-          <Pressable accessibilityLabel={t("Indietro")} onPress={() => go("login")} style={styles.back}><ChevronLeft size={22} weight="bold" color={a.text} /></Pressable>
+          <Pressable accessibilityLabel={t("Indietro")} onPress={() => go("login")} style={styles.back}><ChevronLeft size={24} weight="bold" color={a.text} /></Pressable>
         ) : backUser ? (
-          <Pressable onPress={() => enterAs(backUser.handle)} style={[styles.back, { paddingRight: 12, backgroundColor: a.field, borderWidth: StyleSheet.hairlineWidth, borderColor: a.line }]}>
-            <ChevronLeft size={22} weight="bold" color={a.text} />
-            <T size={14.5} weight="600" color={a.text}>{t("Torna a @{handle}", { handle: backUser.handle })}</T>
+          <Pressable onPress={() => enterAs(backUser.handle)} style={styles.back}>
+            <ChevronLeft size={24} weight="bold" color={a.text} />
+            <T size={15} weight="600" color={a.text}>{t("Torna a @{handle}", { handle: backUser.handle })}</T>
           </Pressable>
-        ) : <View />}
-        <T size={13} color={a.sub}>{LANGS.find((lang) => lang.id === currentLanguage())?.label || "Italiano"}</T>
+        ) : (
+          <T size={13.5} color={a.sub} style={styles.lang}>{language}</T>
+        )}
       </View>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <Animated.View style={{ width: "100%", alignItems: "center", opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
-          <LinearGradient colors={["#8b5cf6", "#3b82f6", "#06b6d4"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.mark}>
-            <View style={styles.markRing} />
-            <T size={34} weight="800" color="#fff" style={{ letterSpacing: -1.7, lineHeight: 38 }}>S</T>
-          </LinearGradient>
-          {mode === "login" ? <T size={34} weight="800" color={a.text} style={styles.word}>Space</T> : <T size={22} weight="700" color={a.text} style={{ textAlign: "center", letterSpacing: -0.4 }}>{heading}</T>}
-          {mode !== "login" ? <T size={14} color={a.sub} style={styles.sub}>{sub}</T> : null}
+      </View>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.body, mode !== "login" && styles.bodyTop]} showsVerticalScrollIndicator={false}>
+        <Animated.View style={{ width: "100%", opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
+          {mode !== "login" ? (
+            <View style={styles.head}>
+              <T size={26} weight="700" color={a.text} style={{ letterSpacing: -0.7, lineHeight: 31 }}>{heading}</T>
+              <T size={15} color={a.sub} style={styles.sub}>{sub}</T>
+            </View>
+          ) : picked ? (
+            <View style={styles.who}>
+              <Image source={faceOf(picked)} style={[styles.whoFace, { borderColor: a.line }]} />
+              <T size={18} weight="700" color={a.text}>{picked.handle}</T>
+              {picked.name ? <T size={14} color={a.sub}>{picked.name}</T> : null}
+            </View>
+          ) : (
+            <T size={56} weight="700" color={a.text} style={styles.word}>iywa</T>
+          )}
           {note ? (
             <View style={styles.note}>
               <Checked size={18} weight="fill" color={a.green} />
@@ -217,7 +243,7 @@ export function AuthScreen({ onDone, backHandle }) {
           ) : null}
           <Animated.View style={{ width: "100%", gap: 10, transform: [{ translateX: shake }] }}>
             {mode === "join" ? <AuthField a={a} label={t("Nome e cognome")} value={name} onChange={setName} autoComplete="name" returnKeyType="next" /> : null}
-            {mode !== "reset" ? (
+            {mode !== "reset" && !picked ? (
               <AuthField
                 a={a}
                 label={t("Nome utente")}
@@ -273,47 +299,38 @@ export function AuthScreen({ onDone, backHandle }) {
                 <T size={13.5} weight="500" color={a.red}>{error}</T>
               </View>
             ) : null}
-            <Pressable disabled={!ready} onPress={submit} style={({ pressed }) => [styles.go, { backgroundColor: pressed && ready ? "#1877f2" : a.blue, opacity: ready ? 1 : 0.4, transform: [{ scale: pressed && ready ? 0.98 : 1 }] }]}>
+            <Pressable disabled={!ready} onPress={submit} style={({ pressed }) => [styles.go, { backgroundColor: pressed && ready ? "#1877f2" : a.blue, opacity: ready ? 1 : 0.45 }]}>
               {busy ? <ActivityIndicator color="#fff" /> : <T size={15.5} weight="700" color="#fff">{cta}</T>}
             </Pressable>
             {mode === "login" ? (
-              <Pressable onPress={() => go("forgot")} style={{ alignSelf: "center", marginTop: 10, padding: 6 }}>
-                <T size={14} weight="600" color={a.text}>{t("Password dimenticata?")}</T>
+              <Pressable onPress={() => { if (picked) setHandle(picked.handle); go("forgot"); }} style={styles.link}>
+                <T size={14.5} weight="600" color={a.text}>{t("Password dimenticata?")}</T>
               </Pressable>
             ) : null}
-            {mode === "join" ? <T size={12} color={a.sub} style={{ textAlign: "center", marginTop: 4, lineHeight: 17 }}>{t("Iscrivendoti accetti i Termini e l'Informativa sulla privacy.")}</T> : null}
+            {mode === "join" ? <T size={12.5} color={a.sub} style={{ textAlign: "center", marginTop: 6, lineHeight: 18 }}>{t("Iscrivendoti accetti i Termini e l'Informativa sulla privacy.")}</T> : null}
           </Animated.View>
-          {mode === "login" && saved.length && !handle ? (
-            <View style={{ width: "100%", marginTop: 26 }}>
-              <View style={styles.or}>
-                <View style={[styles.orLine, { backgroundColor: a.line }]} />
-                <T size={12.5} color={a.sub}>{t("Account su questo dispositivo")}</T>
-                <View style={[styles.orLine, { backgroundColor: a.line }]} />
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "center", gap: 18 }}>
-                {saved.map((user) => (
-                  <Pressable
-                    key={user.handle}
-                    onPress={() => { tap(); setHandle(user.handle); setTimeout(() => passRef.current?.focus(), 40); }}
-                    style={({ pressed }) => ({ alignItems: "center", gap: 6, transform: [{ scale: pressed ? 0.94 : 1 }] })}
-                  >
-                    <Image source={{ uri: user.handle === DEMO_USER.handle ? store.profile?.src || AVATAR : avatarFor(user.name || user.handle) || AVATAR }} style={[styles.savedFace, { borderColor: a.line }]} />
-                    <T size={12.5} weight="500" color={a.text}>{user.handle}</T>
-                  </Pressable>
-                ))}
-              </View>
+          {mode === "login" && !handle && (picked || others.length) ? (
+            <View style={styles.switch}>
+              {others.map((user) => (
+                <Pressable key={user.handle} onPress={() => choose(user.handle)} style={({ pressed }) => [styles.chip, { borderColor: a.line, opacity: pressed ? 0.6 : 1 }]}>
+                  <Image source={faceOf(user)} style={styles.chipFace} />
+                  <T size={14} weight="600" color={a.text}>{user.handle}</T>
+                </Pressable>
+              ))}
+              {picked ? (
+                <Pressable onPress={() => choose(null)} style={styles.link}>
+                  <T size={14.5} weight="600" color={a.blue}>{t("Usa un altro account")}</T>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </Animated.View>
       </ScrollView>
-      <View style={[styles.foot, { paddingBottom: Math.max(26, insets.bottom + 8) }]}>
-        <Pressable onPress={() => go(mode === "login" ? "join" : "login")} style={({ pressed }) => [styles.outline, { borderColor: a.blue, backgroundColor: pressed ? "rgba(0,149,246,0.1)" : "transparent" }]}>
+      <View style={[styles.foot, { paddingBottom: Math.max(22, insets.bottom + 6) }]}>
+        <Pressable onPress={() => go(mode === "login" ? "join" : "login")} style={({ pressed }) => [styles.outline, { borderColor: a.blue, backgroundColor: pressed ? "rgba(0,149,246,0.08)" : "transparent" }]}>
           <T size={15} weight="700" color={a.blue}>{mode === "login" ? t("Crea nuovo account") : t("Ho già un account")}</T>
         </Pressable>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <LinearGradient colors={["#8b5cf6", "#3b82f6", "#06b6d4"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 14, height: 14, borderRadius: 4 }} />
-          <T size={13} weight="700" color={a.sub}>Space</T>
-        </View>
+        <T size={17} weight="700" color={a.sub} style={{ letterSpacing: -0.9 }}>iywa</T>
       </View>
     </KeyboardAvoidingView>
   );
@@ -333,26 +350,30 @@ export function AuthGate() {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, minHeight: 44 },
-  back: { flexDirection: "row", alignItems: "center", gap: 4, height: 36, minWidth: 36, paddingHorizontal: 6, borderRadius: 99 },
-  body: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, paddingBottom: 10 },
-  mark: { width: 64, height: 64, borderRadius: 18, marginBottom: 14, alignItems: "center", justifyContent: "center", shadowColor: "#3b82f6", shadowOpacity: 0.3, shadowRadius: 11, shadowOffset: { width: 0, height: 8 } },
-  markRing: { position: "absolute", top: 10, left: 10, right: 10, bottom: 10, borderRadius: 99, borderWidth: 2, borderColor: "rgba(255,255,255,0.35)", transform: [{ rotate: "-24deg" }, { scaleY: 0.42 }] },
-  word: { marginBottom: 30, letterSpacing: -1.7, lineHeight: 38 },
-  sub: { marginTop: 8, marginBottom: 22, maxWidth: 300, textAlign: "center", lineHeight: 20 },
+  top: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 8, height: 48 },
+  lang: { paddingVertical: 12 },
+  back: { position: "absolute", left: 8, top: 6, flexDirection: "row", alignItems: "center", gap: 2, height: 36, minWidth: 36, paddingRight: 6 },
+  body: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 20, paddingBottom: 12 },
+  bodyTop: { justifyContent: "flex-start", paddingTop: 20 },
+  word: { alignSelf: "center", marginBottom: 40, letterSpacing: -3.4, lineHeight: 64 },
+  who: { alignItems: "center", gap: 3, marginBottom: 28 },
+  whoFace: { width: 96, height: 96, borderRadius: 48, borderWidth: StyleSheet.hairlineWidth, marginBottom: 12 },
+  head: { marginBottom: 24 },
+  sub: { marginTop: 8, lineHeight: 21 },
   note: { width: "100%", flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "rgba(52,199,89,0.14)" },
-  field: { height: 54, borderRadius: 14, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingRight: 6 },
-  label: { position: "absolute", left: 16, fontSize: 15.5 },
-  input: { flex: 1, height: "100%", paddingTop: 18, paddingBottom: 2, paddingHorizontal: 16, fontSize: 15.5 },
+  field: { height: 56, borderRadius: 12, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingRight: 6 },
+  label: { position: "absolute", left: 16, fontSize: 16 },
+  input: { flex: 1, height: "100%", paddingTop: 18, paddingBottom: 2, paddingHorizontal: 16, fontSize: 16 },
   hint: { position: "absolute", right: 48, top: 8 },
   trail: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   strength: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: -2, marginHorizontal: 4, marginBottom: 2 },
   bar: { flex: 1, height: 4, borderRadius: 99 },
   error: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
-  go: { height: 46, marginTop: 6, borderRadius: 99, alignItems: "center", justifyContent: "center" },
-  or: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
-  orLine: { flex: 1, height: StyleSheet.hairlineWidth },
-  savedFace: { width: 54, height: 54, borderRadius: 27, borderWidth: StyleSheet.hairlineWidth },
-  foot: { alignItems: "center", gap: 14, paddingTop: 10, paddingHorizontal: 24 },
-  outline: { width: "100%", height: 44, borderRadius: 99, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  go: { height: 48, marginTop: 6, borderRadius: 99, alignItems: "center", justifyContent: "center" },
+  link: { alignSelf: "center", marginTop: 8, padding: 8 },
+  switch: { alignItems: "center", gap: 10, marginTop: 22 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 10, height: 48, paddingLeft: 6, paddingRight: 18, borderRadius: 99, borderWidth: 1 },
+  chipFace: { width: 36, height: 36, borderRadius: 18 },
+  foot: { alignItems: "center", gap: 12, paddingTop: 10, paddingHorizontal: 20 },
+  outline: { width: "100%", height: 48, borderRadius: 99, borderWidth: 1, alignItems: "center", justifyContent: "center" },
 });

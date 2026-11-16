@@ -85,7 +85,7 @@ export default function Settings() {
               </Pressable>
             </Card>
             <T size={12} color={theme.text2} style={{ textAlign: "center", marginTop: 22 }}>
-              <T size={12} weight="700" color={theme.text2}>Space</T>{t(" · versione {version}", { version: Constants.expoConfig?.version })}
+              <T size={12} weight="700" color={theme.text2}>iywa</T>{t(" · versione {version}", { version: Constants.expoConfig?.version })}
             </T>
           </>
         ) : null}

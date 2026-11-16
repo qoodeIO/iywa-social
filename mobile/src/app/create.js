@@ -17,6 +17,7 @@ import { DEMO_GALLERY, POST_FILTERS, STORY_PLACES } from "../ui/feedData";
 import { publishPost, showToast } from "../ui/feedEcho";
 import { keepAll } from "../lib/media-store";
 import { t } from "../lib/i18n";
+import { openTab } from "../lib/tabs";
 
 const W = Dimensions.get("window").width;
 const CELL = (W - 6) / 4;
@@ -100,7 +101,7 @@ export default function CreateScreen() {
     publishPost(store, item);
     showToast({ text: t("Post condiviso"), src: item.image });
     if (router.canDismiss()) router.dismissAll();
-    router.replace("/");
+    openTab("home");
   }
 
   const back = () => {

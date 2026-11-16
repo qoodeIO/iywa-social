@@ -13,7 +13,7 @@ export const SETTING_GROUPS = [
     { id: "edit", label: tk("Modifica profilo"), meta: tk("Nome, handle, bio") },
     { id: "login", label: tk("Account"), meta: tk("Su questo telefono") },
   ] },
-  { title: tk("Come usi Space"), rows: [
+  { title: tk("Come usi iywa"), rows: [
     { id: "saved", label: tk("Salvati"), meta: tk("Post e reel") },
     { id: "archive", label: tk("Archivio"), meta: tk("Storie e post nascosti") },
     { id: "activity", label: tk("La tua attività"), meta: tk("Tempo, like, ricerche") },
@@ -49,7 +49,7 @@ export const SETTING_GROUPS = [
   ] },
   { title: tk("Info e assistenza"), rows: [
     { id: "help", label: tk("Assistenza"), meta: tk("Risposte") },
-    { id: "privacy-policy", label: tk("Privacy Policy"), meta: tk("Come Space tratta i tuoi dati") },
+    { id: "privacy-policy", label: tk("Privacy Policy"), meta: tk("Come iywa tratta i tuoi dati") },
     { id: "terms", label: tk("Termini di utilizzo"), meta: tk("Le regole dell'anteprima") },
     { id: "about", label: tk("Informazioni"), meta: tk("Versione dell'app") },
   ] },

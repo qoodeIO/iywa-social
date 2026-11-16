@@ -24,6 +24,7 @@ import { DmBubble } from "../../ui/chatBubble";
 import { ArrowDown, BellOff, Camera, Check, ChevronDown, ChevronLeft, ChevronUp, Close, Copy, Eye, Forward, ImageIcon, Mic, PenLine, Phone, Pin, Reply, RotateCcw, Smile, Video } from "../../ui/chatIcons";
 import { Sheet, T, tap } from "../../ui/kit";
 import { keepMedia } from "../../lib/media-store";
+import { openTab } from "../../lib/tabs";
 
 const STORY_EMOJI = seed.STORY_EMOJI || [];
 const DEMO_GALLERY = [...new Set([...WORKS.map((work) => work.src), PORTRAIT, ...(seed.PEOPLE || []).map((person) => person.src), ...POSTS.map((post) => post.image).filter(Boolean)])];
@@ -451,7 +452,7 @@ export default function Chat() {
           <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2} style={{ textAlign: "center" }}>
             {isGroup
               ? t("{n} membri", { n: (thread.members || thread.people || []).length + 1 })
-              : person?.live ? `@${person.handle} · Space` : `${person?.handle || ""} · ${person?.followers ? t("{n} follower", { n: compact(person.followers) }) : "Space"}`}
+              : person?.live ? `@${person.handle} · iywa` : `${person?.handle || ""} · ${person?.followers ? t("{n} follower", { n: compact(person.followers) }) : "iywa"}`}
           </T>
           {!isGroup && person?.craft ? <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2}>{person.craft}{person.city ? ` · ${person.city}` : ""}</T> : null}
           {isGroup && thread.about ? <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2} style={{ marginTop: 4, textAlign: "center", lineHeight: 18 }}>{thread.about}</T> : null}
@@ -518,7 +519,7 @@ export default function Chat() {
           <BlurView intensity={50} tint={theme.dark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: headBg }]} />
           <View style={{ paddingTop: insets.top }}>
             <View style={[styles.head, { borderBottomColor: theme.line }]}>
-              <Pressable accessibilityLabel={t("Torna alle chat")} hitSlop={8} onPress={() => { tap(); router.canGoBack() ? router.back() : router.replace("/messages"); }} style={styles.back}>
+              <Pressable accessibilityLabel={t("Torna alle chat")} hitSlop={8} onPress={() => { tap(); router.canGoBack() ? router.back() : openTab("messages"); }} style={styles.back}>
                 <ChevronLeft size={24} weight="bold" color={theme.blue} />
                 {otherUnread ? <View style={[styles.backBadge, { backgroundColor: theme.blue }]}><T size={12} weight="600" color="#fff">{otherUnread > 99 ? "99+" : otherUnread}</T></View> : null}
               </Pressable>
@@ -727,7 +728,7 @@ export default function Chat() {
               <ThreadFace thread={item} size={44} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <T size={15} weight="600" lines={1}>{item.name}</T>
-                <T size={13} color={theme.text2}>{item.group || item.members ? t("Gruppo") : item.live ? t("Su Space") : t("Chat")}</T>
+                <T size={13} color={theme.text2}>{item.group || item.members ? t("Gruppo") : item.live ? t("Su iywa") : t("Chat")}</T>
               </View>
             </Pressable>
           ))}

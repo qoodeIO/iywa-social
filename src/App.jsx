@@ -866,7 +866,7 @@ const FEED_PAGES = [
 ];
 
 const THEMES = [
-  { id: "space", label: "Space", accent: "124 58 237", ink: "255 255 255" },
+  { id: "space", label: "iywa", accent: "124 58 237", ink: "255 255 255" },
   { id: "rosso", label: "Rosso", accent: "255 64 58", ink: "255 255 255" },
   { id: "arancio", label: "Arancio", accent: "255 149 0", ink: "42 24 0" },
   { id: "giallo", label: "Giallo", accent: "255 214 10", ink: "42 32 0" },
@@ -4480,7 +4480,7 @@ function NotifyBanner({ note, onOpen, onDone }) {
         <i className={`nb-kind ${kind.tone}`}><kind.icon weight="fill" /></i>
       </span>
       <span className="nb-text">
-        <strong>Space</strong>
+        <strong>iywa</strong>
         <span><b>{note.name}</b> {note.text}</span>
       </span>
       <em>{it ? "ora" : "now"}</em>
@@ -5270,7 +5270,7 @@ function PaymentsSetup({ handle, lang }) {
       <div className="set-card">
         <div className="feed-row"><i className="st-ico blue"><Bag weight="fill" /></i><span className="feed-copy"><strong>{s("Buy now on your products", "“Acquista ora” sui tuoi prodotti")}</strong><span>{s("Secure checkout by Stripe, with shipping address.", "Pagamento sicuro con Stripe, con indirizzo di spedizione.")}</span></span></div>
         <div className="feed-row"><i className="st-ico green"><Directions weight="fill" /></i><span className="feed-copy"><strong>{s("Paid to your account", "Pagato sul tuo account")}</strong><span>{s("Stripe sends payouts to your bank automatically.", "Stripe versa automaticamente sul tuo conto.")}</span></span></div>
-        <div className="feed-row"><i className="st-ico gray"><PriceTag weight="fill" /></i><span className="feed-copy"><strong>{s(`Space fee: ${fee}%`, `Commissione Space: ${fee}%`)}</strong><span>{s("Plus Stripe's card fees. No monthly cost.", "Più le commissioni carta di Stripe. Nessun costo mensile.")}</span></span></div>
+        <div className="feed-row"><i className="st-ico gray"><PriceTag weight="fill" /></i><span className="feed-copy"><strong>{s(`iywa fee: ${fee}%`, `Commissione iywa: ${fee}%`)}</strong><span>{s("Plus Stripe's card fees. No monthly cost.", "Più le commissioni carta di Stripe. Nessun costo mensile.")}</span></span></div>
         <div className="feed-row"><i className="st-ico orange"><Bell weight="fill" /></i><span className="feed-copy"><strong>{s("Live order alerts", "Avvisi d'ordine in tempo reale")}</strong><span>{s("You get a notification as soon as someone buys.", "Ricevi una notifica appena qualcuno compra.")}</span></span></div>
       </div>
       <p className="msg-hint">{s("Products with photos from your phone sync without the photo: use photos from the web for now.", "I prodotti con foto caricate dal telefono si sincronizzano senza foto: per ora usa foto dal web.")}</p>
@@ -5351,7 +5351,7 @@ function shopTopicOf(shop, product) {
   return "";
 }
 
-// The Shop section: every shop and product on Space, demo shops and live sellers.
+// The Shop section: every shop and product on iywa, demo shops and live sellers.
 function ShopHome({ onClose, onOrders, me }) {
   const nav = useContext(ThoughtNav);
   const space = useSpace();
@@ -6010,7 +6010,7 @@ function StoreScreen({ owner, live, onClose }) {
           <div className="mk-hero-stats">
             {store.sales ? <span><b>{store.sales.toLocaleString(it ? "it-IT" : "en-GB")}</b><em>{say("sales", "vendite")}</em></span> : null}
             <span><b>{store.products.length}</b><em>{say("products", "prodotti")}</em></span>
-            {store.since ? <span><b>{store.since}</b><em>{say("on Space since", "su Space dal")}</em></span> : null}
+            {store.since ? <span><b>{store.since}</b><em>{say("on iywa since", "su iywa dal")}</em></span> : null}
           </div>
           <SellerBadges store={store} rating={rating} />
           <div className="ps-actions mk-hero-actions">
@@ -8163,7 +8163,7 @@ function Messages({ request, onOpenPerson }) {
                 <em>
                   {isGroup
                     ? `${(thread.members || thread.people || []).length + 1} ${say("members", "membri")}`
-                    : person?.live ? `@${person.handle} · Space` : `${person?.handle || ""} · ${person?.followers ? `${compact(person.followers, it)} follower` : "Space"}`}
+                    : person?.live ? `@${person.handle} · iywa` : `${person?.handle || ""} · ${person?.followers ? `${compact(person.followers, it)} follower` : "iywa"}`}
                 </em>
                 {!isGroup && person?.craft ? <em>{person.craft}{person.city ? ` · ${person.city}` : ""}</em> : null}
                 {isGroup && thread.about ? <p className="dm-intro-about">{thread.about}</p> : null}
@@ -8430,7 +8430,7 @@ function Messages({ request, onOpenPerson }) {
                 {threads.filter((item) => !forwardQuery.trim() || item.name.toLowerCase().includes(forwardQuery.trim().toLowerCase())).map((item) => (
                   <button key={item.id} type="button" onClick={() => forwardTo(item)}>
                     <ThreadFace thread={item} />
-                    <span><strong>{item.name}</strong><em>{item.group || item.members ? say("Group", "Gruppo") : item.live ? say("On Space", "Su Space") : say("Chat", "Chat")}</em></span>
+                    <span><strong>{item.name}</strong><em>{item.group || item.members ? say("Group", "Gruppo") : item.live ? say("On iywa", "Su iywa") : say("Chat", "Chat")}</em></span>
                   </button>
                 ))}
               </div>
@@ -8477,7 +8477,7 @@ function Messages({ request, onOpenPerson }) {
   const liveSection = (onPick, pickedKey) => (
     live ? (
       <>
-        <p className="dm-section">{say("On Space", "Su Space")}{live.status !== "open" ? ` · ${say("connecting…", "connessione…")}` : ""}</p>
+        <p className="dm-section">{say("On iywa", "Su iywa")}{live.status !== "open" ? ` · ${say("connecting…", "connessione…")}` : ""}</p>
         {livePeople.length ? livePeople.map((person) => {
           const key = `live:${person.handle}`;
           return pickRow(
@@ -8490,7 +8490,7 @@ function Messages({ request, onOpenPerson }) {
             busy && !pickedKey,
           );
         }) : (
-          <p className="dm-note-hint">{peopleNeedle ? say("Nobody with this name on Space.", "Nessuno con questo nome su Space.") : say("Nobody else has joined yet. Sign up a second account in another browser to try live chat and calls.", "Ancora nessun altro iscritto. Crea un secondo account in un altro browser per provare chat e chiamate dal vivo.")}</p>
+          <p className="dm-note-hint">{peopleNeedle ? say("Nobody with this name on iywa.", "Nessuno con questo nome su iywa.") : say("Nobody else has joined yet. Sign up a second account in another browser to try live chat and calls.", "Ancora nessun altro iscritto. Crea un secondo account in un altro browser per provare chat e chiamate dal vivo.")}</p>
         )}
         <p className="dm-section">{say("Suggested", "Suggeriti")}</p>
       </>
@@ -8615,9 +8615,9 @@ function Messages({ request, onOpenPerson }) {
         <div className="panel-scroll">
           {live ? (
             <>
-              <p className="dm-letter wide">{say("On Space", "Su Space")}{live.status !== "open" ? ` · ${say("connecting…", "connessione…")}` : ""}</p>
+              <p className="dm-letter wide">{say("On iywa", "Su iywa")}{live.status !== "open" ? ` · ${say("connecting…", "connessione…")}` : ""}</p>
               {livePeople.length ? livePeople.map((person) => checkRow(`live:${person.handle}`, person.src || avatarFor(person.name), person.online, person.name, person.online ? "online" : seenText(person, it))) : (
-                <p className="dm-note-hint">{peopleNeedle ? say("Nobody with this name on Space.", "Nessuno con questo nome su Space.") : say("Nobody else has joined yet.", "Ancora nessun altro iscritto.")}</p>
+                <p className="dm-note-hint">{peopleNeedle ? say("Nobody with this name on iywa.", "Nessuno con questo nome su iywa.") : say("Nobody else has joined yet.", "Ancora nessun altro iscritto.")}</p>
               )}
             </>
           ) : null}
@@ -8629,7 +8629,7 @@ function Messages({ request, onOpenPerson }) {
           ))}
         </div>
         {mixed || hint ? (
-          <p className="dm-hint soft">{hint || say("Demo contacts can't join a live group. Pick only people on Space, or only demo contacts.", "I contatti demo non possono entrare in un gruppo live. Scegli solo persone su Space o solo contatti demo.")}</p>
+          <p className="dm-hint soft">{hint || say("Demo contacts can't join a live group. Pick only people on iywa, or only demo contacts.", "I contatti demo non possono entrare in un gruppo live. Scegli solo persone su iywa o solo contatti demo.")}</p>
         ) : null}
         <button type="button" className={`dm-fab${enough && !mixed ? " on" : ""}`} disabled={!enough || mixed} aria-label={say("Next", "Avanti")} onClick={() => { setGroupStep("details"); setPeopleQuery(""); }}>
           <ArrowRight />
@@ -9307,7 +9307,7 @@ function compact(value, it) {
 }
 
 // Bio text with tappable #hashtags, @mentions and links.
-// A tagged person's name: opens their profile when they exist on Space.
+// A tagged person's name: opens their profile when they exist on iywa.
 function TagName({ name, className = "ig-tag-name", style }) {
   const nav = useContext(ThoughtNav);
   const person = SEARCH_PEOPLE.find((entry) => entry.name === name);
@@ -9977,7 +9977,7 @@ function EditScreen({ profile, onClose, onSave }) {
             </span>
           </label>
         </div>
-        <p className="ep-note">{say("Your name, username, bio and link are visible to everyone on Space.", "Nome, nome utente, bio e link sono visibili a tutti su Space.")}</p>
+        <p className="ep-note">{say("Your name, username, bio and link are visible to everyone on iywa.", "Nome, nome utente, bio e link sono visibili a tutti su iywa.")}</p>
       </div>
       <input ref={fileRef} className="sr" type="file" accept="image/*" onChange={pickPhoto} />
       {sheet ? (
@@ -12876,7 +12876,7 @@ const LEGAL = {
     en: {
       title: "Privacy Policy",
       sections: [
-        { h: "What Space keeps", p: "Your name, handle, bio, the posts you publish in this preview, and the preferences on this phone. Nothing is sent to a server." },
+        { h: "What iywa keeps", p: "Your name, handle, bio, the posts you publish in this preview, and the preferences on this phone. Nothing is sent to a server." },
         { h: "Who can see you", p: "A private account hides posts, reels and stories from people you have not approved. Your name, photo and bio stay visible." },
         { h: "Messages", p: "Activity status and read receipts follow the switches in Settings. Turning them off hides them both ways." },
         { h: "Your choices", p: "Language, colors, muted accounts, blocked accounts and hidden words stay in local storage until you clear them." },
@@ -12885,7 +12885,7 @@ const LEGAL = {
     it: {
       title: "Privacy Policy",
       sections: [
-        { h: "Cosa conserva Space", p: "Nome, handle, bio, i post che pubblichi in questa anteprima e le preferenze su questo telefono. Non parte nulla verso un server." },
+        { h: "Cosa conserva iywa", p: "Nome, handle, bio, i post che pubblichi in questa anteprima e le preferenze su questo telefono. Non parte nulla verso un server." },
         { h: "Chi ti vede", p: "Un account privato nasconde post, reel e storie a chi non hai approvato. Nome, foto e bio restano visibili." },
         { h: "Messaggi", p: "Stato attività e conferme di lettura seguono gli interruttori in Impostazioni. Se li spegni, si nascondono da entrambe le parti." },
         { h: "Le tue scelte", p: "Lingua, colori, account silenziati, bloccati e parole nascoste restano nella memoria locale finché non li cancelli." },
@@ -12896,7 +12896,7 @@ const LEGAL = {
     en: {
       title: "Terms of Use",
       sections: [
-        { h: "The preview", p: "Space is a private demo. Posts, chats and accounts you add live only in this browser." },
+        { h: "The preview", p: "iywa is a private demo. Posts, chats and accounts you add live only in this browser." },
         { h: "Your content", p: "Captions you write stay yours. Do not post anything you do not have the right to share." },
         { h: "Other people", p: "Blocking, restricting and muting change what this preview shows you. They do not reach a real network." },
         { h: "Changes", p: "These terms describe the preview as it is today. The app can change as the demo grows." },
@@ -12905,7 +12905,7 @@ const LEGAL = {
     it: {
       title: "Termini di utilizzo",
       sections: [
-        { h: "L'anteprima", p: "Space è una demo privata. Post, chat e account che aggiungi vivono solo in questo browser." },
+        { h: "L'anteprima", p: "iywa è una demo privata. Post, chat e account che aggiungi vivono solo in questo browser." },
         { h: "I tuoi contenuti", p: "Le didascalie che scrivi restano tue. Non pubblicare ciò che non hai diritto di condividere." },
         { h: "Le altre persone", p: "Bloccare, limitare e silenziare cambia ciò che vedi in questa anteprima. Non raggiungono una rete vera." },
         { h: "Modifiche", p: "Questi termini descrivono l'anteprima di oggi. L'app può cambiare mentre la demo cresce." },
@@ -12916,14 +12916,14 @@ const LEGAL = {
     en: {
       title: "About",
       sections: [
-        { h: "Space", p: "A phone for the workshop. Posts, stories, reels and messages, in liquid glass." },
+        { h: "iywa", p: "A phone for the workshop. Posts, stories, reels and messages, in liquid glass." },
         { h: "Version", p: "Preview 0.1.0 · on this device." },
       ],
     },
     it: {
       title: "Informazioni",
       sections: [
-        { h: "Space", p: "Un telefono per il laboratorio. Post, storie, reel e messaggi, in vetro liquido." },
+        { h: "iywa", p: "Un telefono per il laboratorio. Post, storie, reel e messaggi, in vetro liquido." },
         { h: "Versione", p: "Anteprima 0.1.0 · su questo dispositivo." },
       ],
     },
@@ -12941,7 +12941,7 @@ function settingGroups(lang) {
       ],
     },
     {
-      title: s("How you use Space", "Come usi Space"),
+      title: s("How you use iywa", "Come usi iywa"),
       rows: [
         { id: "saved", label: s("Saved", "Salvati"), meta: s("Posts and reels", "Post e reel") },
         { id: "archive", label: s("Archive", "Archivio"), meta: s("Stories and posts you hid", "Storie e post nascosti") },
@@ -12978,7 +12978,7 @@ function settingGroups(lang) {
     {
       title: s("Your app and media", "App e media"),
       rows: [
-        { id: "theme", label: s("Colors", "Colori"), meta: s("The color of Space", "Il colore di Space") },
+        { id: "theme", label: s("Colors", "Colori"), meta: s("The color of iywa", "Il colore di iywa") },
         { id: "language", label: s("Language", "Lingua"), meta: s("App language", "Lingua dell'app") },
         { id: "accessibility", label: s("Accessibility", "Accessibilità"), meta: s("Captions and alt text", "Sottotitoli e testo alternativo") },
         { id: "data", label: s("Data usage", "Uso dei dati"), meta: s("Data saver", "Risparmio dati") },
@@ -12996,9 +12996,9 @@ function settingGroups(lang) {
       title: s("More info and support", "Info e assistenza"),
       rows: [
         { id: "help", label: s("Help", "Assistenza"), meta: s("Answers", "Risposte") },
-        { id: "privacy-policy", label: s("Privacy Policy", "Privacy Policy"), meta: s("How Space handles this preview", "Come Space tratta questa anteprima") },
+        { id: "privacy-policy", label: s("Privacy Policy", "Privacy Policy"), meta: s("How iywa handles this preview", "Come iywa tratta questa anteprima") },
         { id: "terms", label: s("Terms of Use", "Termini di utilizzo"), meta: s("The rules of the preview", "Le regole dell'anteprima") },
-        { id: "about", label: s("About", "Informazioni"), meta: "Space 0.1.0" },
+        { id: "about", label: s("About", "Informazioni"), meta: "iywa 0.1.0" },
       ],
     },
   ];
@@ -13146,7 +13146,7 @@ function SettingsScreen({ profile, prefs, onClose, onOpen }) {
                 <strong>{say(lang, "Log out", "Esci")}</strong>
               </button>
             </div>
-            <p className="st-foot"><b>Space</b> · {say(lang, "version", "versione")} 0.1.0</p>
+            <p className="st-foot"><b>iywa</b> · {say(lang, "version", "versione")} 0.1.0</p>
           </>
         ) : null}
       </div>
@@ -13563,7 +13563,7 @@ function LegalScreen({ doc, prefs, onClose }) {
     <div className="panel view st">
       <StHead title={body.title} onClose={onClose} />
       <div className="panel-scroll">
-        <StHero id={doc} title={body.title} meta="Space" />
+        <StHero id={doc} title={body.title} meta="iywa" />
         <article className="set-card legal">
         {body.sections.map((section) => (
           <section key={section.h}>
@@ -13633,7 +13633,7 @@ const SpaceData = createContext(null);
 
 export function useSpace() {
   const value = useContext(SpaceData);
-  if (!value) throw new Error("Space data missing");
+  if (!value) throw new Error("iywa data missing");
   return value;
 }
 
@@ -14334,7 +14334,7 @@ function AuthScreen({ users, lang, onEnter, onJoin, onReset, back }) {
       </div>
       <div className={`au2-body${bad ? " bad" : ""}`} key={mode}>
         <div className="au2-mark" aria-hidden="true"><i /><b>S</b></div>
-        {mode === "login" ? <h1 className="au2-word">Space</h1> : <h1 className="au2-title">{heading}</h1>}
+        {mode === "login" ? <h1 className="au2-word">iywa</h1> : <h1 className="au2-title">{heading}</h1>}
         {mode !== "login" ? <p className="au2-sub">{sub}</p> : null}
         {note ? <p className="au2-note"><Checked weight="fill" />{note}</p> : null}
         <form className="au2-form" onSubmit={submit} noValidate>
@@ -14425,7 +14425,7 @@ function AuthScreen({ users, lang, onEnter, onJoin, onReset, back }) {
         ) : (
           <button type="button" className="au2-outline" onClick={() => go("login")}>{s("I already have an account", "Ho già un account")}</button>
         )}
-        <span className="au2-brand"><i /> Space</span>
+        <span className="au2-brand"><i /> iywa</span>
       </div>
     </div>
   );
@@ -14884,7 +14884,7 @@ export default function App() {
             <div className={camOn ? "screen-root cam-open" : "screen-root"} data-screen={tab} ref={screenRoot} inert={auth.handle ? undefined : true}>
               <StatusBar />
               <header className={`topbar ig-top bar-${tab}${topHidden && tab === "home" ? " hidden" : ""}`}>
-                {tab === "home" ? <h1 className="ig-logo">Space</h1> : null}
+                {tab === "home" ? <h1 className="ig-logo">iywa</h1> : null}
                 {tab === "reel" ? <h1 className="ig-title on-media">Reels</h1> : null}
                 {tab === "messages" ? (
                   <h1 className="ig-title">

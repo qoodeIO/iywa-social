@@ -15,6 +15,7 @@ import { playableUri } from "../live/media";
 import { Bell, ChevronLeft, ChevronRight, ClearIcon, ImageIcon, Pause, Pin, Play, Search } from "./chatIcons";
 import { T, tap } from "./kit";
 import { t } from "../lib/i18n";
+import { openTab } from "../lib/tabs";
 
 export const ONLINE = "#1cd14f";
 export const MINE = ["#b13cf2", "#7b3df5", "#2f74f5"];
@@ -187,7 +188,7 @@ export const Wallpaper = memo(function Wallpaper({ id = "sky", style }) {
               <Stop offset="1" stopColor={wall.b} stopOpacity="0" />
             </RadialGradient>
             {wall.pattern === "doodle" ? (
-              <Pattern id="wp" width="120" height="120" patternUnits="userSpaceOnUse">
+              <Pattern id="wp" width="120" height="120" patternUnits="useriywaOnUse">
                 <G fill="none" stroke="#888" strokeOpacity={0.1} strokeWidth={1.6} strokeLinecap="round">
                   <Path d="M18 22c6-6 14-6 20 0" />
                   <Circle cx="86" cy="26" r="7" />
@@ -198,7 +199,7 @@ export const Wallpaper = memo(function Wallpaper({ id = "sky", style }) {
                 </G>
               </Pattern>
             ) : wall.pattern === "stars" ? (
-              <Pattern id="wp" width="120" height="120" patternUnits="userSpaceOnUse">
+              <Pattern id="wp" width="120" height="120" patternUnits="useriywaOnUse">
                 <G fill="#fff" fillOpacity={0.18}>
                   <Circle cx="12" cy="18" r="1.2" />
                   <Circle cx="70" cy="40" r="0.9" />
@@ -313,7 +314,7 @@ export function SubHead({ title, meta, onBack, right, backIcon: BackIcon = Chevr
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: theme.bg }}>
       <View style={styles.subHead}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Indietro")} hitSlop={8} onPress={() => { tap(); (onBack || (() => (router.canGoBack() ? router.back() : router.replace("/messages"))))(); }} style={({ pressed }) => [styles.roundIcon, pressed && { backgroundColor: theme.fill, transform: [{ scale: 0.88 }] }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Indietro")} hitSlop={8} onPress={() => { tap(); (onBack || (() => (router.canGoBack() ? router.back() : openTab("messages"))))(); }} style={({ pressed }) => [styles.roundIcon, pressed && { backgroundColor: theme.fill, transform: [{ scale: 0.88 }] }]}>
           <BackIcon size={25} weight="bold" color={theme.text} />
         </Pressable>
         <View style={{ flex: 1, minWidth: 0, paddingLeft: 8 }}>

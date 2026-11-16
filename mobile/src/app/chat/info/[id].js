@@ -20,6 +20,7 @@ import { Sheet, T, tap } from "../../../ui/kit";
 import { CheckRow, ToneRow } from "../../../ui/chatPick";
 import { INSET } from "../../../theme";
 import { keepMedia } from "../../../lib/media-store";
+import { openTab } from "../../../lib/tabs";
 
 export default function Info() {
   const { id } = useLocalSearchParams();
@@ -193,7 +194,7 @@ function ChatInfo({ thread }) {
           setConfirm(null);
           if (thread.live) store.setDmFlag(thread.id, "hiddenAt", Date.now());
           else store.deleteChat(thread.id);
-          router.dismissTo("/messages");
+          openTab("messages");
         }}
       />
     </View>
@@ -379,7 +380,7 @@ function GroupInfo({ thread }) {
         text={t("Uscire dal gruppo? Non riceverai più i suoi messaggi.")}
         icon={LogOut}
         action={t("Esci dal gruppo")}
-        onConfirm={() => { setConfirmLeave(false); live.leaveGroup(thread.id); router.dismissTo("/messages"); }}
+        onConfirm={() => { setConfirmLeave(false); live.leaveGroup(thread.id); openTab("messages"); }}
       />
     </View>
   );

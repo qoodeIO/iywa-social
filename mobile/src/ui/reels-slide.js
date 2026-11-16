@@ -11,6 +11,7 @@ import { tap } from "./kit";
 import { t } from "../lib/i18n";
 import { Bookmark, Heart, MessageCircle, MoreHorizontal, Music, Pause, Play, Send, SoundOff, SoundOn } from "./reels-icons";
 import { clockLabel, ReelPlayer, reelClips, tally } from "./reels-kit";
+import { openTab } from "../lib/tabs";
 
 const SPRING_OUT = Easing.bezier(0.32, 0.72, 0, 1);
 const POP = Easing.bezier(0.2, 0.9, 0.25, 1.3);
@@ -24,9 +25,9 @@ function Caption({ text, lines }) {
       {parts.map((part, index) => {
         if (/^@[\w.]+$/.test(part)) {
           const person = personByHandle(part.slice(1));
-          return <Text key={index} style={styles.tag} onPress={() => (person ? router.push(`/person/${person.handle}`) : part === "@forno.neri" ? router.push("/profile") : null)}>{part}</Text>;
+          return <Text key={index} style={styles.tag} onPress={() => (person ? router.push(`/person/${person.handle}`) : part === "@forno.neri" ? openTab("profile") : null)}>{part}</Text>;
         }
-        if (/^#[\p{L}\p{N}_]+$/u.test(part)) return <Text key={index} style={styles.tag} onPress={() => router.push({ pathname: "/search", params: { q: part } })}>{part}</Text>;
+        if (/^#[\p{L}\p{N}_]+$/u.test(part)) return <Text key={index} style={styles.tag} onPress={() => openTab("search", { q: part })}>{part}</Text>;
         return part;
       })}
     </Text>

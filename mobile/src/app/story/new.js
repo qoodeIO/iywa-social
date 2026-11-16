@@ -15,11 +15,11 @@ import {
   BRUSHES, CREATE_GRADIENTS, MAX_CLIP, STORY_EMOJI, STORY_FILTERS, STORY_GIFS, STORY_HASH, STORY_KIT, STORY_MUSIC, STORY_PLACES,
   TEXT_FONTS, TEXT_SWATCHES, filterOf,
 } from "../../lib/stories";
-import { CONTACTS, SHOPS, WORKS, euro } from "../../data";
+import { CONTACTS, SHOPS, euro } from "../../data";
 import { At, Bag, Bell, ChevronLeft, ChevronRight, Close, Download, Hash, Heart, MapPin, More, Plus, Search, Star } from "../../ui/icons";
 import {
   BarChart, Checked, Eraser, Flash, FlashOff, Grid4, Hand, HelpCircle, Highlighter, LinkIcon, MessageCircle, Music, Pencil, Ring,
-  Rows, Scribble, Smile, SoundOff, SoundOn, Sparkle, StickerIcon, SwitchCamera, TextIcon, Timer, Undo,
+  Images, Rows, Scribble, Smile, SoundOff, SoundOn, Sparkle, StickerIcon, SwitchCamera, TextIcon, Timer, Undo,
 } from "../../ui/storyIcons";
 import { Avatar, T, tap } from "../../ui/kit";
 import { DrawingLayer, LoopClip, StickerFace, StoryMedia, StrokePath, textBox, textStyle } from "../../ui/story";
@@ -71,7 +71,8 @@ export default function StoryCamera() {
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(0);
-  const pick = WORKS[cells.length % WORKS.length];
+  // The newest photo in the phone's library, for the gallery button (only if access was already given).
+  const [lastShot, setLastShot] = useState(null);
 
   function note(text) {
     setToast({ text, at: Date.now() });
@@ -86,6 +87,19 @@ export default function StoryCamera() {
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const perm = await MediaLibrary.getPermissionsAsync();
+        if (!perm.granted) return;
+        const page = await MediaLibrary.getAssetsAsync({ first: 1, mediaType: ["photo", "video"], sortBy: [[MediaLibrary.SortBy.creationTime, false]] });
+        if (alive && page.assets[0]?.uri) setLastShot(page.assets[0].uri);
+      } catch { /* no library access */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
     if (!recording) return undefined;
     const id = setInterval(() => {
       const secs = (Date.now() - recording) / 1000;
@@ -97,14 +111,14 @@ export default function StoryCamera() {
   const canShoot = Boolean(camPerm?.granted) && camOn;
 
   async function frameFromCamera() {
-    if (!canShoot || !camRef.current) return pick.src;
+    if (!canShoot || !camRef.current) return null;
     try {
       const shot = await camRef.current.takePictureAsync({ quality: 0.85, shutterSound: false });
-      // The iOS simulator has no camera and returns a 200×200 placeholder: use the demo photo instead.
-      if (!shot?.uri || (shot.width <= 200 && shot.height <= 200)) return pick.src;
+      // The iOS simulator has no camera and returns a 200×200 placeholder: treat it as no camera.
+      if (!shot?.uri || (shot.width <= 200 && shot.height <= 200)) return null;
       return await keepMedia(shot.uri, "story");
     } catch {
-      return pick.src;
+      return null;
     }
   }
 
@@ -114,6 +128,11 @@ export default function StoryCamera() {
     setBlink(Date.now());
     const run = async () => {
       const src = await frameFromCamera();
+      // No camera (simulator, or access denied): pick from the gallery instead of a stock photo.
+      if (!src) {
+        fromLibrary();
+        return;
+      }
       if (mode === "layout") {
         const next = [...cells, src];
         if (next.length >= layout) {
@@ -415,7 +434,6 @@ export default function StoryCamera() {
           </Pressable>
         ) : (
           <View style={StyleSheet.absoluteFill}>
-            <Image source={{ uri: pick.src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
             {camPerm?.granted ? (
               <CameraView
                 ref={camRef}
@@ -494,7 +512,7 @@ export default function StoryCamera() {
         <View style={[styles.bottom, { bottom: insets.bottom + 64 }]}>
           <View style={{ flex: 1, alignItems: "flex-start", opacity: recording ? 0 : 1 }}>
             <Pressable style={({ pressed }) => [styles.roll, { transform: [{ scale: pressed ? 0.9 : 1 }] }]} accessibilityLabel={t("Galleria")} onPress={fromLibrary} disabled={Boolean(recording)}>
-              <Image source={{ uri: WORKS[(cells.length + 1) % WORKS.length].src }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+              {lastShot ? <Image source={{ uri: lastShot }} style={{ width: "100%", height: "100%" }} contentFit="cover" /> : <View style={styles.rollEmpty}><Images size={22} color="#fff" /></View>}
             </Pressable>
           </View>
           <View {...shutter} accessibilityRole="button" accessibilityLabel={t("Scatta, tieni premuto per il video")} style={[styles.shutter, { transform: [{ scale: recording ? 1.22 : 1 }] }]}>
@@ -1310,6 +1328,7 @@ const styles = StyleSheet.create({
   railBadge: { position: "absolute", right: -2, bottom: -2, minWidth: 17, height: 17, borderRadius: 9, backgroundColor: "#ffd60a", alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
   bottom: { position: "absolute", left: 0, right: 0, zIndex: 10, flexDirection: "row", alignItems: "center", paddingHorizontal: 26 },
   roll: { width: 40, height: 40, borderRadius: 10, overflow: "hidden", borderWidth: 2, borderColor: "#fff" },
+  rollEmpty: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.16)" },
   shutter: { width: 84, height: 84, alignItems: "center", justifyContent: "center" },
   modes: { position: "absolute", left: 0, right: 0, zIndex: 10, flexDirection: "row", justifyContent: "center", gap: 20 },
   tip: { position: "absolute", left: 0, right: 0, textAlign: "center" },

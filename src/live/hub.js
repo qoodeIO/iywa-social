@@ -1,4 +1,4 @@
-// WebSocket client for the Space hub (calls/src/worker.js).
+// WebSocket client for the iywa hub (calls/src/worker.js).
 // Reconnects with backoff, keeps the socket alive with pings and detects
 // "zombie" sockets, like Spinchat's signaling client.
 

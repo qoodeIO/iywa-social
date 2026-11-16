@@ -14,6 +14,7 @@ import { ChecksGlyph, PlayGlyph, ReelGlyph, UserGlyph } from "./feedIcons";
 import { Name, Sheet, T, tap } from "./kit";
 import { SHARE_BASE, commentCount, shown, tally } from "./feedData";
 import { t } from "../lib/i18n";
+import { openTab } from "../lib/tabs";
 
 const W = Dimensions.get("window").width;
 
@@ -26,7 +27,7 @@ export const STORY_CAMERA = "/story/new";
 export function openHandle(handle) {
   const person = personByHandle(handle);
   if (person) router.push(`/person/${person.handle}`);
-  else if (String(handle).replace(/^@/, "") === "forno.neri") router.push("/profile");
+  else if (String(handle).replace(/^@/, "") === "forno.neri") openTab("profile");
 }
 
 export function openPerson(name) {
@@ -72,7 +73,7 @@ export function Rich({ text, size = 14, lines, style, prefix, color }) {
   );
 }
 
-// A tagged person's name: their handle when they are on Space, and it opens their profile.
+// A tagged person's name: their handle when they are on iywa, and it opens their profile.
 export function TagName({ name, size = 13, color, weight = "600" }) {
   const person = PEOPLE.find((entry) => entry.name === name);
   return (
@@ -123,12 +124,12 @@ export const StoryRing = memo(function StoryRing({ src, size = 66, total = 1, se
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
         <Defs>
-          <SvgGradient id="ringB" x1="18" y1="88" x2="82" y2="12" gradientUnits="userSpaceOnUse">
+          <SvgGradient id="ringB" x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
             <Stop offset="0" stopColor="#ffb800" />
             <Stop offset="0.45" stopColor="#ff2d55" />
             <Stop offset="1" stopColor="#c013d1" />
           </SvgGradient>
-          <SvgGradient id="ringG" x1="18" y1="88" x2="82" y2="12" gradientUnits="userSpaceOnUse">
+          <SvgGradient id="ringG" x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
             <Stop offset="0" stopColor="#1fd15a" />
             <Stop offset="1" stopColor="#0aa344" />
           </SvgGradient>
@@ -270,7 +271,7 @@ function ReelBar({ playing }) {
   );
 }
 
-function PostMedia({ post, kind, images, onSingle, onDouble, onSlide, burst }) {
+function PostMedia({ post, kind, images, onDouble, onSlide, burst }) {
   const theme = useTheme();
   const [showTags, setShowTags] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -288,10 +289,11 @@ function PostMedia({ post, kind, images, onSingle, onDouble, onSlide, burst }) {
       return;
     }
     last.current.at = now;
+    // A single tap on a photo does nothing (only a double tap likes it), like Instagram.
+    if (kind !== "reel") return;
     last.current.timer = setTimeout(() => {
       last.current.at = 0;
-      if (kind === "reel") setPlaying((value) => !value);
-      else onSingle?.();
+      setPlaying((value) => !value);
     }, 260);
   };
 
@@ -360,9 +362,8 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
   const comments = commentCount(post, extraComments);
   const time = post.time === "Now" ? t("Adesso") : typeof post.time === "string" ? t(post.time) : post.time;
   const sub = kind === "reel" ? (post.audio ? t(post.audio) : t("Audio originale")) : String(post.place || post.handle || "");
-  const openAuthor = () => (mine ? router.push("/profile") : openPerson(post.name));
+  const openAuthor = () => (mine ? openTab("profile") : openPerson(post.name));
   const doubleLike = useCallback(() => { actions.doubleLike(post.id); setBurst(Date.now()); }, [actions, post.id]);
-  const open = useCallback(() => (onOpen ? onOpen(post) : actions.open(post)), [actions, onOpen, post]);
 
   return (
     <View style={styles.post}>
@@ -391,7 +392,7 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
       {kind === "tweet" ? (
         <Rich text={post.text} size={16} style={styles.tweetText} />
       ) : (
-        <PostMedia post={post} kind={kind} images={images} onSingle={open} onDouble={doubleLike} onSlide={setSlide} burst={burst} />
+        <PostMedia post={post} kind={kind} images={images} onDouble={doubleLike} onSlide={setSlide} burst={burst} />
       )}
 
       <View style={styles.actions}>

@@ -45,7 +45,7 @@ export default function NewMessage() {
       .finally(() => setBusy(false));
   }
 
-  // "On Space" shows only when the hub has answered: offline, the page is the demo contacts, like the web without a server.
+  // "On iywa" shows only when the hub has answered: offline, the page is the demo contacts, like the web without a server.
   const head = (
     <View>
       <Pressable onPress={() => { tap(); router.replace("/chat/group"); }} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}>
@@ -58,7 +58,7 @@ export default function NewMessage() {
       </Pressable>
       {online ? (
         <>
-          <T size={15} weight="700" style={styles.section}>{t("Su Space")}</T>
+          <T size={15} weight="700" style={styles.section}>{t("Su iywa")}</T>
           {livePeople.length ? livePeople.map((person) => (
             <Pressable key={person.handle} disabled={busy} onPress={() => startLiveChat(person)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }, busy && { opacity: 0.5 }]}>
               <Face src={person.src} name={person.name} size={46} online={person.online} dot={13} />
@@ -67,7 +67,7 @@ export default function NewMessage() {
                 <T size={13.5} color={theme.text2} lines={1}>@{person.handle} · {seenText(person)}</T>
               </View>
             </Pressable>
-          )) : <Hint>{needle ? t("Nessuno con questo nome su Space.") : t("Ancora nessun altro iscritto. Accedi con un secondo account su un altro telefono per provare chat e chiamate dal vivo.")}</Hint>}
+          )) : <Hint>{needle ? t("Nessuno con questo nome su iywa.") : t("Ancora nessun altro iscritto. Accedi con un secondo account su un altro telefono per provare chat e chiamate dal vivo.")}</Hint>}
           <T size={15} weight="700" style={styles.section}>{t("Suggeriti")}</T>
         </>
       ) : null}

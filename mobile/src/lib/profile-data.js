@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import seed from "../data/seed.json";
 import { AVATAR, CHATS, EXPLORE, PEOPLE, PORTRAIT, POSTS, REELS, WORKS, personByName } from "../data";
 import { localeTag, t } from "./i18n";
+import { openTab } from "./tabs";
 
 export const SEARCH_PEOPLE = PEOPLE;
 
@@ -80,7 +81,7 @@ export function openGridItem(post) {
   if (post.kind === "reel" && (post.reelId || String(post.id).startsWith("reel-") || REELS.some((reel) => reel.id === post.id))) {
     const id = post.reelId || String(post.id).replace(/^reel-/, "");
     if (router.canDismiss()) router.dismissAll();
-    router.replace({ pathname: "/reels", params: { id } });
+    openTab("reels", { id });
     return;
   }
   router.push(`/post/${post.id}`);
@@ -88,7 +89,7 @@ export function openGridItem(post) {
 
 export function openPersonByName(name, myName) {
   if (name && name === myName) {
-    router.push("/profile");
+    openTab("profile");
     return;
   }
   const person = personByName(name);

@@ -4355,7 +4355,7 @@ html:has(.stage[data-mode="light"]) #root { background: #f2f2f4; }
 .group-calls .msg-action { flex: none; padding: 0 calc(18 * var(--u)); }
 
 /* =====================================================================
-   Space · Instagram-style layer
+   iywa · Instagram-style layer
    Flat black canvas, full-bleed media, hairline separators, no glass on
    content, instant tab switches and quick native-like push transitions.
    ===================================================================== */

@@ -177,7 +177,7 @@ export default function EditProfile() {
             ) : null}
           </View>
         </View>
-        <View style={styles.note}><T size={12.5} color={theme.text2} style={{ flex: 1, lineHeight: 17 }}>{t("Nome, nome utente, bio e link sono visibili a tutti su Space.")}</T></View>
+        <View style={styles.note}><T size={12.5} color={theme.text2} style={{ flex: 1, lineHeight: 17 }}>{t("Nome, nome utente, bio e link sono visibili a tutti su iywa.")}</T></View>
       </ScrollView>
       <ActionSheet
         open={sheet === "photo"}

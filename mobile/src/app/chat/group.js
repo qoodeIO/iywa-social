@@ -159,10 +159,10 @@ export default function NewGroup() {
         <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 110 }}>
           {online ? (
             <>
-              <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("Su Space")}</T>
+              <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("Su iywa")}</T>
               {livePeople.length ? livePeople.map((person) => (
                 <CheckRow key={person.handle} on={picked.has(`live:${person.handle}`)} src={person.src} name={person.name} online={person.online} meta={person.online ? t("online") : seenText(person)} metaBlue={person.online} onPress={() => toggle(`live:${person.handle}`)} />
-              )) : <Hint>{needle ? t("Nessuno con questo nome su Space.") : t("Ancora nessun altro iscritto.")}</Hint>}
+              )) : <Hint>{needle ? t("Nessuno con questo nome su iywa.") : t("Ancora nessun altro iscritto.")}</Hint>}
             </>
           ) : null}
           {letters.map(([letter, list]) => (
@@ -172,7 +172,7 @@ export default function NewGroup() {
             </Fragment>
           ))}
         </ScrollView>
-        {mixed || hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint || t("I contatti demo non possono entrare in un gruppo live. Scegli solo persone su Space o solo contatti demo.")}</Hint> : null}
+        {mixed || hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint || t("I contatti demo non possono entrare in un gruppo live. Scegli solo persone su iywa o solo contatti demo.")}</Hint> : null}
         {fab(enough && !mixed, <ArrowRight size={24} weight="bold" color={enough && !mixed ? "#fff" : theme.text3} />, () => { tap(); setStep("details"); setQuery(""); }, t("Avanti"))}
       </View>
     );

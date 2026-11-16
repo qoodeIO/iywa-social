@@ -11,6 +11,7 @@ import { router } from "expo-router";
 import { WORKS } from "../data";
 import { T } from "./kit";
 import { t, tk } from "../lib/i18n";
+import { openTab } from "../lib/tabs";
 
 // ---------------------------------------------------------------------------
 // Constants copied from the web app
@@ -101,7 +102,7 @@ export function reelPoster(reel) {
 // Open the Reels tab on a given reel (profile grid, shared links).
 export function openReel(id) {
   if (router.canDismiss()) router.dismissAll();
-  router.replace({ pathname: "/reels", params: id ? { id } : {} });
+  openTab("reels", id ? { id } : undefined);
 }
 
 export function openReelCamera() {

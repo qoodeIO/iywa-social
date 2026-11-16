@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Space",
+    "name": "iywa",
     "slug": "space",
     "scheme": "space",
     "version": "1.0.0",
@@ -13,9 +13,9 @@
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Space usa la fotocamera per storie e post.",
-        "NSPhotoLibraryUsageDescription": "Space usa le foto per storie, post e prodotti.",
-        "NSMicrophoneUsageDescription": "Space usa il microfono per video e messaggi vocali.",
+        "NSCameraUsageDescription": "iywa usa la fotocamera per storie e post.",
+        "NSPhotoLibraryUsageDescription": "iywa usa le foto per storie, post e prodotti.",
+        "NSMicrophoneUsageDescription": "iywa usa il microfono per video e messaggi vocali.",
         "UIBackgroundModes": [
           "audio",
           "voip"
@@ -79,22 +79,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Space usa la fotocamera per storie, reel e videochiamate.",
-          "microphonePermission": "Space usa il microfono per video, chiamate e messaggi vocali.",
+          "cameraPermission": "iywa usa la fotocamera per storie, reel e videochiamate.",
+          "microphonePermission": "iywa usa il microfono per video, chiamate e messaggi vocali.",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Space usa le foto per storie, post e prodotti."
+          "photosPermission": "iywa usa le foto per storie, post e prodotti."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Space usa le foto per storie, post e prodotti.",
-          "savePhotosPermission": "Space salva le tue storie nella libreria."
+          "photosPermission": "iywa usa le foto per storie, post e prodotti.",
+          "savePhotosPermission": "iywa salva le tue storie nella libreria."
         }
       ],
       "expo-asset",

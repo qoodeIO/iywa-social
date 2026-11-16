@@ -11,9 +11,6 @@ import { AuthGate } from "../ui/auth";
 import { useTheme } from "../theme";
 import { useLive } from "../live/LiveStore";
 
-const TAB_ROOTS = ["index", "search", "reels", "messages", "profile"];
-// Screens drawn over black media keep light status bar text in both themes.
-const LIGHT_BAR = { statusBarStyle: "light" };
 
 function Shell() {
   const theme = useTheme();
@@ -28,9 +25,10 @@ function Shell() {
       <StatusBar style={theme.scheme === "dark" ? "light" : "dark"} />
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg }, animation: "default", gestureEnabled: true, statusBarStyle: barStyle, statusBarAnimation: "fade" }}>
-          {TAB_ROOTS.map((name) => <Stack.Screen key={name} name={name} options={{ animation: "fade", animationDuration: 140, ...(name === "reels" ? LIGHT_BAR : null) }} />)}
+          <Stack.Screen name="index" options={{ animation: "none" }} />
           <Stack.Screen name="story/[deck]" options={{ statusBarStyle: "light", presentation: "transparentModal", animation: "fade", animationDuration: 180, gestureEnabled: false, contentStyle: { backgroundColor: "transparent" } }} />
           <Stack.Screen name="story/new" options={{ statusBarStyle: "light", presentation: "fullScreenModal", animation: "slide_from_bottom", gestureEnabled: false, contentStyle: { backgroundColor: "#000" } }} />
+          <Stack.Screen name="story/camera" options={{ statusBarStyle: "light", presentation: "fullScreenModal", animation: "none", gestureEnabled: false, contentStyle: { backgroundColor: "#000" } }} />
           <Stack.Screen name="compose" options={{ presentation: "modal" }} />
           <Stack.Screen name="create" options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
           <Stack.Screen name="comments/[id]" options={{ presentation: "modal" }} />

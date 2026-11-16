@@ -1,6 +1,6 @@
-# Space per iOS e Android
+# iywa per iOS e Android
 
-App nativa di Space in React Native (Expo SDK 58, Expo Router). Usa gli stessi dati demo dell'app web: `npm run seed` li rigenera da `../src/App.jsx`.
+App nativa di iywa in React Native (Expo SDK 58, Expo Router). Usa gli stessi dati demo dell'app web: `npm run seed` li rigenera da `../src/App.jsx`.
 
 ## Avviarla in locale
 
@@ -11,6 +11,11 @@ npx expo start     # solo il server JavaScript, se l'app è già installata
 ```
 
 Se CocoaPods dà errori di codifica: `export LANG=en_US.UTF-8`.
+
+## Account per provare l'app
+
+- Account demo (dati e profilo di Giulia Neri): nome utente `forno.neri`, password `forno` (definito in `src/ui/auth.js`, `DEMO_USER`).
+- Per provare chat e chiamate tra due iPhone, sul secondo usa "Crea nuovo account" con un nome utente diverso: gli account restano sul telefono e il server identifica le persone dal nome utente.
 
 ## TestFlight
 

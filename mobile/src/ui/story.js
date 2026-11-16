@@ -535,12 +535,12 @@ export function StoryRing({ src, size = 66, total = 1, seen = 0, tone = "live" }
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
         <Defs>
-          <SvgGradient id={`${raw}b`} x1="18" y1="88" x2="82" y2="12" gradientUnits="userSpaceOnUse">
+          <SvgGradient id={`${raw}b`} x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
             <Stop offset="0" stopColor="#ffb800" />
             <Stop offset="0.45" stopColor="#ff2d55" />
             <Stop offset="1" stopColor="#c013d1" />
           </SvgGradient>
-          <SvgGradient id={`${raw}g`} x1="18" y1="88" x2="82" y2="12" gradientUnits="userSpaceOnUse">
+          <SvgGradient id={`${raw}g`} x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
             <Stop offset="0" stopColor="#1fd15a" />
             <Stop offset="1" stopColor="#0aa344" />
           </SvgGradient>
