@@ -9,6 +9,9 @@ import { FREE_SHIPPING, SHIPPING_FEE, SORTS, ago, euro, sellerRating, sortRefs, 
 import { Bolt, Clock, MapPin, Phone, Return, ShieldCheck, Truck } from "../../ui/icons";
 import { Avatar, Btn, Chip, Header, Name, Stars, T, tap } from "../../ui/kit";
 import { CartButton, Collage, Grid, RatingSummary, SellerBadges, productHref } from "../../ui/market";
+import { useLiveShop } from "../../lib/liveShops";
+import { useLive } from "../../live/LiveStore";
+import { showToast } from "../../ui/feedEcho";
 
 const DAYS = [tk("Dom"), tk("Lun"), tk("Mar"), tk("Mer"), tk("Gio"), tk("Ven"), tk("Sab")];
 
@@ -16,6 +19,8 @@ export default function StoreScreen() {
   const theme = useTheme();
   const store = useStore();
   const { owner } = useLocalSearchParams();
+  const live = useLive();
+  useLiveShop(decodeURIComponent(String(owner)));
   const shop = storeOf(decodeURIComponent(String(owner)));
   const [tab, setTab] = useState("products");
   const [cat, setCat] = useState("all");
@@ -31,6 +36,12 @@ export default function StoreScreen() {
   const reviews = rating.list.filter((review) => !stars || review.stars === stars);
 
   function message() {
+    if (shop.live) {
+      live?.openDm(shop.live.seller)
+        .then((chatId) => router.push(`/chat/${chatId}`))
+        .catch(() => showToast({ text: t("Chat live non raggiungibile. Riprova.") }));
+      return;
+    }
     const id = store.ensureChat({ name: shop.owner, src: shop.src });
     router.push(`/chat/${id}`);
   }
@@ -44,7 +55,7 @@ export default function StoreScreen() {
           <View style={{ alignItems: "center", paddingHorizontal: INSET }}>
             <View style={{ marginTop: -42, padding: 3, borderRadius: 46, backgroundColor: theme.bg }}><Avatar src={shop.src} size={84} /></View>
             <Name size={21} weight="800" verified={shop.verified} style={{ marginTop: 8 }}>{shop.title}</Name>
-            <T size={13.5} color={theme.text2} style={{ marginTop: 2 }}>{shop.category} · {shop.city}</T>
+            <T size={13.5} color={theme.text2} style={{ marginTop: 2 }}>{[shop.category, shop.city].filter(Boolean).join(" · ")}</T>
             <Pressable onPress={() => setTab("reviews")} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}>
               <Stars value={rating.avg} size={13} />
               <T size={14} weight="700">{rating.avg.toFixed(1)}</T>
@@ -139,7 +150,7 @@ export default function StoreScreen() {
               {[
                 [Truck, t("Spedizione"), t("Spedisce in {days} giorni lavorativi. {fee}, gratis sopra {free}.", { days: shop.shipsIn, fee: euro(SHIPPING_FEE), free: euro(FREE_SHIPPING) })],
                 [Return, t("Resi"), shop.returns ? t("Accettati entro {days} giorni dalla consegna. I pezzi su ordinazione non si possono rendere.", { days: shop.returns }) : t("Non accettati: prodotti freschi fatti in giornata.")],
-                [ShieldCheck, t("Pagamenti"), t("Ordini nel Direct e paghi dopo la conferma della bottega.")],
+                [ShieldCheck, t("Pagamenti"), shop.payments ? t("Paghi subito con Stripe: carta, Apple Pay o Google Pay.") : t("Ordini nel Direct e paghi dopo la conferma della bottega.")],
                 ...(shop.responds ? [[Bolt, t("Risposte"), t("Di solito risponde {when}.", { when: shop.responds })]] : []),
               ].map(([Icon, title, text], index) => (
                 <View key={title} style={[styles.policy, index ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line } : null]}>

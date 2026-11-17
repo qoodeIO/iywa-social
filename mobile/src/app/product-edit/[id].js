@@ -13,6 +13,7 @@ import { ImageIcon, Plus, X } from "../../ui/icons-profile";
 import { T, tap } from "../../ui/kit";
 import { ActionSheet, settingsColors } from "../../ui/profile-kit";
 import { keepAll } from "../../lib/media-store";
+import { showToast } from "../../ui/feedEcho";
 
 // Add or edit a product in your shop (web ProductEditor).
 export default function ProductEditor() {
@@ -77,6 +78,7 @@ export default function ProductEditor() {
   function remove() {
     setConfirm(false);
     store.deleteProduct(product.id);
+    showToast({ text: t("Prodotto eliminato") });
     router.back();
   }
 

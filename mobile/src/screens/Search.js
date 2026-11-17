@@ -4,7 +4,7 @@ import { FlashList } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useTabParams } from "../lib/tabs";
+import { useTabParams, useTabReselect } from "../lib/tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
@@ -35,6 +35,7 @@ export default function Search() {
   const [seed, setSeed] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  useTabReselect("search", () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   const needle = query.trim().toLowerCase().replace(/^[@#]/, "");
   const searching = focus || Boolean(query.trim());
   const follows = store.follows;
@@ -82,7 +83,8 @@ export default function Search() {
       .filter(({ shop, product }) => `${product.name} ${product.category} ${product.description} ${shop.title} ${shop.city}`.toLowerCase().includes(needle))
     : [];
 
-  const openPost = useCallback((post) => openGridItem(post), []);
+  const openPost = useCallback((post, list) => openGridItem(post, list, t("Esplora")), []);
+  const openExplore = useCallback((post) => openPost(post, blocks.flatMap((block) => block.items)), [openPost, blocks]);
 
   function openPerson(person) {
     store.rememberSearch({ key: `p:${person.handle}`, type: "account", label: person.handle, meta: person.name, src: person.src });
@@ -194,7 +196,7 @@ export default function Search() {
           <View style={[styles.scopeTab, { borderBottomWidth: 1, borderBottomColor: theme.text }]}><T size={14} weight="600">{t("Più popolari")}</T></View>
           <Pressable style={styles.scopeTab} onPress={() => setSeed((value) => value + 1)}><T size={14} weight="600" color={theme.text2}>{t("Recenti")}</T></Pressable>
         </View>
-        {matches.length ? <ExploreGrid posts={matches} onOpen={openPost} onPeek={setPeeked} limit={60} /> : <IgEmpty icon={Hash} title={t("Ancora nessun post")} />}
+        {matches.length ? <ExploreGrid posts={matches} onOpen={(post) => openPost(post, matches)} onPeek={setPeeked} limit={60} /> : <IgEmpty icon={Hash} title={t("Ancora nessun post")} />}
       </ScrollView>
     );
   } else if (searching && !needle) {
@@ -244,7 +246,7 @@ export default function Search() {
               {accountHits.slice(0, 3).map((person) => accountRow(person))}
               {tagHits.slice(0, 2).map(([tag, count]) => line(tag, Hash, `#${tag}`, t("{n} post", { n: count }), () => openScope({ type: "tag", value: tag })))}
               {placeHits.slice(0, 1).map((city) => line(city, MapPin, city, t("{n} post", { n: placeCount(city) }), () => openScope({ type: "place", value: city })))}
-              {postHits.length ? <View style={{ marginTop: 10 }}><ExploreGrid posts={postHits} onOpen={openPost} onPeek={setPeeked} limit={30} /></View> : null}
+              {postHits.length ? <View style={{ marginTop: 10 }}><ExploreGrid posts={postHits} onOpen={(post) => openPost(post, postHits)} onPeek={setPeeked} limit={30} /></View> : null}
             </>
           ) : null}
           {key === "accounts" ? accountHits.map((person) => accountRow(person, true)) : null}
@@ -306,7 +308,7 @@ export default function Search() {
           ref={listRef}
           data={blocks}
           keyExtractor={(block) => block.key}
-          renderItem={({ item }) => <ExploreBlock block={item} onOpen={openPost} onPeek={setPeeked} />}
+          renderItem={({ item }) => <ExploreBlock block={item} onOpen={openExplore} onPeek={setPeeked} />}
           ListHeaderComponent={header}
           onEndReached={() => setLimit((value) => Math.min(value + 15, 240))}
           onEndReachedThreshold={1.2}

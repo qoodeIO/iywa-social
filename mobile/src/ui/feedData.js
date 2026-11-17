@@ -132,4 +132,4 @@ export function noteAgo(at) {
   return t("{n} sett", { n: Math.floor(diff / (7 * 86_400_000)) });
 }
 
-export const SHARE_BASE = "https://space.app/p/";
+export const SHARE_BASE = "https://iywa.app/p/";

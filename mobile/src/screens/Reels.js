@@ -7,9 +7,11 @@ import { StatusBar } from "expo-status-bar";
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
-import { usePageFocused, useTabParams } from "../lib/tabs";
+import { usePageFocused, useTabParams, useTabReselect } from "../lib/tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../lib/store";
+import { useTheme } from "../theme";
+import { useLive } from "../live/LiveStore";
 import { t } from "../lib/i18n";
 import { AVATAR, REELS, avatarFor, personByName } from "../data";
 import { tap } from "../ui/kit";
@@ -23,6 +25,8 @@ export default function Reels() {
   const focused = usePageFocused("reels");
   const params = useTabParams("reels");
   const list = useRef(null);
+  const accent = useTheme();
+  useTabReselect("reels", () => list.current?.scrollToOffset({ offset: 0, animated: true }));
   const [size, setSize] = useState(null);
   const [index, setIndex] = useState(0);
   const [feed, setFeed] = useState("foryou");
@@ -90,7 +94,7 @@ export default function Reels() {
     if (kind === "like") s.toggleLike(item.id);
     else if (kind === "save") {
       const on = s.saves.includes(item.id);
-      s.toggleSave(item.id);
+      s.toggleSave(item.id, item);
       say(on ? t("Rimosso dai salvati") : t("Salvato"));
     } else if (kind === "follow") s.toggleFollow(item.name);
     else if (kind === "comments") setSheet("comments");
@@ -123,7 +127,12 @@ export default function Reels() {
     ...(reel.thread || []).map((item, i) => ({ ...item, id: `t-${i}`, src: item.name === store.profile.name ? store.profile.src || AVATAR : avatarFor(item.name) })),
     ...(comments[reel.id] || []).map((text, i) => ({ id: `m-${i}`, name: store.profile.name, text, src: store.profile.src || AVATAR, mine: true })),
   ] : [];
-  const people = store.chats.slice(0, 8);
+  const hub = useLive();
+  // People on iywa (live hub) first, then your recent chats, like the web reel share sheet.
+  const people = [
+    ...(hub ? Object.values(hub.people || {}).filter((person) => person.handle !== hub.me?.handle).map((person) => ({ id: `live:${person.handle}`, name: person.name || person.handle, src: person.src, handle: person.handle })) : []),
+    ...store.chats,
+  ].slice(0, 12);
 
   function sendTo(chat) {
     if (!reel || sentTo.includes(chat.id)) return;
@@ -131,6 +140,12 @@ export default function Reels() {
     setSentTo((prev) => [...prev, chat.id]);
     const text = `Reel · ${reel.name}: ${reel.caption || ""}`.trim();
     const image = reelPoster(reel);
+    if (chat.handle) {
+      hub.openDm(chat.handle)
+        .then((convId) => hub.send(convId, image ? { kind: "image", image, text } : text))
+        .catch(() => { setSentTo((prev) => prev.filter((id) => id !== chat.id)); note(t("Invio non riuscito")); });
+      return;
+    }
     store.sendMessage(chat.id, image ? { image, text } : { text });
   }
 
@@ -199,8 +214,8 @@ export default function Reels() {
             <View style={[styles.empty, { height }]}>
               <View style={styles.emptyIcon}><SquarePlay size={30} color="#fff" /></View>
               <Text style={styles.emptyTitle}>{feed === "following" ? t("Nessun reel da chi segui") : t("Ancora nessun reel")}</Text>
-              <Pressable onPress={() => { tap(); openReelCamera(); }} style={({ pressed }) => [styles.primary, { opacity: pressed ? 0.7 : 1 }]}>
-                <Text style={styles.primaryText}>{t("Crea un reel")}</Text>
+              <Pressable onPress={() => { tap(); openReelCamera(); }} style={({ pressed }) => [styles.primary, { backgroundColor: accent.blue, opacity: pressed ? 0.7 : 1 }]}>
+                <Text style={[styles.primaryText, { color: accent.accentInk }]}>{t("Crea un reel")}</Text>
               </Pressable>
             </View>
           )}
@@ -272,7 +287,7 @@ export default function Reels() {
           />
           {draft.trim() ? (
             <Pressable hitSlop={8} onPress={postComment}>
-              <Text style={styles.post}>{t("Pubblica")}</Text>
+              <Text style={[styles.post, { color: accent.blue }]}>{t("Pubblica")}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -316,7 +331,7 @@ export default function Reels() {
           ))}
         </View>
         <Line icon={Hash} label={captions ? t("Nascondi sottotitoli") : t("Mostra sottotitoli")} onPress={() => { setCaptions((value) => !value); setSheet(null); }} />
-        <Line icon={Bookmark} label={reel && store.saves.includes(reel.id) ? t("Rimuovi dai salvati") : t("Salva")} onPress={() => { store.toggleSave(reel.id); setSheet(null); }} />
+        <Line icon={Bookmark} label={reel && store.saves.includes(reel.id) ? t("Rimuovi dai salvati") : t("Salva")} onPress={() => { store.toggleSave(reel.id, reel); setSheet(null); }} />
         <Line icon={EyeOff} label={t("Non mi interessa")} onPress={() => { setHidden((prev) => [...prev, reel.id]); setSheet(null); note(t("Ne vedrai meno così")); }} />
         {reel?.mine ? (
           <Line icon={X} warn label={t("Elimina")} onPress={() => { store.dropPost(reel.id); setSheet(null); }} />

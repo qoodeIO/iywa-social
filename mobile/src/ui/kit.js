@@ -86,7 +86,7 @@ export function Header({ title, subtitle, right, back = true, onBack, border = f
 export function Btn({ title, onPress, kind = "gray", icon: Icon, style, disabled, height = 34, size = 14, flex }) {
   const theme = useTheme();
   const bg = kind === "primary" ? theme.blue : kind === "done" ? "#e3f8e8" : kind === "outline" ? "transparent" : theme.btn;
-  const fg = kind === "primary" ? "#fff" : kind === "done" ? "#12a33f" : theme.text;
+  const fg = kind === "primary" ? theme.accentInk || "#fff" : kind === "done" ? "#12a33f" : theme.text;
   return (
     <Pressable
       accessibilityRole="button"
@@ -106,7 +106,7 @@ export function Chip({ title, on, onPress, icon: Icon, badge }) {
     <Pressable onPress={() => { tap(); onPress?.(); }} style={({ pressed }) => [styles.chip, { borderColor: on ? theme.text : theme.line, backgroundColor: on ? theme.text : "transparent", transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
       {Icon ? <Icon size={15} color={on ? theme.bg : theme.text} weight="bold" /> : null}
       <T size={14} weight="600" color={on ? theme.bg : theme.text}>{title}</T>
-      {badge ? <View style={[styles.chipBadge, { backgroundColor: theme.blue }]}><T size={11} weight="700" color="#fff">{badge}</T></View> : null}
+      {badge ? <View style={[styles.chipBadge, { backgroundColor: theme.blue }]}><T size={11} weight="700" color={theme.accentInk || "#fff"}>{badge}</T></View> : null}
     </Pressable>
   );
 }

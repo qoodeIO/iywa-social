@@ -33,7 +33,7 @@ export default function Pager() {
   const H = box.h;
   const ref = useRef(null);
   const focused = useIsFocused();
-  const { index } = useTabs();
+  const { index, locked } = useTabs();
   const [mounted, setMounted] = useState(() => new Set([PAGES[index], PAGES[index - 1], PAGES[index + 1]]));
   const settled = useRef(index);
   // Only the first render may place the scroll view; later renders must not move it.
@@ -85,6 +85,7 @@ export default function Pager() {
       <Animated.ScrollView
         ref={ref}
         horizontal
+        scrollEnabled={!locked}
         pagingEnabled
         snapToInterval={W}
         snapToAlignment="start"

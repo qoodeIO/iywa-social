@@ -21,7 +21,7 @@ export default function QrScreen() {
   const insets = useSafeAreaInsets();
   const store = useStore();
   const handle = String(store.profile.handle || "").replace(/^@/, "");
-  const url = `https://space.app/u/${handle}`;
+  const url = `https://iywa.app/u/${handle}`;
   const [tone, setTone] = useState(0);
   const [toast, say] = useToast();
   const [a, b] = TONES[tone];

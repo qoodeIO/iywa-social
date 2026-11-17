@@ -9,6 +9,7 @@ import { useStore } from "../lib/store";
 import { AVATAR, THOUGHTS, compact, personByHandle } from "../data";
 import { TIME, agoLabel, fullStamp, openPersonByName } from "../lib/profile-data";
 import { Check, Feather, Heart, ImageIcon, LinkIcon, MessageCircle, MoreHorizontal, Plus, Poll, Quote, Repost, Send, Trash, UserMinus, UserPlus, Verified } from "./icons-profile";
+import { showToast } from "./feedEcho";
 import { T, tap } from "./kit";
 import { ActionSheet, IgEmpty } from "./profile-kit";
 import { localeTag, t } from "../lib/i18n";
@@ -316,7 +317,7 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
               <Repost size={20} color={reposted ? "#00ba7c" : theme.text} weight={reposted ? "bold" : "regular"} />
               {reposts ? <T size={13.5} weight="500" color={reposted ? "#00ba7c" : theme.text2}>{compact(reposts)}</T> : null}
             </Pressable>
-            <Pressable accessibilityLabel={t("Condividi")} onPress={() => Share.share({ message: `${thought.handle}: ${thought.text || ""}\nhttps://space.app/t/${thought.id}` }).catch(() => {})} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+            <Pressable accessibilityLabel={t("Condividi")} onPress={() => Share.share({ message: `${thought.handle}: ${thought.text || ""}\nhttps://iywa.app/t/${thought.id}` }).catch(() => {})} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <Send size={20} color={theme.text} />
             </Pressable>
           </View>
@@ -329,7 +330,7 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
         open={menu === "repost"}
         onClose={() => setMenu(null)}
         items={[
-          { icon: Repost, label: reposted ? t("Rimuovi ripubblicazione") : t("Ripubblica"), danger: reposted, onPress: () => { store.toggleThoughtRepost(thought.id); setMenu(null); } },
+          { icon: Repost, label: reposted ? t("Rimuovi ripubblicazione") : t("Ripubblica"), danger: reposted, onPress: () => { store.toggleThoughtRepost(thought.id); setMenu(null); showToast({ text: reposted ? t("Ripubblicazione rimossa") : t("Ripubblicato") }); } },
           { icon: Quote, label: t("Cita"), onPress: () => { setMenu(null); composeThought({ quote: thought.id }); } },
         ]}
       />
@@ -337,9 +338,9 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
         open={menu === "more"}
         onClose={() => setMenu(null)}
         items={[
-          { icon: LinkIcon, label: t("Copia link"), onPress: () => { Clipboard.setStringAsync(`https://space.app/t/${thought.id}`).catch(() => {}); setMenu(null); } },
+          { icon: LinkIcon, label: t("Copia link"), onPress: () => { Clipboard.setStringAsync(`https://iywa.app/t/${thought.id}`).catch(() => {}); setMenu(null); } },
           !thought.mine ? { icon: follows ? UserMinus : UserPlus, label: follows ? t("Non seguire più {handle}", { handle: thought.handle }) : t("Segui {handle}", { handle: thought.handle }), onPress: () => { store.toggleFollow(thought.name); setMenu(null); } } : null,
-          thought.mine ? { icon: Trash, label: t("Elimina"), danger: true, onPress: () => { store.deleteThought(thought.id); setMenu(null); onDeleted?.(thought.id); } } : null,
+          thought.mine ? { icon: Trash, label: t("Elimina"), danger: true, onPress: () => { store.deleteThought(thought.id); setMenu(null); onDeleted?.(thought.id); showToast({ text: t("Eliminato") }); } } : null,
         ]}
       />
       <Modal visible={Boolean(zoom)} transparent animationType="fade" onRequestClose={() => setZoom(null)} statusBarTranslucent>

@@ -137,7 +137,7 @@ export default function CreateScreen() {
             <Pressable accessibilityLabel={t("Formato")} onPress={() => { tap(); setAspect((value) => (value === "4:5" ? "1:1" : "4:5")); }} style={[styles.chip, { left: 10 }]}>
               <T size={12.5} weight="700" color="#fff">{aspect}</T>
             </Pressable>
-            <Pressable onPress={() => { tap(); setMulti((value) => !value); if (multi) setPicked([focus]); }} style={[styles.chip, { right: 10 }, multi && { backgroundColor: "#0095f6" }]}>
+            <Pressable onPress={() => { tap(); setMulti((value) => !value); if (multi) setPicked([focus]); }} style={[styles.chip, { right: 10 }, multi && { backgroundColor: theme.blue }]}>
               <CopyGlyph size={15} weight={multi ? "fill" : "regular"} color="#fff" />
               <T size={12.5} weight="700" color="#fff">{t("Seleziona più")}</T>
             </Pressable>
@@ -218,7 +218,7 @@ const GalleryCell = memo(function GalleryCell({ src, index, focus, n, multi, onP
     <Pressable onPress={() => onPress(src)} style={[styles.cell, { marginLeft: index % 4 ? 2 : 0, backgroundColor: theme.fill }]}>
       <Image source={{ uri: src }} style={[StyleSheet.absoluteFill, { opacity: focus ? 0.55 : 1 }]} contentFit="cover" transition={120} recyclingKey={src} />
       {multi ? (
-        <View style={[styles.n, n >= 0 && styles.nOn]}>{n >= 0 ? <T size={12} weight="700" color="#fff">{n + 1}</T> : null}</View>
+        <View style={[styles.n, n >= 0 && styles.nOn, n >= 0 && { backgroundColor: theme.blue, borderColor: theme.blue }]}>{n >= 0 ? <T size={12} weight="700" color="#fff">{n + 1}</T> : null}</View>
       ) : null}
     </Pressable>
   );
@@ -260,7 +260,7 @@ function Details({ picked, filter, caption, setCaption, tags, setTags, place, se
                 <Pressable key={person.name} style={styles.pickCell} onPress={() => { tap(); setTags((prev) => (on ? prev.filter((name) => name !== person.name) : [...prev, person.name])); }}>
                   <View>
                     <Image source={{ uri: person.src }} style={[styles.pickFace, on && { transform: [{ scale: 0.9 }] }]} transition={120} />
-                    {on ? <View style={styles.pickCheck}><Check size={11} weight="bold" color="#fff" /></View> : null}
+                    {on ? <View style={[styles.pickCheck, { backgroundColor: theme.blue }]}><Check size={11} weight="bold" color="#fff" /></View> : null}
                   </View>
                   <T size={11.5} lines={1}>{person.name.split(" ")[0]}</T>
                 </Pressable>

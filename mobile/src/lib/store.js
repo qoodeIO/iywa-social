@@ -1,12 +1,14 @@
-import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { applyDirection, resolveLanguage, setLanguage, t } from "./i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { relinkMedia } from "./media-store";
-import { BUSINESS, CHATS, MY_PRODUCTS, NOTIFICATIONS, PROFILE, THOUGHTS } from "../data";
+import { BUSINESS, CHATS, EXPLORE, FEED_PAGES, MY_PRODUCTS, NOTIFICATIONS, POSTS, PROFILE, REELS, THOUGHTS } from "../data";
 
 // Same preferences as the web app's settings, kept on the phone.
 export const DEFAULT_PREFS = {
   appearance: "auto",
+  // Accent colour id from ACCENTS in theme.js; "default" is the original blue.
+  accent: "default",
   language: "auto",
   private: false,
   activity: true,
@@ -40,6 +42,8 @@ const INITIAL = {
   follows: ["Leo Bassi", "Adele Romano", "Marta Colle"],
   likes: [],
   saves: [],
+  // A copy of each saved item (by id), so own posts, thoughts and reels still show in Salvati.
+  savedItems: {},
   storyLikes: [],
   seenStories: [],
   myStories: [],
@@ -119,7 +123,17 @@ export function StoreProvider({ children }) {
     return {
       toggleFollow: (name) => set((s) => ({ follows: toggle(s.follows, name) })),
       toggleLike: (id) => set((s) => ({ likes: toggle(s.likes, id) })),
-      toggleSave: (id) => set((s) => ({ saves: toggle(s.saves, id) })),
+      // `item` is optional: without it the item is looked up in my posts, thoughts and the seed lists.
+      toggleSave: (id, item) => set((s) => {
+        const items = { ...(s.savedItems || {}) };
+        if (s.saves.includes(id)) {
+          delete items[id];
+          return { saves: s.saves.filter((value) => value !== id), savedItems: items };
+        }
+        const snap = savedSnapshot(item ? { ...item, id } : resolveSaved(s, id));
+        if (snap) items[id] = snap;
+        return { saves: [...s.saves, id], savedItems: items };
+      }),
       toggleStoryLike: (id) => set((s) => ({ storyLikes: toggle(s.storyLikes, id) })),
       markStorySeen: (id) => set((s) => (s.seenStories.includes(id) ? {} : { seenStories: [...s.seenStories, id] })),
       toggleThoughtLike: (id) => set((s) => ({ thoughtLikes: toggle(s.thoughtLikes, id) })),
@@ -226,6 +240,53 @@ export function useAppearance() {
   return choice === "light" || choice === "dark" ? choice : null;
 }
 
+// Finds a saved id in my posts, my thoughts and every seed list.
+export function resolveSaved(state, id) {
+  const key = String(id ?? "");
+  if (!key) return null;
+  const mine = (state?.library || []).find((item) => item.id === key);
+  if (mine) return { ...mine, kind: mine.kind || mine.type || "post", mine: true };
+  const thought = (state?.myThoughts || []).find((item) => item.id === key);
+  if (thought) return { ...thought, kind: "thought", mine: true };
+  const post = POSTS.find((item) => item.id === key) || EXPLORE.find((item) => item.id === key);
+  if (post) return { ...post, kind: post.kind || post.type || "post" };
+  const feed = FEED_PAGES.flat().find((item) => item.id === key);
+  if (feed) return { ...feed, kind: feed.kind || feed.type || "post" };
+  const reelId = key.startsWith("reel-") ? key.slice(5) : key;
+  const reel = REELS.find((item) => item.id === reelId);
+  if (reel) return { ...reel, id: key, reelId, kind: "reel", text: reel.caption };
+  const seed = THOUGHTS.find((item) => item.id === key);
+  if (seed) return { ...seed, kind: "thought" };
+  return null;
+}
+
+// The small, persistable copy kept in savedItems.
+function savedSnapshot(item) {
+  if (!item) return null;
+  const isPic = (uri) => typeof uri === "string" && !/\.(mp4|mov|m4v|webm)(\?|$)/i.test(uri);
+  const clip = (item.clips || []).find((entry) => entry?.type === "image")?.src;
+  const pics = [item.image, item.images?.[0], item.poster, clip, item.kind === "reel" ? item.src : null, item.kind === "reel" ? item.avatar : null];
+  const image = pics.find(isPic) || null;
+  const kind = item.kind || item.type || "post";
+  return {
+    id: String(item.id),
+    kind: kind === "tweet" ? "tweet" : kind,
+    reelId: item.reelId || (kind === "reel" ? String(item.id).replace(/^reel-/, "") : undefined),
+    image,
+    text: String(item.text || item.caption || "").slice(0, 280),
+    name: item.name || "",
+    mine: Boolean(item.mine),
+    at: Date.now(),
+  };
+}
+
+export { savedSnapshot };
+
+// Accent colour id chosen in Settings → Aspetto.
+export function useAccentChoice() {
+  return useContext(Store)?.prefs?.accent || "default";
+}
+
 export function chatIdFor(store, person) {
   return store.chats.find((chat) => chat.name === person.name)?.id || null;
 }
@@ -237,3 +298,66 @@ function clock() {
 
 export const ALL_THOUGHTS = THOUGHTS;
 export const ALL_NOTIFICATIONS = NOTIFICATIONS;
+
+// ---------------------------------------------------------------------------
+// Time spent: foreground milliseconds per local day, kept in its own small store so the
+// ticking counter never re-renders the whole app. `dismissed` remembers the limit wall
+// closed today ({ day, cap }), so "Continua" lasts until tomorrow or until the limit changes.
+// ---------------------------------------------------------------------------
+const USAGE_KEY = "iywa-usage-v1";
+let usage = { days: {}, dismissed: null };
+let usageReady = false;
+const usageSubs = new Set();
+
+function emitUsage(next) {
+  usage = next;
+  usageSubs.forEach((fn) => fn());
+  if (usageReady) AsyncStorage.setItem(USAGE_KEY, JSON.stringify(usage)).catch(() => {});
+}
+
+export function dayKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+AsyncStorage.getItem(USAGE_KEY)
+  .then((raw) => {
+    const saved = raw ? JSON.parse(raw) : null;
+    if (!saved) return;
+    const days = { ...(saved.days || {}) };
+    // Keep anything counted before the saved copy arrived.
+    for (const [day, ms] of Object.entries(usage.days)) days[day] = (days[day] || 0) + ms;
+    usage = { days, dismissed: saved.dismissed || usage.dismissed };
+    usageSubs.forEach((fn) => fn());
+  })
+  .catch(() => {})
+  .finally(() => { usageReady = true; });
+
+export function addUsage(ms) {
+  if (!(ms > 0)) return;
+  const today = dayKey();
+  const days = { ...usage.days, [today]: (usage.days[today] || 0) + ms };
+  // Two weeks is all the charts need.
+  const keep = Object.keys(days).sort().slice(-14);
+  emitUsage({ ...usage, days: Object.fromEntries(keep.map((day) => [day, days[day]])) });
+}
+
+export function dismissLimit(cap) {
+  emitUsage({ ...usage, dismissed: { day: dayKey(), cap: String(cap) } });
+}
+
+export function useUsage() {
+  return useSyncExternalStore((fn) => { usageSubs.add(fn); return () => usageSubs.delete(fn); }, () => usage);
+}
+
+// Minutes for the last `count` days, oldest first, ending today: [{ day, weekday, minutes }].
+export function usageWeek(snapshot, count = 7) {
+  const out = [];
+  for (let back = count - 1; back >= 0; back -= 1) {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() - back);
+    const day = dayKey(date);
+    out.push({ day, weekday: date.getDay(), minutes: Math.floor((snapshot.days[day] || 0) / 60000) });
+  }
+  return out;
+}

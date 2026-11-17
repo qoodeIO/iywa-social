@@ -235,7 +235,7 @@ function GroupInfo({ thread }) {
     : CONTACTS.filter((person) => !inGroup.has(person.name)).map((person) => ({ key: person.name, name: person.name, src: person.src, meta: person.meta }));
   const media = (thread.messages || []).filter((message) => message.kind === "image" && !message.unsent).map((message) => message.image).reverse();
   const voices = (thread.messages || []).filter((message) => message.kind === "audio" && !message.unsent).reverse();
-  const link = `space.app/+${String(thread.id).replace(/[^a-z0-9]/gi, "").slice(-10)}`;
+  const link = `iywa.app/+${String(thread.id).replace(/[^a-z0-9]/gi, "").slice(-10)}`;
 
   function save() {
     const patch = {};

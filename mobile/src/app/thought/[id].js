@@ -10,6 +10,7 @@ import { Feather, ImageIcon } from "../../ui/icons-profile";
 import { Header, T, tap } from "../../ui/kit";
 import { IgEmpty } from "../../ui/profile-kit";
 import { t } from "../../lib/i18n";
+import { showToast } from "../../ui/feedEcho";
 import { ThoughtCard, buildThoughts, composeThought } from "../../ui/thoughts";
 
 const LIMIT = 500;
@@ -44,6 +45,7 @@ export default function ThoughtScreen() {
     tap();
     const reply = { id: `me-r-${Date.now().toString(36)}`, created: Date.now(), likes: 0, text, mine: true, replyTo: thought.handle };
     store.addThoughtReply(thought.id, reply);
+    showToast({ text: t("Risposta pubblicata") });
     setDraft("");
     setFreshId(reply.id);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);

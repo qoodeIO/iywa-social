@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
+import { useTabReselect } from "../lib/tabs";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -34,6 +35,8 @@ export default function Home() {
   // Top bar slides away while scrolling down and comes back when scrolling up (web onChrome).
   const barH = useSharedValue(BAR);
   const scroll = useRef({ last: 0, hidden: false });
+  const listRef = useRef(null);
+  useTabReselect("home", () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   const barStyle = useAnimatedStyle(() => ({ height: barH.value, opacity: barH.value / BAR }));
   const onScroll = useCallback((event) => {
     const top = event.nativeEvent.contentOffset.y;
@@ -135,6 +138,7 @@ export default function Home() {
         </View>
       </Animated.View>
       <FlashList
+        ref={listRef}
         data={rows}
         keyExtractor={(row) => row.key}
         getItemType={(row) => row.type}

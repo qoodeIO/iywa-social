@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { useTabReselect } from "../lib/tabs";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
@@ -45,6 +46,7 @@ export default function Messages() {
   const [sheet, setSheet] = useState(null);
   const [hint, flash] = useFlash();
   const listRef = useRef(null);
+  useTabReselect("messages", () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   const needle = query.trim().toLowerCase();
 
   // A folder just saved in the folder editor becomes the active one (as on the web).
@@ -151,6 +153,7 @@ export default function Messages() {
 
   const data = [{ type: "search", key: "search" }, { type: "tabs", key: "tabs" }];
   if (box === "chats") {
+    if (activeFolder === "all" && !needle && !selecting) data.push({ type: "requests", key: "requests" });
     if (activeFolder === "all" && archived.length && !needle && !selecting) data.push({ type: "archive", key: "archive" });
     for (const entry of listed) data.push({ type: "row", key: entry.item.id, ...entry });
     if (!listed.length) data.push({ type: "empty", key: "empty" });
@@ -173,6 +176,15 @@ export default function Messages() {
             onEdit={(id) => { if (folders.some((entry) => entry.id === id)) router.push({ pathname: "/chat/folder", params: { id } }); }}
             onManage={() => router.push("/chat/folders")}
           />
+        );
+      case "requests":
+        return (
+          <View style={styles.requests}>
+            <T size={16} weight="700">{t("Messaggi")}</T>
+            <Pressable hitSlop={10} onPress={() => { tap(); router.push("/chat/requests"); }}>
+              {({ pressed }) => <T size={14.5} weight="600" color={theme.blue} style={{ opacity: pressed ? 0.5 : 1 }}>{t("Richieste")}</T>}
+            </Pressable>
+          </View>
         );
       case "archive":
         return (
@@ -504,6 +516,7 @@ function CallRow({ entry, onCall }) {
 }
 
 const styles = StyleSheet.create({
+  requests: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   head: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14 },
   pill: { height: 36, paddingHorizontal: 15, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   title: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" },

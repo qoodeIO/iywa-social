@@ -1,6 +1,7 @@
 // Profiles: your own (web Profile) and someone else's (web PersonScreen), with the business
 // card, the professional dashboard, the shop grid, sticky tabs and swipe between boards.
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { lockPager, openTab, useTabReselect } from "../lib/tabs";
 import { Dimensions, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
@@ -201,8 +202,9 @@ function rowsOf(list, tall, extra = {}) {
 }
 
 // Swipe left or right on the boards to change tab, like the web pager.
-function useBoardSwipe(onSwipe) {
+function useBoardSwipe(onSwipe, enabled = true) {
   return usePanGesture({
+    enabled,
     activeOffsetX: [-24, 24],
     failOffsetY: [-12, 12],
     onDeactivate: (event) => {
@@ -212,15 +214,41 @@ function useBoardSwipe(onSwipe) {
   });
 }
 
-function ProfileList({ header, tabs, board, setBoard, items, renderBoard }) {
+function ProfileList({ header, tabs, board, setBoard, items, renderBoard, reselect }) {
   const theme = useTheme();
-  const swipe = useCallback((dir) => setBoard((value) => Math.max(0, Math.min(tabs.length - 1, value + dir))), [setBoard, tabs.length]);
-  const pan = useBoardSwipe(swipe);
+  const listRef = useRef(null);
+  useTabReselect(reselect, () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
+  const swipe = useCallback((dir) => {
+    // On your own profile (inside the pager), swiping right on the first board goes back to Messaggi.
+    if (reselect && dir < 0 && board === 0) { openTab("messages", null, { animated: true }); return; }
+    setBoard((value) => Math.max(0, Math.min(tabs.length - 1, value + dir)));
+  }, [setBoard, tabs.length, reselect, board]);
+  // Inside the pager the boards read the finger directly: the pager is held still while a finger
+  // is on them, and a clear sideways move on release changes board.
+  const touch = useRef(null);
+  const hold = reselect ? {
+    onTouchStart: (event) => { const { pageX, pageY } = event.nativeEvent; touch.current = { x: pageX, y: pageY, lx: pageX, ly: pageY, t: Date.now() }; lockPager(true); },
+    onTouchMove: (event) => { if (touch.current) { touch.current.lx = event.nativeEvent.pageX; touch.current.ly = event.nativeEvent.pageY; } },
+    onTouchEnd: (event) => { finish(event.nativeEvent.pageX, event.nativeEvent.pageY); },
+    onTouchCancel: () => { finish(); },
+  } : null;
+  function finish(x, y) {
+    const start = touch.current;
+    touch.current = null;
+    lockPager(false);
+    if (!start) return;
+    const dx = (x ?? start.lx) - start.x;
+    const dy = (y ?? start.ly) - start.y;
+    const fast = Math.abs(dx) / Math.max(Date.now() - start.t, 1) > 0.5;
+    if ((Math.abs(dx) > 70 || (fast && Math.abs(dx) > 30)) && Math.abs(dx) > Math.abs(dy) * 1.6) swipe(dx < 0 ? 1 : -1);
+  }
+  const pan = useBoardSwipe(swipe, !reselect);
   const data = useMemo(() => [{ type: "head", key: "head" }, { type: "tabs", key: "tabs" }, ...items], [items]);
   return (
     <GestureDetector gesture={pan}>
       <View style={{ flex: 1 }}>
         <FlashList
+          ref={listRef}
           data={data}
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.type}
@@ -230,8 +258,8 @@ function ProfileList({ header, tabs, board, setBoard, items, renderBoard }) {
           extraData={header}
           renderItem={({ item }) => {
             if (item.type === "head") return header;
-            if (item.type === "tabs") return <SlideTabs tabs={tabs} active={board} onChange={setBoard} height={46} iconSize={24} dim="text3" style={{ backgroundColor: theme.bg }} />;
-            return renderBoard(item);
+            if (item.type === "tabs") return <View {...hold}><SlideTabs tabs={tabs} active={board} onChange={setBoard} height={46} iconSize={24} dim="text3" style={{ backgroundColor: theme.bg }} /></View>;
+            return <View {...hold}>{renderBoard(item)}</View>;
           }}
         />
       </View>
@@ -293,7 +321,7 @@ export function MyProfile() {
     return list.length ? rowsOf(list, current === "reels", { board: current }) : [{ type: "empty", key: `empty-${current}` }];
   }, [current, grid, reels, tagged, rows]);
 
-  const openTile = useCallback((post) => openGridItem(post.kind === "reel" ? { ...post, reelId: post.reelId || post.id } : post), []);
+  const openTile = useCallback((post) => openGridItem(post.kind === "reel" ? { ...post, reelId: post.reelId || post.id } : post, current === "tagged" ? tagged : grid, t("Post")), [current, grid, tagged]);
 
   const header = (
     <View>
@@ -413,7 +441,7 @@ export function MyProfile() {
   const liked = peekPost ? store.likes.includes(peekPost.id) : false;
   return (
     <View style={{ flex: 1 }}>
-      <ProfileList header={header} tabs={tabs} board={Math.min(board, boards.length - 1)} setBoard={setBoard} items={items} renderBoard={renderBoard} />
+      <ProfileList reselect="profile" header={header} tabs={tabs} board={Math.min(board, boards.length - 1)} setBoard={setBoard} items={items} renderBoard={renderBoard} />
       <Modal visible={Boolean(peekPost)} transparent animationType="fade" onRequestClose={() => setPeek(null)} statusBarTranslucent>
         <Pressable style={styles.peekBack} onPress={() => setPeek(null)}>
           {peekPost ? (
@@ -597,7 +625,7 @@ export function PersonProfile({ person, menu, setMenu }) {
   );
 
   function renderBoard(item) {
-    if (item.type === "row" || item.type === "tallrow") return <GridRow items={item.items} tall={item.tall} reelMark={item.board === "reels"} onOpen={openGridItem} />;
+    if (item.type === "row" || item.type === "tallrow") return <GridRow items={item.items} tall={item.tall} reelMark={item.board === "reels"} onOpen={(post) => openGridItem(post, posts, t("Post"))} />;
     if (item.type === "thought") return <ThoughtEntry thought={item.row.thought} />;
     if (item.type === "shop") return <ShopGrid shop={shop} onOpen={(product) => router.push(`/product/${encodeURIComponent(person.name)}/${product.id}`)} />;
     if (current === "thoughts") return <IgEmpty icon={Feather} title={t("Ancora nessun pensiero")} />;
@@ -611,7 +639,7 @@ export function PersonProfile({ person, menu, setMenu }) {
         open={menu}
         onClose={() => setMenu(false)}
         items={[
-          { icon: LinkIcon, label: t("Copia URL del profilo"), onPress: () => { Clipboard.setStringAsync(`https://space.app/${person.handle}`).catch(() => {}); setMenu(false); } },
+          { icon: LinkIcon, label: t("Copia URL del profilo"), onPress: () => { Clipboard.setStringAsync(`https://iywa.app/${person.handle}`).catch(() => {}); setMenu(false); } },
           { icon: Send, label: t("Invia messaggio"), onPress: () => { setMenu(false); message(); } },
           following ? { icon: UserMinus, label: t("Non seguire più"), onPress: () => { store.toggleFollow(person.name); setMenu(false); } } : null,
         ]}

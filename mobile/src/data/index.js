@@ -31,8 +31,26 @@ export const CHATS = seed.THREADS.map((thread) => ({ ...thread, messages: thread
 const shot = (id, w = 900, h = 1125) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
 export const EXPLORE = seed.EXPLORE_SEED.map(([id, who, photo, text, likes, tag, extra]) => {
   const person = PEOPLE[who % PEOPLE.length];
-  return { id, name: person.name, handle: person.handle, avatar: person.src, image: shot(photo), images: [shot(photo), ...(extra || []).map((x) => shot(x))], text, likes, tag };
+  return { id, name: person.name, handle: person.handle, avatar: person.src, image: shot(photo), images: [shot(photo), ...(extra || []).map((x) => shot(x))], text, likes, tag, place: person.city };
 });
+
+// People tagged in the photo and shoppable products, like the web EXPLORE_POSTS.
+const EXPLORE_TAGS = { x8: ["Pietro Lama", "Nico Serra"], x7: ["Giulia Neri"], x1: ["Elena Marini"] };
+const EXPLORE_PRODUCTS = {
+  x1: [["Sara Conte", "sc4"]], x7: [["Sara Conte", "sc2"], ["Sara Conte", "sc1"]], x14: [["Sara Conte", "sc3"]], x21: [["Sara Conte", "sc1"]],
+  x4: [["Adele Romano", "ar1"]], x13: [["Adele Romano", "ar2"]], x3: [["Leo Bassi", "lb1"]], x5: [["Pietro Lama", "pl3"]], x11: [["Pietro Lama", "pl3"]], x24: [["Pietro Lama", "pl2"]],
+};
+for (const post of EXPLORE) {
+  if (EXPLORE_TAGS[post.id]) post.tags = EXPLORE_TAGS[post.id];
+  if (EXPLORE_PRODUCTS[post.id]) post.products = EXPLORE_PRODUCTS[post.id].map(([owner, id]) => ({ owner, id }));
+}
+
+// The products tagged on a post that still exist in a shop: [{ owner, product }].
+export function postProducts(post) {
+  return (post?.products || [])
+    .map((ref) => ({ owner: ref.owner, product: findProduct(ref.owner, ref.id) }))
+    .filter((entry) => entry.owner && entry.product);
+}
 
 export function personByName(name) {
   return PEOPLE.find((person) => person.name === name) || CONTACTS.find((person) => person.name === name) || null;
@@ -98,22 +116,86 @@ export function stockLabel(product) {
   return { tone: "ok", text: t("Disponibile") };
 }
 
+// ---------------------------------------------------------------------------
+// Live sellers: catalogues published to the iywa hub (/calls/api/shops).
+// Their owner is "@handle" so routes (/product/@handle/id, /store/@handle) tell them apart
+// from the demo shops, which are keyed by name. src/lib/liveShops.js fills this registry.
+// ---------------------------------------------------------------------------
+const LIVE = new Map();
+const liveListeners = new Set();
+let liveVersion = 0;
+
+export function isLiveOwner(owner) {
+  return typeof owner === "string" && owner.startsWith("@");
+}
+
+function liveProduct(item) {
+  return { ...item, images: Array.isArray(item.images) ? item.images : item.image ? [item.image] : [], category: item.category || "" };
+}
+
+// partial: the list carries only the first products of each seller, so a longer catalogue
+// fetched before (one /shop call) keeps its extra products.
+export function putLiveShops(list, { partial = false } = {}) {
+  for (const shop of list || []) {
+    if (!shop?.seller) continue;
+    const fresh = (shop.products || []).map(liveProduct);
+    const before = LIVE.get(shop.seller);
+    const extra = partial && before ? before.products.filter((item) => !fresh.some((entry) => entry.id === item.id)) : [];
+    LIVE.set(shop.seller, { seller: shop.seller, shop: shop.shop || before?.shop || null, payments: Boolean(shop.payments), products: [...fresh, ...extra] });
+  }
+  liveVersion += 1;
+  liveListeners.forEach((fn) => fn());
+}
+
+export function liveShopOf(seller) {
+  return LIVE.get(String(seller || "").replace(/^@/, "")) || null;
+}
+
+export function liveSnapshot() {
+  return liveVersion;
+}
+
+export function onLiveShops(fn) {
+  liveListeners.add(fn);
+  return () => liveListeners.delete(fn);
+}
+
+export function liveStoreOf(live) {
+  if (!live) return null;
+  const info = live.shop || {};
+  const person = personByHandle(live.seller);
+  return {
+    key: `live:${live.seller}`, owner: `@${live.seller}`, live, handle: live.seller, title: info.title || `@${live.seller}`, city: info.city || "",
+    category: info.category || "", src: person?.src || avatarFor(info.title || live.seller), verified: false, products: live.products || [],
+    about: info.about || "", since: null, shipsIn: "2–3", returns: 14, responds: null, sales: null, payments: Boolean(live.payments),
+  };
+}
+
+export function liveStores(skip) {
+  const me = String(skip || "").replace(/^@/, "");
+  return [...LIVE.values()].filter((live) => live.seller !== me && live.products.length).map(liveStoreOf);
+}
+
 export function productRef(product, owner) {
-  const seller = owner ? `demo:${owner}` : "me";
+  const live = isLiveOwner(owner) ? liveShopOf(owner) || { seller: owner.slice(1), shop: null, payments: false } : null;
+  const seller = live ? `live:${live.seller}` : owner ? `demo:${owner}` : "me";
   return {
     key: `${seller}:${product.id}`,
     seller,
     owner: owner || null,
+    live: live ? { seller: live.seller, shop: live.shop || null, payments: Boolean(live.payments) } : null,
     product: { id: product.id, name: product.name, price: product.price, images: (product.images || []).slice(0, 1), service: Boolean(product.service), stock: product.stock ?? null, madeToOrder: product.madeToOrder || null, category: product.category || "" },
   };
 }
 
 export function findProduct(owner, id, myProducts) {
+  if (isLiveOwner(owner)) return liveShopOf(owner)?.products.find((product) => product.id === id) || null;
   if (owner && SHOPS[owner]) return SHOPS[owner].products.find((product) => product.id === id) || null;
   return (myProducts || MY_PRODUCTS).find((product) => product.id === id) || null;
 }
 
 export function storeOf(owner) {
+  if (isLiveOwner(owner)) return liveStoreOf(liveShopOf(owner));
   const shop = SHOPS[owner];
   if (!shop) return null;
   const person = personByName(owner);

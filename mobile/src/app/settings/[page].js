@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { Alert, Dimensions, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import Constants from "expo-constants";
-import { INSET, useTheme } from "../../theme";
-import { useStore } from "../../lib/store";
+import { ACCENTS, INSET, useTheme } from "../../theme";
+import { ALL_THOUGHTS, resolveSaved, savedSnapshot, usageWeek, useStore, useUsage } from "../../lib/store";
+import { openTab } from "../../lib/tabs";
+import { todayMinutes } from "../../ui/time-limit";
 import { LANGS, applyDirection, deviceLanguage, resolveLanguage, setLanguage, t, tk, weekdayLetter } from "../../lib/i18n";
-import { CONTACTS, EXPLORE, POSTS, REELS, avatarFor } from "../../data";
-import { Bookmark, Plus, Star, Store, User } from "../../ui/icons";
+import { CONTACTS, POSTS, REELS, avatarFor } from "../../data";
+import { Archive, Bookmark, Check, Minus, Plus, Star, Store, User } from "../../ui/icons";
 import { Avatar, Btn, Empty, Header, T, tap } from "../../ui/kit";
 import { Card, ChoiceList, Divider, Kicker, Pick, Row, SettingIcon, ToggleRow, rowById } from "../../ui/settings";
 
 const W = Dimensions.get("window").width;
 const CELL = (W - 2) / 3;
-const WEEK = [40, 62, 28, 74, 55, 36, 48];
-const WEEK_DAYS = [1, 2, 3, 4, 5, 6, 0];
 
 const AUDIENCE = [
   { id: "everyone", label: tk("Tutti") },
@@ -112,10 +112,10 @@ function Body({ page }) {
   const prefs = store.prefs;
   const set = (patch) => { tap(); store.setPrefs(patch); };
   switch (page) {
-    case "edit": return <EditProfile />;
+    case "edit": return <Redirect href="/edit-profile" />;
     case "login": return <Accounts />;
     case "saved": return <Saved />;
-    case "archive": return <Empty icon={Bookmark} title={t("Niente qui")} text={t("I post che archivi aspettano qui.")} />;
+    case "archive": return <ArchiveGrid />;
     case "activity": return <Activity />;
     case "notifications":
       return (
@@ -131,6 +131,7 @@ function Body({ page }) {
     case "time":
       return (
         <>
+          <Today />
           <Week />
           <Kicker>{t("Limite giornaliero")}</Kicker>
           <ChoiceList value={prefs.timeLimit} onPick={(timeLimit) => set({ timeLimit })} options={[
@@ -200,6 +201,9 @@ function Body({ page }) {
           <ChoiceList value={prefs.appearance} onPick={(appearance) => set({ appearance })} options={[
             { id: "auto", label: t("Automatico"), meta: t("Segue il tema del telefono") }, { id: "light", label: t("Chiaro") }, { id: "dark", label: t("Scuro") },
           ]} />
+          <Kicker>{t("Colore principale")}</Kicker>
+          <AccentPicker value={prefs.accent || "default"} onPick={(accent) => set({ accent })} />
+          <Note>{t("Link, pulsanti e selezioni usano questo colore.")}</Note>
         </>
       );
     case "language":
@@ -262,19 +266,36 @@ function Note({ children }) {
   return <T size={13} color={theme.text2} style={{ paddingHorizontal: INSET + 4, paddingTop: 10, lineHeight: 18 }}>{children}</T>;
 }
 
+// Today's minutes on iywa, counted by ui/time-limit.js.
+function Today() {
+  const theme = useTheme();
+  const usage = useUsage();
+  const limit = Number(useStore().prefs.timeLimit);
+  const used = todayMinutes(usage);
+  return (
+    <View style={{ alignItems: "center", paddingTop: 12 }}>
+      <T size={34} weight="800">{t("{n} min", { n: used })}</T>
+      <T size={13} color={theme.text2}>{limit ? t("Oggi · limite {n} min", { n: limit }) : t("Oggi")}</T>
+    </View>
+  );
+}
+
+// The last seven days, today on the right in the accent colour.
 function Week() {
   const theme = useTheme();
+  const week = usageWeek(useUsage());
+  const top = Math.max(1, ...week.map((entry) => entry.minutes));
   return (
     <Card style={{ marginTop: 14, padding: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-end", height: 96, gap: 10 }}>
-        {WEEK.map((height, index) => (
-          <View key={index} style={{ flex: 1, alignItems: "center", gap: 6 }}>
-            <View style={{ width: "100%", height: height, borderRadius: 6, backgroundColor: index === 3 ? theme.blue : theme.text3 }} />
+        {week.map((entry, index) => (
+          <View key={entry.day} style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", height: "100%" }} accessibilityLabel={t("{n} min", { n: entry.minutes })}>
+            <View style={{ width: "100%", height: Math.max(4, Math.round((entry.minutes / top) * 96)), borderRadius: 6, backgroundColor: index === week.length - 1 ? theme.blue : theme.text3 }} />
           </View>
         ))}
       </View>
       <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
-        {WEEK_DAYS.map((day, index) => <T key={index} size={11} color={theme.text2} style={{ flex: 1, textAlign: "center" }}>{weekdayLetter(day)}</T>)}
+        {week.map((entry) => <T key={entry.day} size={11} color={theme.text2} style={{ flex: 1, textAlign: "center" }}>{weekdayLetter(entry.weekday)}</T>)}
       </View>
     </Card>
   );
@@ -283,12 +304,16 @@ function Week() {
 function Activity() {
   const theme = useTheme();
   const store = useStore();
-  const avg = Math.round(WEEK.reduce((sum, value) => sum + value, 0) / WEEK.length);
+  const usage = useUsage();
+  const week = usageWeek(usage);
+  const counted = week.filter((entry) => entry.minutes > 0);
+  const avg = counted.length ? Math.round(counted.reduce((sum, entry) => sum + entry.minutes, 0) / counted.length) : 0;
   return (
     <>
       <View style={{ alignItems: "center", paddingTop: 12 }}>
         <T size={34} weight="800">{t("{n} min", { n: avg })}</T>
         <T size={13} color={theme.text2}>{t("Media giornaliera questa settimana")}</T>
+        <T size={13} color={theme.text2} style={{ marginTop: 2 }}>{t("{n} minuti oggi", { n: todayMinutes(usage) })}</T>
       </View>
       <Week />
       <Kicker>{t("Interazioni")}</Kicker>
@@ -359,55 +384,91 @@ function Words() {
   );
 }
 
-function Saved() {
+// Where a saved or archived tile leads.
+function openItem(item, store) {
+  const reelId = item.reelId || String(item.id).replace(/^reel-/, "");
+  if (item.kind === "reel" && (REELS.some((reel) => reel.id === reelId) || (store.library || []).some((post) => post.id === item.id))) {
+    openTab("reels", { id: REELS.some((reel) => reel.id === reelId) ? reelId : item.id });
+    return;
+  }
+  const thought = item.kind === "thought" && [...(store.myThoughts || []), ...ALL_THOUGHTS].some((entry) => entry.id === item.id);
+  router.push(thought ? `/thought/${encodeURIComponent(item.id)}` : `/post/${encodeURIComponent(item.id)}`);
+}
+
+function Tile({ item, onPress }) {
   const theme = useTheme();
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={{ width: CELL, height: CELL * 1.33, backgroundColor: theme.fill }} contentFit="cover" transition={150} />
+      ) : (
+        <View style={{ width: CELL, height: CELL * 1.33, backgroundColor: theme.card, padding: 10, justifyContent: "space-between" }}>
+          <T size={13} lines={6} style={{ lineHeight: 18 }}>{item.text}</T>
+          {item.name ? <T size={11} weight="600" color={theme.text2} lines={1}>{item.name}</T> : null}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function Saved() {
   const store = useStore();
-  const pool = [...POSTS, ...EXPLORE, ...REELS.map((reel) => ({ ...reel, image: /\.(jpe?g|png|webp)|unsplash/.test(reel.src) ? reel.src : reel.avatar }))];
-  const items = store.saves.map((id) => pool.find((item) => item.id === id)).filter(Boolean);
+  // Live copy first (fresh caption and photo), then the snapshot taken when it was saved.
+  const items = [...store.saves].reverse()
+    .map((id) => savedSnapshot(resolveSaved(store, id)) || store.savedItems?.[id])
+    .filter(Boolean);
   if (!items.length) return <Empty icon={Bookmark} title={t("Niente qui")} text={t("Salva un post dal feed: lo ritrovi qui. Solo tu vedi cosa hai salvato.")} />;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 1, paddingTop: 1 }}>
-      {items.map((item) => (
-        <Pressable key={item.id} onPress={() => item.text && router.push(`/post/${item.id}`)}>
-          <Image source={{ uri: item.image }} style={{ width: CELL, height: CELL * 1.33, backgroundColor: theme.fill }} contentFit="cover" transition={150} />
-        </Pressable>
-      ))}
+      {items.map((item) => <Tile key={item.id} item={item} onPress={() => { tap(); openItem(item, store); }} />)}
     </View>
   );
 }
 
-function EditProfile() {
+// Archived posts (web ArchiveList): tap one to put it back on the profile.
+function ArchiveGrid() {
   const theme = useTheme();
   const store = useStore();
-  const [name, setName] = useState(store.profile.name);
-  const [handle, setHandle] = useState(String(store.profile.handle).replace(/^@/, ""));
-  const [bio, setBio] = useState(store.profile.bio || "");
-  const clean = handle.trim().toLowerCase().replace(/[^a-z0-9._]/g, "");
-  const changed = name.trim() !== store.profile.name || `@${clean}` !== store.profile.handle || bio.trim() !== (store.profile.bio || "");
-  const valid = name.trim().length > 1 && clean.length > 2;
-
-  function save() {
-    store.setProfile({ name: name.trim(), handle: `@${clean}`, bio: bio.trim() });
-    router.back();
+  const archived = store.archived || [];
+  const seen = new Set();
+  const items = [...(store.library || []), ...POSTS]
+    .filter((post) => archived.includes(post.id) && !seen.has(post.id) && seen.add(post.id))
+    .map((post) => savedSnapshot({ ...post, kind: post.kind || post.type || "post" }));
+  if (!items.length) return <Empty icon={Archive} title={t("Niente qui")} text={t("I post che archivi aspettano qui.")} />;
+  function pick(item) {
+    tap();
+    Alert.alert(t("Post archiviato"), t("Solo tu lo vedi. Ripristinalo per rimetterlo sul profilo."), [
+      { text: t("Ripristina"), onPress: () => { tap(); store.toggleArchive(item.id); } },
+      { text: t("Apri"), onPress: () => openItem(item, store) },
+      { text: t("Annulla"), style: "cancel" },
+    ]);
   }
-
   return (
     <>
-      <View style={{ alignItems: "center", paddingTop: 6 }}>
-        <Avatar src={store.profile.src} size={86} />
-        <Pressable onPress={() => Alert.alert(t("Foto profilo"), t("Il cambio foto arriva con la fotocamera nativa."))}><T size={14} weight="600" color={theme.blue} style={{ marginTop: 10 }}>{t("Modifica foto")}</T></Pressable>
-      </View>
-      <Kicker>{t("Profilo")}</Kicker>
-      <Card>
-        <Field label={t("Nome")} value={name} onChange={setName} max={40} first />
-        <Field label={t("Nome utente")} value={handle} onChange={setHandle} max={30} prefix="@" lower />
-        <Field label={t("Bio")} value={bio} onChange={setBio} max={150} multiline />
-      </Card>
-      <Note>{t("{n}/150 · Il nome utente usa solo lettere, numeri, punto e trattino basso.", { n: bio.length })}</Note>
-      <View style={{ paddingHorizontal: INSET, paddingTop: 22 }}>
-        <Btn title={t("Salva")} kind="primary" height={44} disabled={!changed || !valid} onPress={save} />
+      <Note>{t("Tocca un post per ripristinarlo sul profilo.")}</Note>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 1, paddingTop: 12, backgroundColor: theme.bg }}>
+        {items.map((item) => <Tile key={item.id} item={item} onPress={() => pick(item)} />)}
       </View>
     </>
+  );
+}
+
+function AccentPicker({ value, onPick }) {
+  const theme = useTheme();
+  return (
+    <Card style={{ flexDirection: "row", flexWrap: "wrap", paddingVertical: 12, paddingHorizontal: 6 }}>
+      {ACCENTS.map((accent) => {
+        const on = value === accent.id;
+        return (
+          <Pressable key={accent.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onPick(accent.id)} style={{ width: "20%", alignItems: "center", paddingVertical: 8, gap: 6 }}>
+            <View style={[styles.swatch, { backgroundColor: accent.color, borderColor: on ? theme.text : "transparent" }]}>
+              {on ? <Check size={18} weight="bold" color={accent.ink} /> : null}
+            </View>
+            <T size={11.5} weight={on ? "700" : "400"} color={on ? theme.text : theme.text2} lines={1}>{accent.id === "space" ? accent.label : t(accent.label)}</T>
+          </Pressable>
+        );
+      })}
+    </Card>
   );
 }
 
@@ -535,12 +596,42 @@ function Business() {
             </View>
             <T size={14} color={theme.text2}>{biz.hours.days.length ? t("Aperto {open}–{close}", { open: biz.hours.open, close: biz.hours.close }) : t("Chiuso tutta la settimana")}</T>
           </Card>
+          {biz.hours.days.length ? (
+            <Card style={{ marginTop: 10 }}>
+              <HourRow first label={t("Apre")} value={biz.hours.open} onChange={(open) => patch({ hours: { ...biz.hours, open } })} />
+              <HourRow label={t("Chiude")} value={biz.hours.close} onChange={(close) => patch({ hours: { ...biz.hours, close } })} />
+            </Card>
+          ) : null}
           <Card style={{ marginTop: 14 }}>
             <ToggleRow first on={biz.shop !== false} label={t("Mostra lo shop sul profilo")} meta={t("Una scheda Shop con i tuoi prodotti.")} onPress={() => { tap(); patch({ shop: biz.shop === false }); }} />
           </Card>
           <Note>{t("Il profilo mostra contatti, orari e la scheda Shop. I clienti ti mandano le richieste d'ordine in chat.")}</Note>
         </>
       ) : null}
+    </>
+  );
+}
+
+// "HH:MM" moved by half an hour, wrapping round midnight.
+function shiftTime(value, delta) {
+  const [h, m] = String(value || "09:00").split(":").map((part) => Number(part) || 0);
+  const total = (((h * 60 + m + delta) % 1440) + 1440) % 1440;
+  const step = Math.round(total / 30) * 30 % 1440;
+  return `${String(Math.floor(step / 60)).padStart(2, "0")}:${String(step % 60).padStart(2, "0")}`;
+}
+
+function HourRow({ label, value, onChange, first }) {
+  const theme = useTheme();
+  const step = (delta) => { tap(); onChange(shiftTime(value, delta)); };
+  return (
+    <>
+      {first ? null : <Divider />}
+      <View style={[styles.field, { paddingVertical: 10 }]}>
+        <T size={15} style={{ flex: 1 }}>{label}</T>
+        <Pressable onPress={() => step(-30)} hitSlop={6} accessibilityLabel={t("{label}: 30 minuti prima", { label })} style={[styles.step, { backgroundColor: theme.fill }]}><Minus size={15} weight="bold" color={theme.text} /></Pressable>
+        <T size={16} weight="600" style={{ width: 64, textAlign: "center", fontVariant: ["tabular-nums"] }}>{value}</T>
+        <Pressable onPress={() => step(30)} hitSlop={6} accessibilityLabel={t("{label}: 30 minuti dopo", { label })} style={[styles.step, { backgroundColor: theme.fill }]}><Plus size={15} weight="bold" color={theme.text} /></Pressable>
+      </View>
     </>
   );
 }
@@ -605,4 +696,6 @@ const styles = StyleSheet.create({
   field: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 14 },
   plus: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   day: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  step: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  swatch: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, alignItems: "center", justifyContent: "center" },
 });

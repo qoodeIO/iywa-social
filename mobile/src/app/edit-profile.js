@@ -161,7 +161,7 @@ export default function EditProfile() {
             <TextInput
               value={form.link}
               maxLength={120}
-              placeholder={t("space.app/tuo-nome")}
+              placeholder={t("iywa.app/tuo-nome")}
               placeholderTextColor={theme.text3}
               onChangeText={set("link")}
               accessibilityLabel={t("Link")}

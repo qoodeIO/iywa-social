@@ -15,6 +15,7 @@ import { AtSign, Feather, Globe, Hash, ImageIcon, Plus, Poll, Trash, Users, Veri
 import { T, tap } from "./kit";
 import { ActionSheet } from "./profile-kit";
 import { QuotedThought, buildThoughts } from "./thoughts";
+import { showToast } from "./feedEcho";
 import { keepAll } from "../lib/media-store";
 import { t, tk } from "../lib/i18n";
 
@@ -185,6 +186,7 @@ export default function ThoughtComposer({ replyId, quoteId }) {
       store.addThoughtChain(thought, chain);
       echo(store, thought);
     }
+    showToast({ text: replyTo ? t("Risposta pubblicata") : t("Pensiero pubblicato") });
     router.back();
   }
 

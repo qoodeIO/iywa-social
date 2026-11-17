@@ -10,6 +10,9 @@ import { createHub } from "./hub";
 import { CallController } from "./calls";
 import { sounds } from "./sounds";
 import { useStore } from "../lib/store";
+import { emitOrderEvent, payApi, payHandle } from "../lib/pay";
+import { t } from "../lib/i18n";
+import { avatarFor, euro } from "../data";
 
 const Live = createContext(null);
 
@@ -192,6 +195,22 @@ export function LiveProvider({ children }) {
   userRef.current = user;
   const visible = () => AppState.currentState === "active";
 
+  // Sellers publish their catalogue to the server so buyers on other devices can pay
+  // (web App "/products/sync"): business accounts with the shop on, 800 ms after a change.
+  const payAs = payHandle(store);
+  const selling = store.accountType === "business" && store.business?.shop !== false && Boolean(payAs);
+  useEffect(() => {
+    if (!selling) return undefined;
+    const business = store.business || {};
+    const products = (store.myProducts || []).map((item) => ({
+      id: item.id, name: item.name, price: item.price, image: item.images?.[0], stock: item.madeToOrder && !item.stock ? null : item.stock, madeToOrder: item.madeToOrder || null, service: Boolean(item.service),
+    }));
+    const id = setTimeout(() => {
+      payApi("/products/sync", { handle: payAs, shop: { title: business.title, city: business.city, category: business.category }, products }).catch(() => {});
+    }, 800);
+    return () => clearTimeout(id);
+  }, [selling, payAs, store.business, store.myProducts]);
+
   const send = useCallback((message) => hubRef.current?.send(message) || false, []);
   const calls = useMemo(() => new CallController({ send, me: () => userRef.current?.handle }), [send]);
   const call = useSyncExternalStore(calls.subscribe, calls.getSnapshot);
@@ -298,6 +317,24 @@ export function LiveProvider({ children }) {
       case "reaction": dispatch({ type: "reaction", convId: message.convId, messageId: message.messageId, reactions: message.reactions }); return;
       case "edited": dispatch({ type: "edited", message: message.message }); return;
       case "unsent": dispatch({ type: "unsent", convId: message.convId, messageId: message.messageId }); return;
+      // Stripe orders (calls/src/payments.js markPaid / orders/ship): a sale for the seller,
+      // "shipped" for the buyer, both as notifications that open the orders (web "space-order").
+      case "order": {
+        const order = message.order;
+        if (!order) return;
+        emitOrderEvent(message);
+        // The hub sends "sold" only to the seller and "shipped" to both sides.
+        const mine = new Set([current.me?.handle, userRef.current?.handle, storeRef.current.auth?.handle].filter(Boolean));
+        const push = storeRef.current.pushNote;
+        if (message.event === "sold") {
+          const what = `${order.qty > 1 ? `${order.qty} × ` : ""}${order.name}`;
+          push?.({ type: "order", name: `@${order.buyer}`, src: avatarFor(order.buyer) || order.image || undefined, text: t("ha acquistato {what} · {total}", { what, total: euro(order.total) }), target: { kind: "orders" } });
+        }
+        if (message.event === "shipped" && (mine.has(order.buyer) || !mine.has(order.seller))) {
+          push?.({ type: "order", name: `@${order.seller}`, src: avatarFor(order.seller) || order.image || undefined, text: t("ha spedito il tuo ordine: {name}", { name: order.name }), target: { kind: "orders" } });
+        }
+        return;
+      }
       default:
         if (String(message.type || "").startsWith("call_")) calls.onMessage(message);
     }

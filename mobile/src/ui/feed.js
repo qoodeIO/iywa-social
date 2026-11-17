@@ -4,16 +4,17 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { Easing, ZoomIn, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
 import { filterOf, useStoryDecks } from "../lib/stories";
-import { AVATAR, PEOPLE, REELS, personByHandle, personByName } from "../data";
-import { At, Bookmark, Comment, Feather, Heart, More, Plus, Send } from "./icons";
+import { AVATAR, PEOPLE, REELS, euro, personByHandle, personByName, postProducts } from "../data";
+import { At, Bag, Bookmark, ChevronRight, Comment, Feather, Heart, More, Plus, Send } from "./icons";
 import { ChecksGlyph, PlayGlyph, ReelGlyph, UserGlyph } from "./feedIcons";
 import { Name, Sheet, T, tap } from "./kit";
 import { SHARE_BASE, commentCount, shown, tally } from "./feedData";
 import { t } from "../lib/i18n";
+import { showToast } from "./feedEcho";
 import { openTab } from "../lib/tabs";
 
 const W = Dimensions.get("window").width;
@@ -110,7 +111,20 @@ export function MentionSuggest({ value, onPick, style }) {
 // Stories
 // ---------------------------------------------------------------------------
 // Segmented ring like the web StoryRing: one arc per frame, watched arcs muted, green for close friends.
-export const StoryRing = memo(function StoryRing({ src, size = 66, total = 1, seen = 0, tone = "live" }) {
+// After you publish a story your ring turns once (web ".story.yours.posted .ring-svg").
+function RingSpin({ at, children }) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    if (!at) return;
+    v.value = 0;
+    // Starts as the camera flies into the rail and closes.
+    v.value = withDelay(420, withTiming(1, { duration: 1200, easing: Easing.bezier(0.32, 0.72, 0, 1) }));
+  }, [at, v]);
+  const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${v.value * 360}deg` }, { scale: 1 + Math.sin(v.value * Math.PI) * 0.06 }] }));
+  return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>{children}</Animated.View>;
+}
+
+export const StoryRing = memo(function StoryRing({ src, size = 66, total = 1, seen = 0, tone = "live", spinAt = 0 }) {
   const theme = useTheme();
   const count = Math.max(1, total);
   const gap = count > 1 ? 11 : 0;
@@ -120,8 +134,7 @@ export const StoryRing = memo(function StoryRing({ src, size = 66, total = 1, se
   const dash = (sweep / 360) * circ;
   const muted = theme.scheme === "dark" ? "#3a3a3c" : "#c7c7c7";
   const inner = Math.round(size * 0.84);
-  return (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+  const ring = (
       <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
         <Defs>
           <SvgGradient id="ringB" x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
@@ -154,6 +167,10 @@ export const StoryRing = memo(function StoryRing({ src, size = 66, total = 1, se
           );
         })}
       </Svg>
+  );
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      {spinAt ? <RingSpin at={spinAt}>{ring}</RingSpin> : ring}
       <Image source={src ? { uri: src } : null} style={{ width: inner, height: inner, borderRadius: inner / 2, backgroundColor: theme.fill }} contentFit="cover" transition={150} recyclingKey={src} />
     </View>
   );
@@ -168,6 +185,15 @@ export function StoryRail() {
   const yours = decks[0]?.mine ? decks[0] : null;
   const yoursSeen = Boolean(yours && yours.frames.every((frame) => seenSet.has(frame.id)));
   const close = store.prefs?.closeFriends || [];
+  // A new frame in your story (not the saved ones loading at launch) plays the "posted" turn.
+  const mineCount = (store.myStories || []).length;
+  const counted = useRef(store.ready ? mineCount : -1);
+  const [postedAt, setPostedAt] = useState(0);
+  useEffect(() => {
+    if (!store.ready) return;
+    if (counted.current >= 0 && mineCount > counted.current) setPostedAt(Date.now());
+    counted.current = mineCount;
+  }, [mineCount, store.ready]);
   const rest = useMemo(() => (yours ? decks.slice(1) : decks).slice().sort((a, b) => {
     const aSeen = a.frames.every((frame) => seenSet.has(frame.id)) ? 1 : 0;
     const bSeen = b.frames.every((frame) => seenSet.has(frame.id)) ? 1 : 0;
@@ -177,7 +203,7 @@ export function StoryRail() {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
       <View style={styles.story}>
         <Pressable accessibilityLabel={t("La tua storia")} onPress={() => { tap(); router.push(yours ? `/story/${yours.id}` : STORY_CAMERA); }}>
-          <StoryRing src={store.profile.src || AVATAR} total={yours?.frames.length || 1} seen={yours ? watched(yours) : 0} tone={yours ? (yoursSeen ? "seen" : yours.frames.some((frame) => frame.close) ? "close" : "live") : "empty"} />
+          <StoryRing src={store.profile.src || AVATAR} total={yours?.frames.length || 1} seen={yours ? watched(yours) : 0} tone={yours ? (yoursSeen ? "seen" : yours.frames.some((frame) => frame.close) ? "close" : "live") : "empty"} spinAt={postedAt} />
         </Pressable>
         <Pressable accessibilityLabel={t("Nuova storia")} hitSlop={6} onPress={() => { tap(); router.push(STORY_CAMERA); }} style={[styles.storyPlus, { backgroundColor: theme.blue, borderColor: theme.bg }]}>
           <Plus size={12} weight="bold" color="#fff" />
@@ -214,7 +240,7 @@ export function usePostActions({ onMenu } = {}) {
       tap("medium");
       if (!ref.current.likes.includes(id)) ref.current.toggleLike(id);
     },
-    save: (id) => { tap(); ref.current.toggleSave(id); },
+    save: (id, item) => { tap(); ref.current.toggleSave(id, item); },
     follow: (name) => { tap(); ref.current.toggleFollow(name); },
     comment: (post) => router.push(`/comments/${encodeURIComponent(post.id)}`),
     share: (post) => router.push(`/share/${encodeURIComponent(post.id)}`),
@@ -271,9 +297,14 @@ function ReelBar({ playing }) {
   );
 }
 
-function PostMedia({ post, kind, images, onDouble, onSlide, burst }) {
+function openProduct(owner, product) {
+  router.push(`/product/${encodeURIComponent(owner)}/${encodeURIComponent(product.id)}`);
+}
+
+function PostMedia({ post, kind, images, onDouble, onSlide, burst, shop }) {
   const theme = useTheme();
   const [showTags, setShowTags] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const [slide, setSlide] = useState(0);
   const [playing, setPlaying] = useState(false);
   const last = useRef({ at: 0, timer: 0 });
@@ -348,6 +379,28 @@ function PostMedia({ post, kind, images, onDouble, onSlide, burst }) {
           </Pressable>
         </>
       ) : null}
+      {shop.length ? (
+        <>
+          {showShop ? (
+            <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+              {shop.map(({ owner, product }, index) => (
+                <View key={`${owner}-${product.id}`} pointerEvents="box-none" style={[styles.tagPillWrap, { left: `${30 + ((index * 41) % 45)}%`, top: `${32 + ((index * 29) % 40)}%` }]}>
+                  <Animated.View entering={ZoomIn.springify().damping(14).delay(index * 60)} style={{ alignItems: "center" }}>
+                    <View style={styles.tagArrow} />
+                    <Pressable accessibilityRole="link" accessibilityLabel={`${product.name}, ${euro(product.price)}`} onPress={() => { tap(); openProduct(owner, product); }} style={({ pressed }) => [styles.tagPill, styles.prodPill, pressed && { opacity: 0.8 }]}>
+                      <T size={13} weight="600" color="#fff" lines={1}>{product.name}</T>
+                      <T size={12} weight="500" color="rgba(255,255,255,0.8)">{euro(product.price)}</T>
+                    </Pressable>
+                  </Animated.View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <Pressable accessibilityLabel={t("Prodotti")} accessibilityState={{ selected: showShop }} hitSlop={8} onPress={() => { tap(); setShowShop((value) => !value); }} style={[styles.shopBtn, showShop && { backgroundColor: "#fff" }]}>
+            <Bag size={15} weight="fill" color={showShop ? "#000" : "#fff"} />
+          </Pressable>
+        </>
+      ) : null}
       <Burst trigger={burst} />
     </View>
   );
@@ -364,6 +417,7 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
   const sub = kind === "reel" ? (post.audio ? t(post.audio) : t("Audio originale")) : String(post.place || post.handle || "");
   const openAuthor = () => (mine ? openTab("profile") : openPerson(post.name));
   const doubleLike = useCallback(() => { actions.doubleLike(post.id); setBurst(Date.now()); }, [actions, post.id]);
+  const shop = useMemo(() => (kind === "tweet" ? [] : postProducts(post)), [kind, post]);
 
   return (
     <View style={styles.post}>
@@ -392,8 +446,16 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
       {kind === "tweet" ? (
         <Rich text={post.text} size={16} style={styles.tweetText} />
       ) : (
-        <PostMedia post={post} kind={kind} images={images} onDouble={doubleLike} onSlide={setSlide} burst={burst} />
+        <PostMedia post={post} kind={kind} images={images} onDouble={doubleLike} onSlide={setSlide} burst={burst} shop={shop} />
       )}
+
+      {shop.length ? (
+        <Pressable accessibilityRole="link" onPress={() => { tap(); openProduct(shop[0].owner, shop[0].product); }} style={({ pressed }) => [styles.shopStrip, pressed && { opacity: 0.6 }]}>
+          <Bag size={17} weight="fill" color={theme.text} />
+          <T size={14} weight="600" style={{ flex: 1 }}>{shop.length > 1 ? t("Visualizza prodotti · {n}", { n: shop.length }) : t("Visualizza prodotti")}</T>
+          <ChevronRight size={14} weight="bold" color={theme.text3} />
+        </Pressable>
+      ) : null}
 
       <View style={styles.actions}>
         <Pressable accessibilityLabel={t("Mi piace")} accessibilityState={{ selected: liked }} onPress={() => actions.like(post.id)} style={styles.act}>
@@ -408,7 +470,7 @@ export const FeedPost = memo(function FeedPost({ post, liked, saved, following, 
         <View style={styles.dots} pointerEvents="none">
           {images.length > 1 && kind !== "tweet" ? images.map((src, index) => <View key={`${index}-${src}`} style={[styles.dot, { backgroundColor: index === slide ? theme.blue : theme.text3 }]} />) : null}
         </View>
-        <Pressable accessibilityLabel={t("Salva")} accessibilityState={{ selected: saved }} onPress={() => actions.save(post.id)} style={styles.act}>
+        <Pressable accessibilityLabel={t("Salva")} accessibilityState={{ selected: saved }} onPress={() => actions.save(post.id, post)} style={styles.act}>
           <Bookmark size={25} weight={saved ? "fill" : "regular"} color={theme.text} />
         </Pressable>
       </View>
@@ -480,9 +542,9 @@ export function PostMenu({ target, onClose, onDeleted }) {
   if (post) {
     if (mine) {
       if (target.archivable ?? (inLibrary || post.mine)) rows.push({ label: store.archived?.includes(post.id) ? t("Mostra nel profilo") : t("Archivia"), run: () => store.toggleArchive(post.id) });
-      if (inLibrary) rows.push({ label: t("Elimina"), danger: true, run: () => { store.dropPost(post.id); onDeleted?.(post.id); } });
+      if (inLibrary) rows.push({ label: t("Elimina"), danger: true, run: () => { store.dropPost(post.id); onDeleted?.(post.id); showToast({ text: t("Eliminato") }); } });
     } else {
-      rows.push({ label: saved ? t("Rimuovi dai salvati") : t("Salva"), run: () => store.toggleSave(post.id) });
+      rows.push({ label: saved ? t("Rimuovi dai salvati") : t("Salva"), run: () => store.toggleSave(post.id, post) });
       if (canFollow) rows.push({ label: following ? t("Non seguire più") : t("Segui"), run: () => store.toggleFollow(post.name) });
     }
     rows.push({ label: t("Condividi"), run: () => setTimeout(() => router.push(`/share/${encodeURIComponent(post.id)}`), 260) });
@@ -623,6 +685,9 @@ const styles = StyleSheet.create({
   tagPillWrap: { position: "absolute", alignItems: "center", transform: [{ translateX: "-50%" }] },
   tagArrow: { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 5, borderLeftColor: "transparent", borderRightColor: "transparent", borderBottomColor: "rgba(0,0,0,0.78)" },
   tagPill: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.78)" },
+  prodPill: { alignItems: "flex-start", maxWidth: W * 0.6 },
+  shopBtn: { position: "absolute", right: 10, bottom: 10, width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.62)", alignItems: "center", justifyContent: "center" },
+  shopStrip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingTop: 10 },
   burstShadow: { shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
   actions: { flexDirection: "row", alignItems: "center", paddingTop: 4, paddingHorizontal: 6 },
   act: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },

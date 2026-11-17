@@ -105,6 +105,8 @@ function safeReturn(value, request) {
     const url = new URL(String(value || ""));
     const origin = request.headers.get("origin");
     if (origin && url.origin !== origin) return null;
+    // The iOS/Android app has no Origin header and comes back through its own scheme.
+    if (url.protocol === "space:" && !origin) return url;
     if (!/^https?:$/.test(url.protocol)) return null;
     return url;
   } catch {

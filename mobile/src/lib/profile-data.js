@@ -76,12 +76,26 @@ export function explorePool({ library = [], prefs } = {}) {
   });
 }
 
-// Open a grid tile: reels go to the Reels tab, the rest to the post page.
-export function openGridItem(post) {
+let feed = { list: [], start: 0, title: "" };
+export function gridFeed() {
+  return feed;
+}
+
+// Open a grid tile: reels go to the Reels tab; a post opens the grid as a feed starting at
+// that post when the grid is known, otherwise the single post page.
+export function openGridItem(post, list, title) {
   if (post.kind === "reel" && (post.reelId || String(post.id).startsWith("reel-") || REELS.some((reel) => reel.id === post.id))) {
     const id = post.reelId || String(post.id).replace(/^reel-/, "");
     if (router.canDismiss()) router.dismissAll();
     openTab("reels", { id });
+    return;
+  }
+  const ids = new Set();
+  const posts = (list || []).filter((item) => item.kind !== "reel" && (item.image || item.images?.[0]) && !ids.has(item.id) && ids.add(item.id));
+  const start = posts.findIndex((item) => item.id === post.id);
+  if (posts.length > 1 && start >= 0) {
+    feed = { list: posts, start, title };
+    router.push("/posts");
     return;
   }
   router.push(`/post/${post.id}`);

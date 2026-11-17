@@ -10,6 +10,8 @@ import { FeedOverlay } from "../ui/notify";
 import { AuthGate } from "../ui/auth";
 import { useTheme } from "../theme";
 import { useLive } from "../live/LiveStore";
+import { LaunchScreen } from "../ui/launch";
+import { TimeLimit } from "../ui/time-limit";
 
 
 function Shell() {
@@ -43,6 +45,7 @@ function Shell() {
       <TabBar />
       <FeedOverlay />
       <AuthGate />
+      <TimeLimit />
     </View>
   );
 }
@@ -54,6 +57,7 @@ export default function RootLayout() {
         <StoreProvider>
           <LiveRoot>
             <Shell />
+            <LaunchScreen />
           </LiveRoot>
         </StoreProvider>
       </SafeAreaProvider>

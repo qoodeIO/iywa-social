@@ -148,7 +148,8 @@ export function TrustRows({ shop, product }) {
     rows.push([Truck, product.madeToOrder && !product.stock ? t("Realizzato per te in {n} settimane", { n: product.madeToOrder }) : t("Arriva {when}", { when: deliveryWindow(shop) }), product.price >= FREE_SHIPPING ? t("Spedizione gratuita") : t("Spedizione {fee} · gratis sopra {free}", { fee: euro(SHIPPING_FEE), free: euro(FREE_SHIPPING) })]);
     rows.push([Return, food || !shop?.returns ? t("Niente resi sugli alimentari") : t("Resi entro {n} giorni", { n: shop.returns }), food || !shop?.returns ? t("Prodotto fresco, fatto in giornata") : t("Scrivi alla bottega nel Direct per avviarlo")]);
   }
-  rows.push([ShieldCheck, t("Paghi dopo la conferma della bottega"), t("Pagamento e spedizione si concordano nel Direct")]);
+  if (shop?.payments) rows.push([ShieldCheck, t("Pagamento sicuro con Stripe"), t("Carta, Apple Pay, Google Pay")]);
+  else rows.push([ShieldCheck, t("Paghi dopo la conferma della bottega"), t("Pagamento e spedizione si concordano nel Direct")]);
   return (
     <View style={{ borderRadius: 12, backgroundColor: theme.fill, marginTop: 14 }}>
       {rows.map(([Icon, title, sub], index) => (

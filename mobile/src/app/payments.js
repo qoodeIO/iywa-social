@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
 import { t } from "../lib/i18n";
-import { payApi, payBase } from "../lib/pay";
+import { payApi, payBase, payHandle } from "../lib/pay";
 import { Bag, Bell, Check, Directions, PriceTag, Warn } from "../ui/icons-profile";
 import { Header, T, tap } from "../ui/kit";
 import { settingsColors } from "../ui/profile-kit";
@@ -17,7 +17,7 @@ export default function Payments() {
   const insets = useSafeAreaInsets();
   const store = useStore();
   const st = settingsColors(theme);
-  const handle = store.auth?.handle || null;
+  const handle = payHandle(store);
   const [config, setConfig] = useState(null);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -30,7 +30,7 @@ export default function Payments() {
   }, [handle]);
   useEffect(load, [load]);
 
-  const back = payBase() ? `${payBase().replace(/\/calls\/api$/, "")}/` : "https://space.app/";
+  const back = payBase() ? `${payBase().replace(/\/calls\/api$/, "")}/` : "https://iywa.app/";
 
   async function onboard() {
     setBusy(true);

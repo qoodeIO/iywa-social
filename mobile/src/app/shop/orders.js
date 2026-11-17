@@ -7,7 +7,7 @@ import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
 import { localeTag, t, tk } from "../../lib/i18n";
 import { euro } from "../../data";
-import { payApi, payBase } from "../../lib/pay";
+import { onOrderEvent, payApi, payBase, payHandle } from "../../lib/pay";
 import { Box } from "../../ui/icons-profile";
 import { Btn, Header, T } from "../../ui/kit";
 import { IgEmpty, SlideTabs } from "../../ui/profile-kit";
@@ -20,7 +20,7 @@ const LABEL = { paid: tk("Pagato"), shipped: tk("Spedito"), pending: tk("In atte
 export default function Orders() {
   const theme = useTheme();
   const store = useStore();
-  const handle = store.auth?.handle || null;
+  const handle = payHandle(store);
   const [tab, setTab] = useState(0);
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
@@ -35,6 +35,8 @@ export default function Orders() {
     payApi(`/orders?handle=${encodeURIComponent(handle)}`).then(setData).catch(() => setError(true));
   }, [handle]);
   useEffect(load, [load]);
+  // A sale, a payment or a shipment arriving live from the hub refreshes the list.
+  useEffect(() => onOrderEvent(() => load()), [load]);
 
   const list = data?.[key] || [];
   return (

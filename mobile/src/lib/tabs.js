@@ -2,14 +2,14 @@
 // horizontal pager on the "/" route, so moving between them is a native swipe and every
 // page stays mounted. This module is the pager's shared state: which page is showing,
 // params handed to a page (a search query, a reel to open) and the live scroll offset.
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Animated } from "react-native";
 import { router, useIsFocused } from "expo-router";
 
 export const PAGES = ["camera", "home", "search", "reels", "messages", "profile"];
 export const HOME = 1;
 
-let state = { index: HOME, params: {} };
+let state = { index: HOME, params: {}, locked: false };
 const subs = new Set();
 let scrollTo = null;
 
@@ -19,6 +19,12 @@ export const pagerX = new Animated.Value(0);
 function set(next) {
   state = { ...state, ...next };
   subs.forEach((fn) => fn());
+}
+
+// While a finger is on a part of a page that swipes sideways itself (the profile boards),
+// the pager stops taking horizontal swipes.
+export function lockPager(locked) {
+  if (state.locked !== locked) set({ locked });
 }
 
 export function setPageIndex(index) {
@@ -54,8 +60,25 @@ export function usePageFocused(name) {
 export function openTab(name, params, { animated = false } = {}) {
   const index = PAGES.indexOf(name);
   if (index < 0) return;
+  // Tapping the tab of the page already on screen scrolls it back to the top, like Instagram.
+  const again = !params && state.index === index && !router.canDismiss();
   if (params) set({ params: { ...state.params, [name]: { ...params, at: Date.now() } } });
   if (router.canDismiss()) router.dismissAll();
   set({ index });
   scrollTo?.(index, animated);
+  if (again) reselect.get(name)?.();
+}
+
+const reselect = new Map();
+
+// What a page does when its tab is tapped while it is showing (usually: scroll to the top).
+export function useTabReselect(name, fn) {
+  const latest = useRef(fn);
+  latest.current = fn;
+  useEffect(() => {
+    if (!name) return undefined;
+    const run = () => latest.current?.();
+    reselect.set(name, run);
+    return () => { if (reselect.get(name) === run) reselect.delete(name); };
+  }, [name]);
 }

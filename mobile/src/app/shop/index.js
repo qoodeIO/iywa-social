@@ -4,7 +4,9 @@ import { router } from "expo-router";
 import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
 import { t } from "../../lib/i18n";
-import { NO_FILTERS, PRICE_BANDS, SHOP_TOPICS, SORTS, allStores, applyFilters, filterCount, sellerRating, shopTopicOf, sortRefs, storeRefs } from "../../data";
+import { NO_FILTERS, PRICE_BANDS, SHOP_TOPICS, SORTS, allStores, applyFilters, filterCount, liveStores, sellerRating, shopTopicOf, sortRefs, storeRefs } from "../../data";
+import { useLiveShops } from "../../lib/liveShops";
+import { payHandle } from "../../lib/pay";
 import { Box, ChevronDown, ChevronRight, Search, Sliders } from "../../ui/icons";
 import { Btn, Chip, Empty, Hairline, Header, Section, Sheet, T, Toggle, tap } from "../../ui/kit";
 import { CartButton, Grid, MarketCard, StoreCard, WishlistButton } from "../../ui/market";
@@ -18,7 +20,10 @@ export default function ShopHome() {
   const [filters, setFilters] = useState(NO_FILTERS);
   const [sheet, setSheet] = useState(null);
 
-  const stores = useMemo(() => allStores(), []);
+  // Live sellers with a catalogue on the hub first (not you), then the demo shops (web ShopHome).
+  const liveVersion = useLiveShops();
+  const me = payHandle(store);
+  const stores = useMemo(() => [...liveStores(me), ...allStores()], [liveVersion, me]); // eslint-disable-line react-hooks/exhaustive-deps
   const refs = useMemo(() => stores.flatMap((shop) => storeRefs(shop).map((ref) => ({ ...ref, topic: shopTopicOf(shop, ref.product), shop }))), [stores]);
   const needle = query.trim().toLowerCase();
   const active = filterCount(filters);

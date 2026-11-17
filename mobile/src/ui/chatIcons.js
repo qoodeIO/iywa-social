@@ -52,3 +52,4 @@ export { ClockIcon as Clock } from "phosphor-react-native/src/icons/Clock";
 export { EyeIcon as Eye } from "phosphor-react-native/src/icons/Eye";
 export { SealCheckIcon as Verified } from "phosphor-react-native/src/icons/SealCheck";
 export { XCircleIcon as ClearIcon } from "phosphor-react-native/src/icons/XCircle";
+export { TrayIcon as Inbox } from "phosphor-react-native/src/icons/Tray";

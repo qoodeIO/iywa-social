@@ -5,8 +5,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { INSET, useTheme } from "../../../theme";
 import { useStore } from "../../../lib/store";
 import { t } from "../../../lib/i18n";
-import { allStores, ago, euro, findProduct, hashOf, productRef, reviewsFor, shopTopicOf, stockLabel, storeOf, storeRefs } from "../../../data";
-import { Bag, Bookmark, Box, Check, Heart, Send, Star } from "../../../ui/icons";
+import { allStores, ago, euro, findProduct, hashOf, isLiveOwner, productRef, reviewsFor, shopTopicOf, stockLabel, storeOf, storeRefs } from "../../../data";
+import { checkoutErrorText, checkoutResultText, payHandle, startCheckout } from "../../../lib/pay";
+import { useLiveShop } from "../../../lib/liveShops";
+import { useLive } from "../../../live/LiveStore";
+import { showToast } from "../../../ui/feedEcho";
+import { Bag, Bookmark, Box, Check, Heart, Lock, Send, Star } from "../../../ui/icons";
 import { Avatar, Btn, Chip, Header, Rating, Section, Stars, T, tap } from "../../../ui/kit";
 import { CartButton, MarketCard, RatingSummary, SellerCard, TrustRows } from "../../../ui/market";
 
@@ -18,7 +22,10 @@ export default function ProductScreen() {
   const store = useStore();
   const { owner: rawOwner, id } = useLocalSearchParams();
   const owner = rawOwner === "me" ? null : decodeURIComponent(String(rawOwner));
-  const product = findProduct(owner, id, store.myProducts);
+  const live = useLive();
+  // Live sellers ("@handle") load from the hub; the version re-renders when they arrive.
+  useLiveShop(owner);
+  const product = findProduct(owner, String(id), store.myProducts);
   const shop = owner ? storeOf(owner) : null;
   const mine = !owner;
   const ref = product ? productRef(product, owner) : null;
@@ -26,6 +33,8 @@ export default function ProductScreen() {
   const [variant, setVariant] = useState(product?.variants?.[0] || "");
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const canBuy = Boolean(shop?.payments);
 
   useEffect(() => {
     if (ref && !mine) store.viewProduct(ref);
@@ -43,7 +52,7 @@ export default function ProductScreen() {
   }, [product, owner, shop, mine]);
 
   if (!product) {
-    return <View style={{ flex: 1, backgroundColor: theme.bg }}><Header title={t("Prodotto")} /><T style={{ padding: INSET }}>{t("Prodotto non trovato.")}</T></View>;
+    return <View style={{ flex: 1, backgroundColor: theme.bg }}><Header title={t("Prodotto")} /><T style={{ padding: INSET }}>{isLiveOwner(owner) ? t("Caricamento…") : t("Prodotto non trovato.")}</T></View>;
   }
 
   const stock = stockLabel(product);
@@ -59,10 +68,36 @@ export default function ProductScreen() {
     setTimeout(() => setAdded(false), 1400);
   }
 
+  // "Acquista ora": Stripe Checkout for sellers with payments on (web ProductScreen onBuy).
+  async function buy() {
+    if (buying) return;
+    const buyer = payHandle(store);
+    if (!buyer) { showToast({ text: t("Prima collegati al Direct") }); return; }
+    setBuying(true);
+    try {
+      const result = await startCheckout({ buyer, seller: shop.live.seller, productId: product.id, qty, variant });
+      showToast({ text: checkoutResultText(result.status), src: result.order?.image || product.images[0] || undefined });
+      if (result.status === "paid" || result.status === "processing" || result.status === "unknown") router.push("/shop/orders");
+    } catch (error) {
+      showToast({ text: checkoutErrorText(error.code) });
+    }
+    setBuying(false);
+  }
+
   function ask() {
+    const what = `${qty > 1 ? `${qty} × ` : ""}${product.name}${variant ? ` (${variant})` : ""}`;
+    if (shop?.live) {
+      // A live seller is a real account: the question goes through the hub Direct.
+      live?.openDm(shop.live.seller)
+        .then((chatId) => {
+          live.send(chatId, t("Ciao! Mi interessa: {what} · {price}. È disponibile?", { what, price: euro(product.price * qty) }));
+          router.push(`/chat/${chatId}`);
+        })
+        .catch(() => showToast({ text: t("Chat live non raggiungibile. Riprova.") }));
+      return;
+    }
     const person = { name: owner, src: shop?.src };
     const chatId = store.ensureChat(person);
-    const what = `${qty > 1 ? `${qty} × ` : ""}${product.name}${variant ? ` (${variant})` : ""}`;
     store.sendMessage(chatId, { kind: "image", image: product.images[0], text: t("Ciao! Mi interessa: {what} · {price}. È disponibile?", { what, price: euro(product.price * qty) }) });
     setTimeout(() => store.receiveMessage(chatId, product.service ? t("Certo! Ti tengo il posto, ci vediamo in bottega 🙂") : t("Certo, è disponibile! Ti mando i dettagli per pagamento e spedizione 🙂")), 3500);
     router.push(`/chat/${chatId}`);
@@ -105,6 +140,12 @@ export default function ProductScreen() {
             <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: TONES[stock.tone] }} />
             <T size={13} weight="600" color={TONES[stock.tone]}>{stock.text}</T>
           </View>
+          {canBuy ? (
+            <View style={styles.secure}>
+              <Lock size={13} weight="fill" color={theme.green} />
+              <T size={12.5} weight="600" color={theme.green}>{t("Pagamento sicuro con Stripe")}</T>
+            </View>
+          ) : null}
           <T size={22} weight="700" style={{ marginTop: 6, letterSpacing: -0.5 }}>{product.name}</T>
           {!mine ? <View style={{ marginTop: 4 }}><Rating avg={rating.avg} count={rating.count} size={13} /></View> : null}
           <T size={22} weight="700" style={{ marginTop: 6 }}>{euro(product.price)}{product.service ? <T size={14} color={theme.text2}>{" "}{t("a persona")}</T> : null}</T>
@@ -165,7 +206,20 @@ export default function ProductScreen() {
           <>
             <Btn icon={Send} height={44} onPress={ask} style={{ paddingHorizontal: 14 }} />
             <Btn title={added ? t("Aggiunto") : t("Al carrello")} icon={added ? Check : Bag} kind={added ? "done" : "gray"} height={44} size={14.5} flex={1} disabled={soldOut} onPress={add} />
-            <Btn title={soldOut ? t("Esaurito") : t("Compra")} kind="primary" height={44} size={14.5} flex={1} disabled={soldOut} onPress={() => { store.addToCart(ref, qty, variant); router.push("/shop/cart"); }} />
+            <Btn
+              title={soldOut ? t("Esaurito") : buying ? t("Apertura…") : canBuy ? t("Acquista ora") : t("Compra")}
+              icon={canBuy && !soldOut && !buying ? Lock : undefined}
+              kind="primary"
+              height={44}
+              size={14.5}
+              flex={1}
+              disabled={soldOut || buying}
+              onPress={() => {
+                if (canBuy) { buy(); return; }
+                store.addToCart(ref, qty, variant);
+                router.push("/shop/cart");
+              }}
+            />
           </>
         )}
       </View>
@@ -233,6 +287,7 @@ function Reviews({ refKey, rating }) {
 
 const styles = StyleSheet.create({
   dots: { flexDirection: "row", justifyContent: "center", gap: 5, paddingTop: 10 },
+  secure: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   qtyRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 18 },
   qtyBtn: { width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center" },

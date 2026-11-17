@@ -89,7 +89,7 @@ export function FeedOverlay() {
                 <View style={[styles.kind, { backgroundColor: kind.tone, borderColor: dark ? "#1c1c1e" : "#fff" }]}><Icon size={10} weight="fill" color="#fff" /></View>
               </View>
               <View style={{ flex: 1, gap: 1 }}>
-                <T size={12} weight="600" color={theme.text2} style={{ letterSpacing: 0.5 }}>SPACE</T>
+                <T size={12} weight="600" color={theme.text2} style={{ letterSpacing: 0.5 }}>IYWA</T>
                 <T size={14} lines={2} style={{ lineHeight: 18 }}><T size={14} weight="700">{banner.name}</T> {banner.text}</T>
               </View>
               <T size={12} color={theme.text2} style={{ alignSelf: "flex-start" }}>{t("ora")}</T>

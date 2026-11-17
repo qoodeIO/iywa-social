@@ -7,12 +7,13 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
-import { AVATAR, CONTACTS } from "../../data";
+import { AVATAR, CONTACTS, avatarFor } from "../../data";
 import { Check, PlusSquare, Search } from "../../ui/icons";
 import { ArrowUpRightGlyph, LinkGlyph } from "../../ui/feedIcons";
 import { T, tap } from "../../ui/kit";
 import { SHARE_BASE, findPost, personHidden } from "../../ui/feedData";
 import { useKeyboardPad } from "../../ui/comments";
+import { useLive } from "../../live/LiveStore";
 import { t } from "../../lib/i18n";
 
 // Send a post to people, add it to your story, copy its link or open the system share sheet (web ShareScreen).
@@ -28,7 +29,13 @@ export default function ShareSheet() {
   const [toast, setToast] = useState("");
   const pad = useKeyboardPad(0);
   const needle = query.trim().toLowerCase();
-  const people = useMemo(() => CONTACTS.filter((person) => !personHidden(store.prefs, person.name, true) && (!needle || person.name.toLowerCase().includes(needle))), [store.prefs, needle]);
+  const live = useLive();
+  // People on iywa (live hub) first, then the demo contacts, like the web ShareScreen.
+  const people = useMemo(() => {
+    const online = live ? Object.values(live.people || {}).filter((person) => person.handle !== live.me?.handle).map((person) => ({ key: `live:${person.handle}`, name: person.name || person.handle, src: person.src || avatarFor(person.name || person.handle), live: person })) : [];
+    const demo = CONTACTS.map((person) => ({ ...person, key: `demo:${person.name}`, demo: person }));
+    return [...online, ...demo].filter((person) => !personHidden(store.prefs, person.name, true) && (!needle || person.name.toLowerCase().includes(needle)));
+  }, [live?.people, live?.me, store.prefs, needle]); // eslint-disable-line react-hooks/exhaustive-deps
   const image = post?.image || "";
   const link = `${SHARE_BASE}${post?.id || ""}`;
   const sheetBg = theme.scheme === "dark" ? "#1c1c1e" : theme.bg;
@@ -42,13 +49,17 @@ export default function ShareSheet() {
     if (!post) return;
     tap("medium");
     const text = message.trim();
-    for (const person of CONTACTS.filter((entry) => picked.includes(entry.name))) {
-      const chatId = store.ensureChat(person);
-      const payload = image ? { kind: "image", image, text: text || `${post.name}: ${post.text || ""}`.trim() } : { text: `${text ? `${text} · ` : ""}${post.name}: ${post.text || link}` };
+    const payload = image ? { kind: "image", image, text: text || `${post.name}: ${post.text || ""}`.trim() } : { text: `${text ? `${text} · ` : ""}${post.name}: ${post.text || link}` };
+    const chosen = people.filter((person) => picked.includes(person.key));
+    for (const person of chosen.filter((entry) => entry.demo)) {
+      const chatId = store.ensureChat(person.demo);
       setTimeout(() => store.sendMessage(chatId, payload), 0);
     }
-    note(t("Inviato"));
-    setTimeout(() => router.back(), 650);
+    const online = chosen.filter((entry) => entry.live);
+    Promise.all(online.map((person) => live.openDm(person.live.handle).then((convId) => live.send(convId, image ? payload : payload.text)))).then(() => {
+      note(t("Inviato"));
+      setTimeout(() => router.back(), 650);
+    }).catch(() => note(t("Invio non riuscito")));
   }
 
   return (
@@ -61,19 +72,19 @@ export default function ShareSheet() {
       <FlatList
         data={people}
         numColumns={3}
-        keyExtractor={(person) => person.name}
+        keyExtractor={(person) => person.key}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingHorizontal: INSET, paddingVertical: 10 }}
         columnWrapperStyle={{ gap: 8 }}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item: person }) => {
-          const on = picked.includes(person.name);
+          const on = picked.includes(person.key);
           return (
-            <Pressable style={styles.cell} onPress={() => { tap(); setPicked((prev) => (on ? prev.filter((name) => name !== person.name) : [...prev, person.name])); }}>
+            <Pressable style={styles.cell} onPress={() => { tap(); setPicked((prev) => (on ? prev.filter((key) => key !== person.key) : [...prev, person.key])); }}>
               <View>
                 <Image source={{ uri: person.src }} style={[styles.face, on && { opacity: 0.75 }]} transition={120} recyclingKey={person.src} />
-                {on ? <View style={[styles.check, { borderColor: sheetBg }]}><Check size={13} weight="bold" color="#fff" /></View> : null}
+                {on ? <View style={[styles.check, { borderColor: sheetBg, backgroundColor: theme.blue }]}><Check size={13} weight="bold" color={theme.accentInk || "#fff"} /></View> : null}
               </View>
               <T size={12.5} lines={1} style={{ textAlign: "center" }}>{person.name}</T>
             </Pressable>

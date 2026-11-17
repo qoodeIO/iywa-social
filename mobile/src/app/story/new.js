@@ -1180,7 +1180,7 @@ function Tray({ tool, setTool, find, setFind, addSticker, bottom }) {
   } else if (tool === "slider") {
     body = <Row title={t("Quanto ti piace?")} sub={t("Slider con il cuore")} onPress={() => addSticker({ type: "slider", prompt: t("Quanto ti piace?"), char: "❤️", value: 62 })} />;
   } else if (tool === "link") {
-    body = <Row title="space.app/forno" onPress={() => addSticker({ type: "link", label: "space.app/forno" })} />;
+    body = <Row title="iywa.app/forno" onPress={() => addSticker({ type: "link", label: "iywa.app/forno" })} />;
   } else if (tool === "count") {
     body = <Row title={t("Apertura")} sub={t("Sabato")} onPress={() => addSticker({ type: "count", label: t("Apertura"), when: t("Sabato") })} />;
   } else if (tool === "yours") {
