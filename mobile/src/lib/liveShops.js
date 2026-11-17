@@ -1,53 +1,32 @@
-// Live sellers for the Shop (web ShopHome payApi("/shops") and LiveShopScreen "/shop").
-// Results go into the registry in src/data, so storeOf("@handle") / findProduct work everywhere.
-import { useEffect, useSyncExternalStore } from "react";
-import { isLiveOwner, liveShopOf, liveSnapshot, onLiveShops, putLiveShops } from "../data";
-import { payApi } from "./pay";
+// Shops from the server for the marketplace screens (useShops / useShop in lib/social.js).
+// What arrives is also copied into the small registry in src/data, so product stickers in
+// stories and posts (findProduct / storeOf there) can still show name, photo and price.
+import { useEffect, useMemo } from "react";
+import { putLiveShops } from "../data";
+import { useShop, useShops } from "./social";
+import { myHandle } from "./session";
+import { shopFromList } from "../ui/market";
 
-let loadedAt = 0;
-let pending = null;
-const asked = new Map();
-
-export function loadLiveShops(force = false) {
-  if (pending) return pending;
-  if (!force && Date.now() - loadedAt < 30_000) return Promise.resolve();
-  pending = payApi("/shops")
-    .then((data) => {
-      loadedAt = Date.now();
-      putLiveShops(data.shops || [], { partial: true });
-    })
-    .catch(() => {})
-    .finally(() => { pending = null; });
-  return pending;
-}
-
-// One seller's full catalogue (the /shops list carries at most 12 products each).
-export function fetchLiveShop(seller) {
-  const handle = String(seller || "").replace(/^@/, "");
-  if (!handle) return Promise.resolve(null);
-  const last = asked.get(handle);
-  if (last && Date.now() - last < 15_000) return Promise.resolve(liveShopOf(handle));
-  asked.set(handle, Date.now());
-  return payApi(`/shop?handle=${encodeURIComponent(handle)}`)
-    .then((data) => {
-      if (data?.products?.length) putLiveShops([data]);
-      return liveShopOf(handle);
-    })
-    .catch(() => liveShopOf(handle));
-}
-
-// Re-renders when the registry changes and loads the list of live shops once.
-export function useLiveShops() {
-  const version = useSyncExternalStore(onLiveShops, liveSnapshot);
-  useEffect(() => { loadLiveShops(); }, []);
-  return version;
-}
-
-// For a route owner like "@handle": makes sure that seller's shop is loaded.
-export function useLiveShop(owner) {
-  const version = useSyncExternalStore(onLiveShops, liveSnapshot);
+// Every shop except mine, in the shape of shopFromList.
+export function useMarketShops() {
+  const query = useShops();
+  const list = query.data;
   useEffect(() => {
-    if (isLiveOwner(owner)) fetchLiveShop(owner);
-  }, [owner]);
-  return version;
+    if (Array.isArray(list)) putLiveShops(list, { partial: true });
+  }, [list]);
+  const me = myHandle();
+  const shops = useMemo(() => (Array.isArray(list) ? list.filter((entry) => entry.seller !== me && entry.products?.length).map(shopFromList) : []), [list, me]);
+  return { ...query, shops, all: Array.isArray(list) ? list : [] };
+}
+
+// One seller's full catalogue: { seller, business, products, payments }.
+export function useSellerShop(handle) {
+  const query = useShop(handle);
+  const data = query.data;
+  useEffect(() => {
+    if (!data || !handle) return;
+    const business = data.business || {};
+    putLiveShops([{ seller: handle, shop: { title: business.title || data.seller?.name || "", city: business.city || "", category: business.category || "" }, payments: data.payments, products: data.products || [] }]);
+  }, [data, handle]);
+  return query;
 }

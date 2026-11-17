@@ -7,7 +7,7 @@ import Constants from "expo-constants";
 //   app.json expo.extra.devHubUrl, e.g. "ws://192.168.1.20:8787/calls/hub", with
 //   `wrangler dev --ip 0.0.0.0`.
 // - Production: app.json expo.extra.hubUrl, e.g. "wss://space-calls.<account>.workers.dev/calls/hub".
-//   When it is empty the app stays offline: demo chats and demo calls work locally, nothing errors.
+//   When it is empty the app stays offline: chats and calls show "Connessione…", nothing errors.
 export function hubUrl() {
   const extra = Constants.expoConfig?.extra || {};
   if (__DEV__) {

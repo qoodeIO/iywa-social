@@ -8,7 +8,7 @@ import Animated, { ZoomIn } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient as SvgGradient, Rect, Stop } from "react-native-svg";
 import MaskedText from "../ui/qr-text";
 import qrcode from "../lib/qrcode";
-import { useStore } from "../lib/store";
+import { useMe } from "../lib/session";
 import { ArrowUpRight, Copy, X } from "../ui/icons-profile";
 import { T, tap } from "../ui/kit";
 import { useToast } from "../ui/profile-kit";
@@ -19,9 +19,9 @@ const TONES = [["#7c3aed", "#ff2d55"], ["#ff8a00", "#ff2d55"], ["#0095f6", "#34c
 // "Condividi profilo": a QR code of your profile link on a colour you can change (web QrCard).
 export default function QrScreen() {
   const insets = useSafeAreaInsets();
-  const store = useStore();
-  const handle = String(store.profile.handle || "").replace(/^@/, "");
-  const url = `https://iywa.app/u/${handle}`;
+  const me = useMe();
+  const handle = me?.handle || "";
+  const url = `https://iywa.app/${handle}`;
   const [tone, setTone] = useState(0);
   const [toast, say] = useToast();
   const [a, b] = TONES[tone];

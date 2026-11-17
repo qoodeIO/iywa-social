@@ -3,3 +3,6 @@ dist
 .DS_Store
 calls/.dev.vars
 calls/.wrangler
+
+# Local test accounts (wrangler dev only)
+calls/test-accounts.local.json

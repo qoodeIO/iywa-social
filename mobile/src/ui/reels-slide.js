@@ -6,12 +6,11 @@ import { GestureDetector, useCompetingGestures, useExclusiveGestures, useLongPre
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { AVATAR, personByHandle } from "../data";
+import { compact } from "../data";
 import { tap } from "./kit";
 import { t } from "../lib/i18n";
 import { Bookmark, Heart, MessageCircle, MoreHorizontal, Music, Pause, Play, Send, SoundOff, SoundOn } from "./reels-icons";
-import { clockLabel, ReelPlayer, reelClips, tally } from "./reels-kit";
-import { openTab } from "../lib/tabs";
+import { clockLabel, ReelPlayer, reelClips, reelPoster } from "./reels-kit";
 
 const SPRING_OUT = Easing.bezier(0.32, 0.72, 0, 1);
 const POP = Easing.bezier(0.2, 0.9, 0.25, 1.3);
@@ -23,11 +22,8 @@ function Caption({ text, lines }) {
   return (
     <Text numberOfLines={lines} style={[styles.caption, SHADOW]}>
       {parts.map((part, index) => {
-        if (/^@[\w.]+$/.test(part)) {
-          const person = personByHandle(part.slice(1));
-          return <Text key={index} style={styles.tag} onPress={() => (person ? router.push(`/person/${person.handle}`) : part === "@forno.neri" ? openTab("profile") : null)}>{part}</Text>;
-        }
-        if (/^#[\p{L}\p{N}_]+$/u.test(part)) return <Text key={index} style={styles.tag} onPress={() => openTab("search", { q: part })}>{part}</Text>;
+        if (/^@[\w.]+$/.test(part)) return <Text key={index} style={styles.tag} onPress={() => router.push(`/person/${part.slice(1).toLowerCase()}`)}>{part}</Text>;
+        if (/^#[\p{L}\p{N}_]+$/u.test(part)) return <Text key={index} style={styles.tag} onPress={() => router.push(`/hashtag/${encodeURIComponent(part.slice(1).toLowerCase())}`)}>{part}</Text>;
         return part;
       })}
     </Text>
@@ -55,7 +51,17 @@ function RailAct({ icon: Icon, label, on, liked, onPress, a11y }) {
   );
 }
 
-function Disc({ src, spinning, label, onPress }) {
+// Profile picture, or the initial on a grey circle when there is none.
+function Face({ src, name, style }) {
+  if (src) return <Image source={{ uri: src }} style={style} contentFit="cover" transition={150} recyclingKey={src} />;
+  return (
+    <View style={[style, styles.face]}>
+      <Text style={styles.faceText}>{String(name || "?").trim().charAt(0).toUpperCase() || "?"}</Text>
+    </View>
+  );
+}
+
+function Disc({ src, name, spinning, label, onPress }) {
   const turn = useSharedValue(0);
   useEffect(() => {
     if (spinning) {
@@ -70,7 +76,7 @@ function Disc({ src, spinning, label, onPress }) {
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} style={styles.disc}>
       <Animated.View style={[StyleSheet.absoluteFill, style]}>
-        <Image source={{ uri: src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={src} />
+        <Face src={src} name={name} style={StyleSheet.absoluteFill} />
       </Animated.View>
     </Pressable>
   );
@@ -131,7 +137,7 @@ function Flash({ kind }) {
   );
 }
 
-function ReelSlide({ reel, active, near, width, height, top, muted, rate, captions, sheetOpen, commentsOpen, liked, saved, following, mine, showCounts, act }) {
+function ReelSlide({ reel, active, near, width, height, top, muted, rate, captions, sheetOpen, commentsOpen, liked, saved, following, requested, mine, showCounts, act }) {
   const [paused, setPaused] = useState(false);
   const [boost, setBoost] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -188,7 +194,7 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
     setHearts((prev) => [...prev, { id, x, y, r: Math.random() * 30 - 15 }]);
     setTimeout(() => setHearts((prev) => prev.filter((item) => item.id !== id)), 900);
     tap("medium");
-    if (!liked) act("like", reel);
+    if (!liked) act("doubletap", reel);
   }
 
   const single = useTapGesture({ runOnJS: true, maxDistance: 10, onActivate: () => togglePause() });
@@ -220,10 +226,11 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
     onFinalize: () => setScrub(null),
   });
 
-  const caption = reel.caption || reel.text || "";
-  const music = reel.music ? `${reel.music.title} · ${reel.music.artist}` : `${reel.audio ? t(reel.audio) : t("Audio originale")} · ${reel.name}`;
-  const poster = reel.src || reel.image;
-  const handle = String(reel.handle || reel.name).replace(/^@/, "");
+  const caption = reel.text || "";
+  const handle = reel.owner || String(reel.handle || "").replace(/^@/, "");
+  const music = reel.audio || `${t("Audio originale")} · ${handle}`;
+  const poster = reelPoster(reel);
+  const likes = showCounts && (mine || !reel.hideLikes) ? compact(reel.likes || 0) : null;
 
   return (
     <View style={{ width, height, backgroundColor: "#000", overflow: "hidden" }}>
@@ -234,15 +241,14 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
             active={active}
             paused={paused || sheetOpen || Boolean(scrub)}
             rate={(boost ? 2 : 1) * rate}
-            muted={muted || reel.muted}
-            filter={reel.filter}
+            muted={muted}
             seekRef={seekRef}
             progress={progress}
-            poster={reel.videoOnly ? undefined : poster}
+            poster={poster}
           />
-        ) : (
+        ) : poster ? (
           <Image source={{ uri: poster }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={poster} />
-        )}
+        ) : null}
       </Animated.View>
 
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, scrimStyle]}>
@@ -273,23 +279,23 @@ function ReelSlide({ reel, active, near, width, height, top, muted, rate, captio
       ) : null}
 
       <Animated.View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.rail, chromeStyle]}>
-        <RailAct icon={Heart} a11y={t("Mi piace")} on={liked} liked={liked} label={showCounts ? tally(reel.likes || "0", liked) : null} onPress={() => { tap(); act("like", reel); }} />
-        <RailAct icon={MessageCircle} a11y={t("Commenti")} label={showCounts ? reel.comments || "0" : null} onPress={() => act("comments", reel)} />
+        <RailAct icon={Heart} a11y={t("Mi piace")} on={liked} liked={liked} label={likes} onPress={() => { tap(); act("like", reel); }} />
+        {!reel.commentsOff ? <RailAct icon={MessageCircle} a11y={t("Commenti")} label={showCounts ? compact(reel.comments || 0) : null} onPress={() => act("comments", reel)} /> : null}
         <RailAct icon={Send} a11y={t("Condividi")} label={showCounts ? t("Invia") : null} onPress={() => act("share", reel)} />
         <RailAct icon={Bookmark} a11y={t("Salva")} on={saved} onPress={() => { tap(); act("save", reel); }} />
         <RailAct icon={MoreHorizontal} a11y={t("Altro")} onPress={() => act("more", reel)} />
-        <Disc src={reel.avatar || AVATAR} spinning={active && !paused} label={music} onPress={() => act("audio", reel)} />
+        <Disc src={reel.avatar} name={reel.name || handle} spinning={active && !paused} label={music} onPress={() => act("audio", reel)} />
       </Animated.View>
 
       <Animated.View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.meta, chromeStyle]}>
         <View style={styles.who}>
           <Pressable onPress={() => act("person", reel)} style={styles.whoTap}>
-            <Image source={{ uri: reel.avatar || AVATAR }} style={styles.avatar} contentFit="cover" transition={150} recyclingKey={reel.avatar || AVATAR} />
+            <Face src={reel.avatar} name={reel.name || handle} style={styles.avatar} />
             <Text numberOfLines={1} style={[styles.handle, SHADOW]}>{handle}</Text>
           </Pressable>
           {!mine ? (
-            <Pressable accessibilityRole="button" accessibilityState={{ selected: following }} onPress={() => { tap(); act("follow", reel); }} style={[styles.follow, following ? styles.followOn : null]}>
-              <Text style={styles.followText}>{following ? t("Segui già") : t("Segui")}</Text>
+            <Pressable accessibilityRole="button" accessibilityState={{ selected: following || requested }} onPress={() => { tap(); act("follow", reel); }} style={[styles.follow, following || requested ? styles.followOn : null]}>
+              <Text style={styles.followText}>{following ? t("Segui già") : requested ? t("Richiesta inviata") : t("Segui")}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -354,6 +360,8 @@ const styles = StyleSheet.create({
   who: { flexDirection: "row", alignItems: "center", gap: 9, maxWidth: "100%" },
   whoTap: { flexDirection: "row", alignItems: "center", gap: 9, flexShrink: 1 },
   avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#222" },
+  face: { backgroundColor: "#3a3a3c", alignItems: "center", justifyContent: "center" },
+  faceText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   handle: { color: "#fff", fontSize: 14, fontWeight: "600", flexShrink: 1 },
   follow: { height: 28, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.75)", alignItems: "center", justifyContent: "center" },
   followOn: { backgroundColor: "rgba(255,255,255,0.2)", borderColor: "transparent" },

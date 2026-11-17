@@ -1,4 +1,4 @@
-// Files for chat media: the demo voice tone, data URLs from the hub written to disk
+// Files for chat media: data URLs from the hub written to disk
 // (the native audio player can't play data: URLs), and local files read back as
 // data URLs for sending through the hub.
 
@@ -46,15 +46,6 @@ export function wavBytes(seconds, rate, sample) {
   return bytes;
 }
 
-function voiceTone(seconds = 2.2) {
-  return wavBytes(seconds, 8000, (t) => {
-    const env = Math.min(1, t * 14) * Math.min(1, (seconds - t) * 8);
-    const wobble = 0.55 + 0.45 * Math.sin(t * 9);
-    const value = Math.sin(2 * Math.PI * 196 * t) * 0.34 + Math.sin(2 * Math.PI * 294 * t) * 0.18;
-    return value * env * wobble * 0.8;
-  });
-}
-
 const written = new Map();
 
 async function writeOnce(name, makeBase64) {
@@ -71,10 +62,6 @@ async function writeOnce(name, makeBase64) {
   return job;
 }
 
-export function demoVoiceUri() {
-  return writeOnce("space-voice-demo.wav", () => bytesToBase64(voiceTone()));
-}
-
 export function toneUri(name, bytes) {
   return writeOnce(`space-sound-${name}.wav`, () => bytesToBase64(bytes));
 }
@@ -89,7 +76,7 @@ function hashOf(text) {
 // Something the audio player can open: a file/http URI as is, a data: URL written to the cache.
 export async function playableUri(source) {
   const value = String(source || "");
-  if (!value) return demoVoiceUri();
+  if (!value) return null;
   if (!value.startsWith("data:")) return value;
   const match = value.match(/^data:([^;,]+)(?:;[^,]*)?,(.*)$/);
   if (!match) return null;

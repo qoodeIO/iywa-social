@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useTabReselect } from "../lib/tabs";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,24 +9,17 @@ import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { INSET } from "../theme";
 import { useStore } from "../lib/store";
-import { PEOPLE } from "../data";
 import { useLive } from "../live/LiveStore";
 import { useInboxRules, useThreads } from "../live/threads";
-import { callStamp, demoTime, isGroupChat, listTime, previewOf, tickFor } from "../live/format";
+import { callStamp, isGroupChat, listTime, previewOf, tickFor } from "../live/format";
 import { placeCall } from "../live/actions";
 import { takeFolder } from "../live/chatBus";
 import { EmptyState, SheetRow, Spinner, ThreadFace, Toast, useChatTheme, useFlash } from "../ui/chat";
-import { Archive, Bell, BellOff, Check, CheckCheck, ClearIcon, Clock, Close, Folder, ImageIcon, MarkRead, MessageCircle, Mic, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Pin, Search, Sliders, SquarePen, Trash, Users, Verified, Video } from "../ui/chatIcons";
+import { Archive, Bell, BellOff, Check, CheckCheck, ClearIcon, Clock, Close, Folder, ImageIcon, MarkRead, MessageCircle, Mic, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Pin, Search, Sliders, SquarePen, Trash, Users, Video } from "../ui/chatIcons";
 import { Sheet, T, tap } from "../ui/kit";
 import { t, tk } from "../lib/i18n";
 
 const PREVIEW_ICONS = { image: ImageIcon, mic: Mic, video: Video, phone: Phone };
-const RECENT_CALLS = [
-  { id: "seed-adele", threadId: "t3", call: "video", from: "them", duration: 0, time: tk("Ieri") },
-  { id: "seed-leo", threadId: "t1", call: "voice", from: "me", duration: 184, time: tk("Lun") },
-  { id: "seed-marta", threadId: "t2", call: "voice", from: "them", duration: 46, time: tk("Dom") },
-];
-const VERIFIED = new Set(PEOPLE.filter((person) => person.verified).map((person) => person.name));
 
 export default function Messages() {
   const theme = useChatTheme();
@@ -61,9 +54,8 @@ export default function Messages() {
   const visible = useMemo(() => threads.filter((item) => {
     const kinds = (item.messages || []).map((message) => message.kind || "").join(" ");
     const blob = `${item.name} ${item.kind} ${item.preview} ${(item.messages || []).map((message) => message.text || "").join(" ")} ${kinds} ${kinds.includes("image") ? "photo foto" : ""} ${kinds.includes("audio") ? "voice vocale audio" : ""} ${kinds.includes("call") ? "call chiamata video" : ""} ${(item.members || []).map((member) => member.name).join(" ")}`.toLowerCase();
-    if (!item.live && !item.members && (store.prefs.blocked || []).includes(item.name)) return false;
-    return !needle || blob.includes(needle);
-  }), [threads, needle, store.prefs.blocked]);
+    return !needle || blob.includes(needle) || Boolean(item.other?.handle?.includes(needle));
+  }), [threads, needle]);
 
   const alive = visible.filter((item) => !hiddenOut(item));
   const archived = alive.filter(isArchived);
@@ -74,29 +66,30 @@ export default function Messages() {
     .map((item, order) => ({ item, order, pinned: Boolean(flags[item.id]?.pinned) }))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.order - b.order);
   const sheetItem = sheet ? threads.find((item) => item.id === sheet) : null;
-  const connecting = live && (live.status === "connecting" || live.status === "reconnecting");
+  // Until the hub has answered once there is no inbox to show, only "Connessione…".
+  const connecting = !live || live.status !== "open";
+  const waiting = connecting && !live?.me;
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => { if (live?.status === "open") setRefreshing(false); }, [live?.status, live?.convs]);
+  function refresh() {
+    if (live?.sync()) setRefreshing(true);
+  }
 
-  const callRows = useMemo(() => [
-    ...threads.flatMap((item) => (item.messages || []).flatMap((message, index) => (
+  const callRows = useMemo(() => threads
+    .flatMap((item) => (item.messages || []).flatMap((message, index) => (
       message.kind === "call"
-        ? [{ key: `${item.id}-${message.id || index}-${message.time}`, thread: item, call: message.call === "video" ? "video" : "voice", from: message.from, duration: message.duration || 0, time: item.live ? listTime(message.created) : message.time, at: message.created || 0 }]
+        ? [{ key: `${item.id}-${message.id || index}`, thread: item, call: message.call === "video" ? "video" : "voice", from: message.from, duration: message.duration || 0, time: listTime(message.created), at: message.created || 0 }]
         : []
-    ))).sort((a, b) => b.at - a.at),
-    ...RECENT_CALLS.flatMap((item) => {
-      const found = threads.find((entry) => entry.id === item.threadId);
-      return found ? [{ ...item, key: item.id, thread: found }] : [];
-    }),
-  ].filter((item) => !needle || item.thread.name.toLowerCase().includes(needle)), [threads, needle]);
+    )))
+    .sort((a, b) => b.at - a.at)
+    .filter((item) => !needle || item.thread.name.toLowerCase().includes(needle)), [threads, needle]);
 
   function openThread(id) {
-    const item = threads.find((entry) => entry.id === id);
-    if (item && !item.live && item.unread) store.readChat(id);
     router.push(`/chat/${id}`);
   }
 
   function hideThread(item) {
-    if (item.live) store.setDmFlag(item.id, "hiddenAt", Date.now());
-    else store.deleteChat(item.id);
+    store.setDmFlag(item.id, "hiddenAt", Date.now());
     setSheet(null);
   }
 
@@ -106,12 +99,7 @@ export default function Messages() {
   }
 
   function readIds(ids) {
-    for (const id of ids) {
-      const item = threads.find((entry) => entry.id === id);
-      if (!item) continue;
-      if (item.live) live.markRead(id);
-      else if (item.unread) store.readChat(id);
-    }
+    for (const id of ids) live?.markRead(id);
   }
 
   const toggleSelect = useCallback((id) => {
@@ -144,11 +132,8 @@ export default function Messages() {
   }
 
   const rowTime = (item) => {
-    if (item.live) {
-      const label = listTime(item.updatedAt);
-      return label ? label.charAt(0).toUpperCase() + label.slice(1).replace(".", "") : "";
-    }
-    return demoTime(item.time);
+    const label = listTime(item.updatedAt);
+    return label ? label.charAt(0).toUpperCase() + label.slice(1).replace(".", "") : "";
   };
 
   const data = [{ type: "search", key: "search" }, { type: "tabs", key: "tabs" }];
@@ -156,10 +141,10 @@ export default function Messages() {
     if (activeFolder === "all" && !needle && !selecting) data.push({ type: "requests", key: "requests" });
     if (activeFolder === "all" && archived.length && !needle && !selecting) data.push({ type: "archive", key: "archive" });
     for (const entry of listed) data.push({ type: "row", key: entry.item.id, ...entry });
-    if (!listed.length) data.push({ type: "empty", key: "empty" });
+    if (!listed.length) data.push({ type: waiting ? "connecting" : "empty", key: "empty" });
   } else {
     callRows.forEach((entry) => data.push({ type: "call", key: entry.key, entry }));
-    if (!callRows.length) data.push({ type: "empty-calls", key: "empty-calls" });
+    if (!callRows.length) data.push({ type: waiting ? "connecting" : "empty-calls", key: "empty-calls" });
   }
 
   const renderItem = ({ item: cell }) => {
@@ -208,7 +193,7 @@ export default function Messages() {
               time={rowTime(cell.item)}
               count={unreadOf(cell.item)}
               muted={isMuted(cell.item)}
-              room={cell.item.live ? live?.call.rooms[cell.item.id] : null}
+              room={live?.call.rooms[cell.item.id] || null}
               tick={rowTick(cell.item, receipts)}
               selecting={Boolean(selecting)}
               selected={Boolean(selecting?.has(cell.item.id))}
@@ -222,13 +207,28 @@ export default function Messages() {
         );
       case "call":
         return <CallRow entry={cell.entry} onCall={() => placeCall(live, cell.entry.thread, cell.entry.call)} />;
+      case "connecting":
+        return (
+          <View style={styles.connecting}>
+            <Spinner color={theme.text2} size={22} />
+            <T size={15} weight="600" color={theme.text2}>{t("Connessione…")}</T>
+            {live?.status === "offline" ? <T size={13.5} color={theme.text3} style={{ textAlign: "center" }}>{t("Le chat compaiono appena il telefono è di nuovo online.")}</T> : null}
+          </View>
+        );
       case "empty":
         return (
-          <EmptyState
-            icon={needle ? Search : MessageCircle}
-            title={needle ? t("Nessun risultato") : activeFolder !== "all" ? t("Questa cartella è vuota") : t("Nessun messaggio")}
-            text={needle ? t("Nessuna chat con questo nome.") : activeFolder !== "all" ? t("Qui compaiono le chat che rispettano le regole della cartella.") : t("Inizia una chat con chi segui.")}
-          />
+          <View>
+            <EmptyState
+              icon={needle ? Search : MessageCircle}
+              title={needle ? t("Nessun risultato") : activeFolder !== "all" ? t("Questa cartella è vuota") : t("Nessun messaggio")}
+              text={needle ? t("Nessuna chat con questo nome.") : activeFolder !== "all" ? t("Qui compaiono le chat che rispettano le regole della cartella.") : t("Inizia una chat con chi segui.")}
+            />
+            {!needle && activeFolder === "all" ? (
+              <Pressable onPress={() => { tap(); router.push("/chat/new"); }} style={({ pressed }) => [styles.cta, { backgroundColor: theme.blue, opacity: pressed ? 0.85 : 1 }]}>
+                <T size={14.5} weight="600" color="#fff">{t("Nuovo messaggio")}</T>
+              </Pressable>
+            ) : null}
+          </View>
         );
       case "empty-calls":
         return <EmptyState icon={Phone} title={t("Ancora nessuna chiamata")} />;
@@ -269,6 +269,7 @@ export default function Messages() {
         keyboardShouldPersistTaps="handled"
         initialNumToRender={14}
         windowSize={11}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.text2} />}
         contentContainerStyle={{ paddingBottom: selecting ? 80 : 18 }}
       />
       {selecting ? (
@@ -298,8 +299,6 @@ export default function Messages() {
             <SheetRow icon={Pin} label={flags[sheetItem.id]?.pinned ? t("Rimuovi dai fissati") : t("Fissa")} onPress={() => { store.setDmFlag(sheetItem.id, "pinned", !flags[sheetItem.id]?.pinned); setSheet(null); }} />
             {unreadOf(sheetItem) ? (
               <SheetRow icon={MarkRead} label={t("Segna come letta")} onPress={() => { readIds([sheetItem.id]); setSheet(null); }} />
-            ) : !sheetItem.live ? (
-              <SheetRow icon={MessageCircle} label={t("Segna come da leggere")} onPress={() => { store.markChatUnread(sheetItem.id); setSheet(null); }} />
             ) : null}
             <SheetRow icon={flags[sheetItem.id]?.muted ? Bell : BellOff} label={flags[sheetItem.id]?.muted ? t("Riattiva notifiche") : t("Silenzia")} onPress={() => { store.setDmFlag(sheetItem.id, "muted", !flags[sheetItem.id]?.muted); setSheet(null); }} />
             <SheetRow icon={Archive} label={isArchived(sheetItem) ? t("Ripristina") : t("Archivia")} onPress={() => { archiveIds([sheetItem.id], !isArchived(sheetItem)); setSheet(null); }} />
@@ -462,7 +461,6 @@ export const InboxRow = memo(function InboxRow({ item, pinned, time, count, mute
         <View style={[styles.body, { borderBottomColor: theme.line }]}>
           <View style={styles.l1}>
             <T size={15.5} weight={count ? "700" : "600"} lines={1} style={{ flexShrink: 1, letterSpacing: -0.15 }}>{item.name}</T>
-            {VERIFIED.has(item.name) ? <Verified size={16} weight="fill" color={theme.blue} /> : null}
             {muted ? <BellOff size={14} weight="fill" color={theme.text3} /> : null}
             <View style={{ flex: 1 }} />
             {tick === "pending" ? <Clock size={15} weight="bold" color={theme.text3} />
@@ -501,7 +499,7 @@ function CallRow({ entry, onCall }) {
         <View style={styles.l1}>
           <T size={15.5} weight="600" lines={1} color={missed ? theme.red : theme.text} style={{ flexShrink: 1 }}>{entry.thread.name}</T>
           <View style={{ flex: 1 }} />
-          <T size={13} color={theme.text2}>{t(entry.time)}</T>
+          <T size={13} color={theme.text2}>{entry.time}</T>
         </View>
         <View style={styles.l2}>
           <WayIcon size={14} weight="bold" color={missed ? theme.red : theme.text3} />
@@ -516,6 +514,8 @@ function CallRow({ entry, onCall }) {
 }
 
 const styles = StyleSheet.create({
+  connecting: { alignItems: "center", gap: 10, paddingVertical: 56, paddingHorizontal: 32 },
+  cta: { alignSelf: "center", height: 40, paddingHorizontal: 20, borderRadius: 20, alignItems: "center", justifyContent: "center", marginTop: -24 },
   requests: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   head: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14 },
   pill: { height: 36, paddingHorizontal: 15, borderRadius: 18, alignItems: "center", justifyContent: "center" },

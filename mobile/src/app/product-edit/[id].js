@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,22 +7,68 @@ import * as ImagePicker from "expo-image-picker";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
 import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
+import { useMe } from "../../lib/session";
+import { deleteProduct, saveProduct } from "../../lib/social";
+import { useSellerShop } from "../../lib/liveShops";
+import { errorText } from "../../lib/api";
 import { t } from "../../lib/i18n";
-import { DEMO_GALLERY } from "../../lib/profile-data";
-import { ImageIcon, Plus, X } from "../../ui/icons-profile";
-import { T, tap } from "../../ui/kit";
+import { Camera, ImageIcon, Plus, X } from "../../ui/icons-profile";
+import { Store } from "../../ui/icons";
+import { Btn, Empty, Header, T, Toggle, tap } from "../../ui/kit";
 import { ActionSheet, settingsColors } from "../../ui/profile-kit";
-import { keepAll } from "../../lib/media-store";
 import { showToast } from "../../ui/feedEcho";
 
-// Add or edit a product in your shop (web ProductEditor).
-export default function ProductEditor() {
+// Add or edit a product in my shop. Each save goes straight to the server (PUT /products/:id);
+// photos picked on the phone are uploaded by saveProduct.
+export default function ProductEditorScreen() {
+  const theme = useTheme();
+  const store = useStore();
+  const me = useMe();
+  const { id } = useLocalSearchParams();
+  const fresh = !id || id === "new";
+  const shop = useSellerShop(fresh ? null : me?.handle);
+  const selling = store.accountType === "business" && store.business?.shop !== false;
+
+  if (!me || !selling) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.bg }}>
+        <Header title={t("Il tuo shop")} />
+        <Empty icon={Store} title={t("Apri la tua bottega")} text={store.accountType === "business" ? t("Attiva «Mostra lo shop sul profilo» nelle impostazioni dell'account Azienda per pubblicare prodotti.") : t("Per vendere su iywa passa a un account Azienda e attiva lo shop.")}>
+          <Btn title={t("Apri le impostazioni")} kind="primary" onPress={() => router.replace("/settings/account-type")} style={{ marginTop: 10 }} />
+        </Empty>
+      </View>
+    );
+  }
+  if (fresh) return <ProductEditor product={null} />;
+  if (!shop.data) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.bg }}>
+        <Header title={t("Modifica prodotto")} />
+        {shop.loading ? <ActivityIndicator color={theme.text2} style={{ marginTop: 60 }} /> : (
+          <Empty icon={Store} title={t("Shop non raggiungibile")} text={t("Controlla la connessione e riprova.")}>
+            <Btn title={t("Riprova")} onPress={shop.refresh} style={{ marginTop: 8 }} />
+          </Empty>
+        )}
+      </View>
+    );
+  }
+  const product = shop.data.products.find((item) => item.id === String(id));
+  if (!product) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.bg }}>
+        <Header title={t("Modifica prodotto")} />
+        <Empty icon={Store} title={t("Prodotto non trovato")} text={t("Forse l'hai già eliminato.")} />
+      </View>
+    );
+  }
+  return <ProductEditor key={product.id} product={product} />;
+}
+
+function ProductEditor({ product }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const store = useStore();
+  const me = useMe();
   const st = settingsColors(theme);
-  const { id } = useLocalSearchParams();
-  const product = id && id !== "new" ? store.myProducts.find((item) => item.id === id) : null;
   const fresh = !product;
   const [form, setForm] = useState(() => ({
     name: product?.name || "",
@@ -36,50 +82,74 @@ export default function ProductEditor() {
     stock: product?.stock != null ? String(product.stock) : "1",
     weeks: String(product?.madeToOrder || 3),
     variants: (product?.variants || []).join(", "),
+    service: Boolean(product?.service),
   }));
   const [tray, setTray] = useState(fresh);
   const [confirm, setConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const set = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
   const price = Number(String(form.price).replace(",", "."));
-  const valid = Boolean(form.name.trim() && price > 0 && form.images.length);
+  const valid = Boolean(form.name.trim() && price >= 0.5 && price <= 50000 && form.images.length);
 
-  async function fromDevice() {
+  async function pick(camera) {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsMultipleSelection: true, selectionLimit: 6, quality: 0.8 });
+      const options = { preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ["images"], quality: 0.8 };
+      if (camera) {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) return;
+      }
+      const result = camera
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync({ ...options, allowsMultipleSelection: true, selectionLimit: 6 - form.images.length });
       if (!result.canceled && result.assets?.length) {
-        const kept = await keepAll(result.assets.map((asset) => asset.uri));
-        setForm((prev) => ({ ...prev, images: [...prev.images, ...kept].slice(0, 6) }));
+        setForm((prev) => ({ ...prev, images: [...prev.images, ...result.assets.map((asset) => asset.uri)].slice(0, 6) }));
+        setTray(false);
       }
     } catch {
-      // picker unavailable
+      showToast({ text: t("Foto non disponibili") });
     }
   }
 
-  function save() {
-    if (!valid) return;
+  async function save() {
+    if (!valid || saving) return;
     tap("medium");
-    store.saveProduct({
-      ...(product || {}),
-      id: product?.id || `p-${Date.now().toString(36)}`,
-      name: form.name.trim(),
-      price,
-      category: form.category.trim() || t("Altro"),
-      description: form.description.trim(),
-      materials: form.materials.trim(),
-      size: form.size.trim(),
-      images: form.images,
-      stock: form.mode === "order" ? 0 : Math.max(0, Number(form.stock) || 0),
-      madeToOrder: form.mode === "order" ? Math.max(1, Number(form.weeks) || 1) : null,
-      variants: form.variants.split(",").map((item) => item.trim()).filter(Boolean),
-    });
-    router.back();
+    setSaving(true);
+    try {
+      await saveProduct({
+        ...(product || {}),
+        id: product?.id || `p-${Date.now().toString(36)}`,
+        name: form.name.trim(),
+        price,
+        category: form.category.trim(),
+        description: form.description.trim(),
+        materials: form.materials.trim(),
+        size: form.size.trim(),
+        images: form.images,
+        service: form.service,
+        stock: form.mode === "order" ? 0 : Math.max(0, Math.round(Number(form.stock) || 0)),
+        madeToOrder: form.mode === "order" ? Math.max(1, Math.round(Number(form.weeks) || 1)) : null,
+        variants: form.variants.split(",").map((item) => item.trim()).filter(Boolean),
+      });
+      showToast({ text: fresh ? t("Prodotto pubblicato") : t("Modifiche salvate") });
+      router.back();
+    } catch (error) {
+      setSaving(false);
+      showToast({ text: error.code === "price" ? t("Il prezzo deve essere tra 0,50 € e 50.000 €") : errorText(error, t) });
+    }
   }
 
-  function remove() {
+  async function remove() {
     setConfirm(false);
-    store.deleteProduct(product.id);
-    showToast({ text: t("Prodotto eliminato") });
-    router.back();
+    setSaving(true);
+    try {
+      await deleteProduct(product.id);
+      showToast({ text: t("Prodotto eliminato") });
+      if (router.canGoBack()) router.back();
+      if (me?.handle) router.replace(`/store/${encodeURIComponent(me.handle)}`);
+    } catch (error) {
+      setSaving(false);
+      showToast({ text: errorText(error, t) });
+    }
   }
 
   const row = (label, key, options = {}) => (
@@ -107,8 +177,8 @@ export default function ProductEditor() {
       <View style={[styles.headRow, { marginTop: insets.top }]}>
         <Pressable hitSlop={8} onPress={() => router.back()} style={{ width: 80 }}><T size={15.5}>{t("Annulla")}</T></Pressable>
         <T size={17} weight="700" style={{ flex: 1, textAlign: "center" }}>{fresh ? t("Nuovo prodotto") : t("Modifica prodotto")}</T>
-        <Pressable hitSlop={8} disabled={!valid} onPress={save} style={{ width: 80, alignItems: "flex-end" }}>
-          <T size={15.5} weight="700" color={theme.blue} style={{ opacity: valid ? 1 : 0.35 }}>{t("Salva")}</T>
+        <Pressable hitSlop={8} disabled={!valid || saving} onPress={save} style={{ width: 80, alignItems: "flex-end" }}>
+          {saving ? <ActivityIndicator color={theme.text2} /> : <T size={15.5} weight="700" color={theme.blue} style={{ opacity: valid ? 1 : 0.35 }}>{t("Salva")}</T>}
         </Pressable>
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingBottom: insets.bottom + 34 }}>
@@ -133,21 +203,19 @@ export default function ProductEditor() {
         {tray && form.images.length < 6 ? (
           <Animated.View entering={FadeIn.duration(200)}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: INSET, paddingTop: 10 }}>
-              <Pressable onPress={fromDevice} style={[styles.trayItem, { backgroundColor: theme.fill, alignItems: "center", justifyContent: "center", gap: 4 }]}>
+              <Pressable onPress={() => pick(false)} style={[styles.trayItem, { backgroundColor: theme.fill, alignItems: "center", justifyContent: "center", gap: 4 }]}>
                 <ImageIcon size={22} color={theme.text} /><T size={11.5} weight="600">{t("Libreria")}</T>
               </Pressable>
-              {DEMO_GALLERY.slice(0, 10).map((src) => (
-                <Pressable key={src} onPress={() => { tap(); setForm((prev) => ({ ...prev, images: [...prev.images, src].slice(0, 6) })); }} style={({ pressed }) => [styles.trayItem, { backgroundColor: theme.fill, opacity: pressed ? 0.8 : 1 }]}>
-                  <Image source={{ uri: src }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                </Pressable>
-              ))}
+              <Pressable onPress={() => pick(true)} style={[styles.trayItem, { backgroundColor: theme.fill, alignItems: "center", justifyContent: "center", gap: 4 }]}>
+                <Camera size={22} color={theme.text} /><T size={11.5} weight="600">{t("Fotocamera")}</T>
+              </Pressable>
             </ScrollView>
           </Animated.View>
         ) : null}
 
         <Cap>{t("Prodotto")}</Cap>
         <View style={[styles.card, { backgroundColor: st.card }]}>
-          {row(t("Nome"), "name", { first: true, max: 60, placeholder: t("es. Coppa rossa") })}
+          {row(t("Nome"), "name", { first: true, max: 120, placeholder: t("es. Coppa rossa") })}
           {row(t("Prezzo"), "price", { prefix: "€", placeholder: "0", keyboard: "decimal-pad" })}
           {row(t("Categoria"), "category", { max: 30, placeholder: t("es. Tazze") })}
         </View>
@@ -166,6 +234,14 @@ export default function ProductEditor() {
           </View>
           {form.mode === "stock" ? row(t("Pezzi"), "stock", { keyboard: "number-pad" }) : row(t("Settimane"), "weeks", { keyboard: "number-pad" })}
           {row(t("Varianti"), "variants", { placeholder: t("Rosso, Blu, Avorio") })}
+          <Pressable onPress={() => { tap(); setForm((prev) => ({ ...prev, service: !prev.service })); }} style={styles.row}>
+            <View style={[styles.sep, { backgroundColor: theme.line }]} />
+            <View style={{ flex: 1, paddingVertical: 10 }}>
+              <T size={15.5}>{t("Corso o servizio")}</T>
+              <T size={12.5} color={theme.text2}>{t("Niente spedizione: si prenota in chat.")}</T>
+            </View>
+            <Toggle on={form.service} />
+          </Pressable>
         </View>
 
         <Cap>{t("Dettagli")}</Cap>
@@ -190,7 +266,9 @@ export default function ProductEditor() {
             <T size={15.5} weight="500" color={theme.red}>{t("Elimina prodotto")}</T>
           </Pressable>
         ) : null}
-        <T size={12.5} color={theme.text2} style={styles.note}>{t("Chi compra te lo chiede nel Direct: prezzo, pagamento e spedizione li concordate in chat.")}</T>
+        <Pressable onPress={() => router.push("/payments")}>
+          <T size={12.5} color={theme.text2} style={styles.note}>{t("Con i pagamenti Stripe attivi chi compra paga subito nell'app; altrimenti ti scrive nel Direct.")} <T size={12.5} weight="600" color={theme.blue}>{t("Pagamenti")}</T></T>
+        </Pressable>
       </ScrollView>
       <ActionSheet
         open={confirm}

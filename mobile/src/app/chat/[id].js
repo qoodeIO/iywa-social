@@ -8,26 +8,23 @@ import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, ZoomIn, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
-import seed from "../../data/seed.json";
-import { CONTACTS, PEOPLE, PORTRAIT, POSTS, WORKS, compact } from "../../data";
 import { INSET } from "../../theme";
 import { useStore } from "../../lib/store";
 import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
-import { useThreads, personOf } from "../../live/threads";
+import { useThreads } from "../../live/threads";
 import { DM_REACTIONS, clockOf, dayOf, nameIn, seenText, textHidden, tickFor } from "../../live/format";
 import { placeCall, sendTo } from "../../live/actions";
 import { useVoiceRecorder } from "../../live/recorder";
 import { takeFind } from "../../live/chatBus";
-import { ThreadFace, Face, GroupAvatar, TypingDots, Wallpaper, SearchField, wallColors, useChatTheme } from "../../ui/chat";
+import { ThreadFace, Face, GroupAvatar, Spinner, TypingDots, Wallpaper, SearchField, wallColors, useChatTheme } from "../../ui/chat";
 import { DmBubble } from "../../ui/chatBubble";
 import { ArrowDown, BellOff, Camera, Check, ChevronDown, ChevronLeft, ChevronUp, Close, Copy, Eye, Forward, ImageIcon, Mic, PenLine, Phone, Pin, Reply, RotateCcw, Smile, Video } from "../../ui/chatIcons";
 import { Sheet, T, tap } from "../../ui/kit";
 import { keepMedia } from "../../lib/media-store";
 import { openTab } from "../../lib/tabs";
 
-const STORY_EMOJI = seed.STORY_EMOJI || [];
-const DEMO_GALLERY = [...new Set([...WORKS.map((work) => work.src), PORTRAIT, ...(seed.PEOPLE || []).map((person) => person.src), ...POSTS.map((post) => post.image).filter(Boolean)])];
+const EMOJI = ["😀", "😂", "🥰", "😍", "😘", "😊", "😉", "😎", "🤔", "😴", "🔥", "❤️", "✨", "⭐", "💯", "👏", "🙌", "👍", "👎", "💪", "🎉", "🥂", "☕️", "📸"];
 
 function mentionOf(draft) {
   try {
@@ -49,10 +46,10 @@ export default function Chat() {
   const receipts = prefs.readReceipts !== false;
   const flags = store.dmFlags || {};
   const me = live?.me?.handle;
-  const myKey = thread?.live ? me : "me";
+  const myKey = me;
 
   const [draft, setDraft] = useState("");
-  const [tray, setTray] = useState(false);
+  const [sending, setSending] = useState(0);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -88,22 +85,20 @@ export default function Chat() {
     return () => { show.remove(); hide.remove(); clearTimeout(hintTimer.current); };
   }, []);
 
-  // Reads go out only while a live chat is really on screen; demo chats are read on open.
+  // Reads go out only while the chat is really on screen.
   useFocusEffect(useCallback(() => {
-    if (thread?.live) live.setViewing(thread.id);
+    if (thread) live.setViewing(thread.id);
     if (thread && takeFind(thread.id)) setFinding({ q: "", at: 0 });
-    return () => { if (thread?.live) live.setViewing(null); };
+    return () => { if (thread) live.setViewing(null); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [thread?.id, thread?.live]));
+  }, [thread?.id]));
 
   useEffect(() => {
-    if (!thread) return;
-    if (thread.live && thread.unread) live.markRead(thread.id);
-    if (!thread.live && thread.unread) store.readChat(thread.id);
+    if (thread?.unread) live.markRead(thread.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread?.id, thread?.unread]);
 
-  // A live chat that disappears (removed from the group, left) closes itself.
+  // A chat that disappears (removed from the group, left) closes itself.
   const existed = useRef(false);
   useEffect(() => {
     if (thread) existed.current = true;
@@ -144,15 +139,14 @@ export default function Chat() {
   const rows = useMemo(() => {
     if (!thread) return [];
     const out = [];
-    if (!thread.live && entries.length) out.push({ type: "pill", key: "today", text: t("Oggi") });
-    if (thread.live && !entries.length) out.push({ type: "pill", key: "hello", text: t("Saluta 👋 I messaggi arrivano in tempo reale.") });
+    if (!entries.length) out.push({ type: "pill", key: "hello", text: t("Saluta 👋 I messaggi arrivano in tempo reale.") });
     const far = (a, b) => Boolean(a?.created && b?.created && b.created - a.created > 30 * 60 * 1000);
     const solo = (item) => item && item.from !== "system" && item.kind !== "call";
     entries.forEach((entry, at) => {
       const { message } = entry;
       const prev = entries[at - 1]?.message;
       const next = entries[at + 1]?.message;
-      const stampHere = thread.live && message.created && (!prev?.created || far(prev, message));
+      const stampHere = message.created && (!prev?.created || far(prev, message));
       if (stampHere) out.push({ type: "pill", key: `stamp-${entry.key}`, text: `${dayOf(message.created)} ${clockOf(message.created)}` });
       if (message.from === "system") {
         out.push({ type: "pill", key: entry.key, text: message.text });
@@ -160,7 +154,7 @@ export default function Chat() {
       }
       const sameAsPrev = solo(prev) && solo(message) && prev.from === message.from && prev.sender === message.sender && !stampHere && !message.reply;
       const sameAsNext = solo(next) && solo(message) && next.from === message.from && next.sender === message.sender && !far(message, next) && !next.reply;
-      const face = message.from === "them" ? (thread.live ? (thread.people.find((p) => p.handle === message.sender) || { name: message.senderName }) : { src: thread.src, name: thread.name }) : null;
+      const face = message.from === "them" ? (thread.people.find((p) => p.handle === message.sender) || { name: message.senderName }) : null;
       out.push({
         type: "line",
         key: entry.key,
@@ -194,35 +188,42 @@ export default function Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.key]);
 
-  if (!thread) return <View style={{ flex: 1, backgroundColor: theme.bg }} />;
+  if (!thread) {
+    // Opened from a link or a notification before the hub has sent the inbox.
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: "center", justifyContent: "center", gap: 10 }}>
+        {live?.status !== "open" || !live?.me ? <><Spinner color={theme.text2} size={22} /><T size={15} weight="600" color={theme.text2}>{t("Connessione…")}</T></> : <T size={15} color={theme.text2}>{t("Chat non trovata.")}</T>}
+        <Pressable onPress={() => { tap(); router.canGoBack() ? router.back() : openTab("messages"); }} hitSlop={8}><T size={15} weight="600" color={theme.blue}>{t("Torna alle chat")}</T></Pressable>
+      </View>
+    );
+  }
 
   const isGroup = Boolean(thread.group || thread.members);
-  const person = personOf(thread, PEOPLE, CONTACTS);
-  const room = thread.live ? live?.call.rooms[thread.id] : null;
+  const otherHandle = !isGroup ? thread.other?.handle : null;
+  const openHeader = () => {
+    tap();
+    if (otherHandle) router.push(`/person/${otherHandle}`);
+    else router.push(`/chat/info/${thread.id}`);
+  };
+  const room = live?.call.rooms[thread.id] || null;
   const inThisCall = live?.call.convId === thread.id && live?.call.phase !== "idle";
   const muted = Boolean(flags[thread.id]?.muted);
   const subtitle = thread.typing?.length
     ? (thread.group ? t("{names} sta scrivendo…", { names: thread.typing.join(", ") }) : t("sta scrivendo…"))
-    : thread.live
-      ? (thread.group
-        ? t("{n} membri · {online} online", { n: thread.conv.members.length, online: thread.people.filter((p) => p.online).length })
-        : (prefs.activity === false ? "" : thread.online ? t("Attivo/a ora") : seenText(thread.other)))
-      : thread.members
-        ? thread.members.map((member) => member.name.split(" ")[0]).join(", ")
-        : (prefs.activity === false ? "" : t("Attivo/a 12 min fa"));
+    : thread.group
+      ? t("{n} membri · {online} online", { n: thread.conv.members.length, online: thread.people.filter((p) => p.online).length })
+      : (prefs.activity === false ? "" : thread.online ? t("Attivo/a ora") : seenText(thread.other));
   const subtitleBlue = Boolean(thread.typing?.length) || (thread.online && prefs.activity !== false);
-  const otherUnread = threads.filter((item) => item.id !== thread.id && !flags[item.id]?.muted).reduce((sum, item) => sum + (item.live ? item.unread || 0 : item.unread ? 1 : 0), 0);
-  const showIntro = !(thread.live && thread.conv.hasMore);
+  const otherUnread = threads.filter((item) => item.id !== thread.id && !flags[item.id]?.muted).reduce((sum, item) => sum + (item.unread || 0), 0);
+  const showIntro = !thread.conv.hasMore;
   const focusEntry = focus ? entries.find((entry) => entry.key === focus) : null;
-  const pinnedEntry = thread.live
-    ? entries.find((entry) => entry.message.id && entry.message.id === thread.pinned?.id)
-    : entries.find((entry) => entry.index === flags[thread.id]?.pin);
-  const pinnedRaw = pinnedEntry?.message || (thread.live ? thread.pinned : null);
+  const pinnedEntry = entries.find((entry) => entry.message.id && entry.message.id === thread.pinned?.id);
+  const pinnedRaw = pinnedEntry?.message || thread.pinned || null;
   const pinnedText = pinnedRaw ? (pinnedRaw.text || (pinnedRaw.kind === "image" ? `📷 ${t("Foto")}` : pinnedRaw.kind === "audio" ? `🎤 ${t("Messaggio vocale")}` : "…")) : "";
-  const isPinned = (entry) => (thread.live ? Boolean(thread.pinned?.id) && thread.pinned.id === entry.message.id : flags[thread.id]?.pin === entry.index);
+  const isPinned = (entry) => Boolean(thread.pinned?.id) && thread.pinned.id === entry.message.id;
   const mention = isGroup ? mentionOf(draft) : null;
   const mentionList = mention
-    ? (thread.live ? thread.people.map((p) => ({ key: p.handle, label: p.handle, name: p.name, src: p.src })) : (thread.members || []).map((m) => ({ key: m.name, label: m.name.split(" ")[0], name: m.name, src: m.src })))
+    ? thread.people.map((p) => ({ key: p.handle, label: p.handle, name: p.name, src: p.src }))
       .filter((item) => !mention[2] || `${item.label} ${item.name}`.toLowerCase().includes(mention[2].toLowerCase()))
       .slice(0, 5)
     : [];
@@ -234,8 +235,8 @@ export default function Chat() {
   const stamp = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
 
   function quoteName(reply, mineMessage) {
-    const fromMe = thread.live ? reply.from === me : reply.from === "me";
-    const other = thread.live ? nameIn(thread.conv, reply.from, me).split(" ")[0] : (reply.name || thread.name || "").split(" ")[0];
+    const fromMe = reply.from === me;
+    const other = nameIn(thread.conv, reply.from, me).split(" ")[0];
     if (mineMessage) return fromMe ? t("Hai risposto a te stesso") : t("Hai risposto a {name}", { name: other });
     return fromMe ? t("Ha risposto a te") : t("Ha risposto a {name}", { name: other });
   }
@@ -246,14 +247,15 @@ export default function Chat() {
       return;
     }
     setDraft("");
-    setTray(false);
+    const media = payload.kind !== "text";
+    if (media) setSending((value) => value + 1);
     try {
-      await sendTo({ live, store }, thread, payload);
+      await sendTo(live, thread, payload);
     } catch (error) {
-      flash(String(error?.message) === "too-big" ? t("File troppo grande per la chat live.") : t("Impossibile inviare il file."));
-      return;
+      flash(String(error?.message) === "too-big" ? t("File troppo grande per la chat.") : t("Impossibile inviare il file."));
+    } finally {
+      if (media) setSending((value) => value - 1);
     }
-    if (!thread.live && !thread.members) live.answerLater(thread, payload);
   }
 
   function submit() {
@@ -262,15 +264,14 @@ export default function Chat() {
     tap();
     if (editing) {
       if (text !== editing.text) {
-        if (thread.live) live.edit(thread.id, editing.id, text);
-        else store.editChatMessage(thread.id, editing.index, text);
+        live.edit(thread.id, editing.id, text);
       }
       setEditing(null);
       setDraft("");
       return;
     }
     const payload = { kind: "text", text };
-    if (replyTo) payload.reply = thread.live ? { id: replyTo.id, from: replyTo.from, kind: replyTo.kind, text: replyTo.text } : { from: replyTo.from, name: thread.name, kind: replyTo.kind, text: replyTo.text };
+    if (replyTo) payload.reply = { id: replyTo.id, from: replyTo.from, kind: replyTo.kind, text: replyTo.text };
     deliver(payload);
     setReplyTo(null);
     setEmojiOpen(false);
@@ -279,8 +280,7 @@ export default function Chat() {
   function react(entry, emoji) {
     const currentEmoji = entry.message.reactions?.[myKey];
     const next = emoji === currentEmoji ? null : emoji;
-    if (thread.live) live.react(thread.id, entry.message.id, next);
-    else store.reactChatMessage(thread.id, entry.index, next);
+    live.react(thread.id, entry.message.id, next);
     if (next) {
       setPop(entry.key);
       setTimeout(() => setPop(null), 700);
@@ -293,7 +293,7 @@ export default function Chat() {
     setReplyTo({
       key: entry.key,
       id: message.id,
-      from: thread.live ? message.sender : message.from,
+      from: message.sender,
       name: message.from === "me" ? t("te stesso") : (message.senderName || thread.name || ""),
       kind: message.kind || "text",
       text: message.kind === "text" || !message.kind ? message.text : (message.text || ""),
@@ -309,18 +309,12 @@ export default function Chat() {
   }
 
   function togglePinned(entry) {
-    if (thread.live) {
-      const on = thread.pinned?.id === entry.message.id;
-      live.pin(thread.id, on ? null : thread.conv.messages.find((message) => message.id === entry.message.id));
-    } else {
-      const on = flags[thread.id]?.pin === entry.index;
-      store.setDmFlag(thread.id, "pin", on ? null : entry.index);
-    }
+    const on = thread.pinned?.id === entry.message.id;
+    live.pin(thread.id, on ? null : thread.conv.messages.find((message) => message.id === entry.message.id));
   }
 
   function unsend(entry) {
-    if (thread.live) live.unsend(thread.id, entry.message.id);
-    else store.unsendChatMessage(thread.id, entry.index);
+    live.unsend(thread.id, entry.message.id);
   }
 
   async function forwardTo(target) {
@@ -335,21 +329,32 @@ export default function Chat() {
     setForwarding(null);
     setForwardQuery("");
     try {
-      await sendTo({ live, store }, target, { ...base, fwd: { name: origin } });
+      await sendTo(live, target, { ...base, fwd: { name: origin } });
       flash(t("Inoltrato a {name}", { name: target.name }));
     } catch {
       flash(t("Impossibile inoltrare."));
     }
   }
 
-  async function pickPhoto() {
+  // Photos are uploaded and sent as a link; the quality keeps the inline fallback under the hub's limit.
+  async function pickPhoto(camera) {
     tap();
+    Keyboard.dismiss();
+    setEmojiOpen(false);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: thread.live ? 0.35 : 0.8 });
+      if (camera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          flash(t("Consenti la fotocamera per scattare una foto."));
+          return;
+        }
+      }
+      const options = { preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ["images"], quality: 0.4 };
+      const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled || !result.assets?.[0]) return;
       deliver({ kind: "image", image: await keepMedia(result.assets[0].uri, "chat") });
     } catch {
-      flash(t("Impossibile aprire la foto."));
+      flash(camera ? t("Impossibile aprire la fotocamera.") : t("Impossibile aprire la foto."));
     }
   }
 
@@ -438,7 +443,7 @@ export default function Chat() {
 
   const intro = (
     <View>
-      {thread.live && thread.conv.hasMore ? (
+      {thread.conv.hasMore ? (
         <Pressable disabled={thread.conv.loading} onPress={() => { tap(); live.fetchOlder(thread.id); }} style={[styles.more, { backgroundColor: theme.fill }]}>
           <T size={13} weight="600">{thread.conv.loading ? t("Caricamento…") : t("Messaggi precedenti")}</T>
         </Pressable>
@@ -451,13 +456,12 @@ export default function Chat() {
           <T size={17} weight="700" color={wall.night ? "#fff" : theme.text} style={{ textAlign: "center" }}>{thread.name}</T>
           <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2} style={{ textAlign: "center" }}>
             {isGroup
-              ? t("{n} membri", { n: (thread.members || thread.people || []).length + 1 })
-              : person?.live ? `@${person.handle} · iywa` : `${person?.handle || ""} · ${person?.followers ? t("{n} follower", { n: compact(person.followers) }) : "iywa"}`}
+              ? t("{n} membri", { n: (thread.people || []).length + 1 })
+              : otherHandle ? `@${otherHandle} · iywa` : "iywa"}
           </T>
-          {!isGroup && person?.craft ? <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2}>{person.craft}{person.city ? ` · ${person.city}` : ""}</T> : null}
           {isGroup && thread.about ? <T size={13} color={wall.night ? "rgba(232,236,245,0.72)" : theme.text2} style={{ marginTop: 4, textAlign: "center", lineHeight: 18 }}>{thread.about}</T> : null}
-          <Pressable onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.introBtn, { backgroundColor: wall.night ? "rgba(120,160,255,0.18)" : "rgba(0,149,246,0.12)", transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-            <T size={13.5} weight="600" color={wall.night ? "#9cc0ff" : theme.blue}>{isGroup ? t("Info gruppo") : t("Info chat")}</T>
+          <Pressable onPress={() => { tap(); router.push(otherHandle ? `/person/${otherHandle}` : `/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.introBtn, { backgroundColor: wall.night ? "rgba(120,160,255,0.18)" : "rgba(0,149,246,0.12)", transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
+            <T size={13.5} weight="600" color={wall.night ? "#9cc0ff" : theme.blue}>{isGroup ? t("Info gruppo") : t("Visualizza profilo")}</T>
           </Pressable>
         </Animated.View>
       ) : null}
@@ -523,7 +527,7 @@ export default function Chat() {
                 <ChevronLeft size={24} weight="bold" color={theme.blue} />
                 {otherUnread ? <View style={[styles.backBadge, { backgroundColor: theme.blue }]}><T size={12} weight="600" color="#fff">{otherUnread > 99 ? "99+" : otherUnread}</T></View> : null}
               </Pressable>
-              <Pressable accessibilityLabel={t("Info chat")} onPress={() => { tap(); router.push(`/chat/info/${thread.id}`); }} style={({ pressed }) => [styles.title, pressed && { backgroundColor: theme.fill }]}>
+              <Pressable accessibilityLabel={otherHandle ? t("Visualizza profilo") : t("Info gruppo")} onPress={openHeader} style={({ pressed }) => [styles.title, pressed && { backgroundColor: theme.fill }]}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "100%" }}>
                   <T size={16} weight="700" lines={1} style={{ letterSpacing: -0.16, flexShrink: 1 }}>{thread.name}</T>
                   {muted ? <BellOff size={13} weight="fill" color={theme.text3} /> : null}
@@ -564,23 +568,9 @@ export default function Chat() {
         </View>
       </View>
 
-      {tray ? (
-        <Animated.View entering={FadeInDown.duration(260)} style={[styles.tray, { borderTopColor: theme.line, backgroundColor: theme.bg }]}>
-          <View style={styles.trayHead}>
-            <T size={14} weight="700">{t("Recenti")}</T>
-            <Pressable onPress={pickPhoto} hitSlop={8}><T size={14} weight="600" color={theme.blue}>{t("Libreria")}</T></Pressable>
-          </View>
-          <ScrollView style={{ maxHeight: 180, borderRadius: 10 }} contentContainerStyle={styles.trayGrid}>
-            {DEMO_GALLERY.slice(0, 12).map((src) => (
-              <Pressable key={src} onPress={() => { tap(); deliver({ kind: "image", image: src }); }} style={({ pressed }) => [styles.trayCell, { backgroundColor: theme.fill, opacity: pressed ? 0.8 : 1 }]}>
-                <Image source={{ uri: src }} recyclingKey={src} style={StyleSheet.absoluteFill} contentFit="cover" transition={120} />
-              </Pressable>
-            ))}
-          </ScrollView>
-        </Animated.View>
-      ) : null}
+      {sending ? <View style={[styles.hintRow]}><Spinner color={theme.text2} size={13} /><T size={12.5} color={theme.text2}>{t("Invio in corso…")}</T></View> : null}
       {hint ? <Animated.View entering={FadeIn.duration(200)}><T size={12.5} color={theme.text2} style={styles.hint}>{hint}</T></Animated.View> : null}
-      {thread.live && live.status !== "open" ? <T size={12.5} color={theme.text2} style={styles.hint}>{t("Riconnessione… i messaggi partiranno appena torni online.")}</T> : null}
+      {live.status !== "open" ? <T size={12.5} color={theme.text2} style={styles.hint}>{t("Riconnessione… i messaggi partiranno appena torni online.")}</T> : null}
 
       <View style={[styles.composer, { paddingBottom: (keyboard ? 0 : insets.bottom) + 10, borderTopColor: theme.line, backgroundColor: theme.bg }]}>
         {mentionList.length ? (
@@ -615,7 +605,7 @@ export default function Chat() {
         ) : null}
         {emojiOpen ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 2, paddingHorizontal: 4, paddingBottom: 8 }}>
-            {STORY_EMOJI.slice(0, 24).map((emoji) => (
+            {EMOJI.map((emoji) => (
               <Pressable key={emoji} onPress={() => { tap(); setDraft((value) => `${value}${emoji}`); }} style={({ pressed }) => [styles.emoji, { transform: [{ scale: pressed ? 1.3 : 1 }] }]}>
                 <T style={{ fontSize: 24 }}>{emoji}</T>
               </Pressable>
@@ -623,7 +613,7 @@ export default function Chat() {
           </ScrollView>
         ) : null}
         <View style={[styles.pillRow, { backgroundColor: theme.fill }]}>
-          <Pressable accessibilityLabel={t("Foto")} accessibilityState={{ selected: tray }} onPress={() => { tap(); Keyboard.dismiss(); setTray((value) => !value); setEmojiOpen(false); }} style={({ pressed }) => [styles.cam, { backgroundColor: theme.blue, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+          <Pressable accessibilityLabel={t("Fotocamera")} onPress={() => pickPhoto(true)} style={({ pressed }) => [styles.cam, { backgroundColor: theme.blue, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
             <Camera size={20} weight="fill" color="#fff" />
           </Pressable>
           {rec ? (
@@ -640,9 +630,8 @@ export default function Chat() {
               multiline
               onChangeText={(value) => {
                 setDraft(value);
-                if (thread.live && value.trim()) live.typing(thread.id);
+                if (value.trim()) live.typing(thread.id);
               }}
-              onFocus={() => setTray(false)}
               placeholder={t("Messaggio…")}
               placeholderTextColor={theme.text2}
               accessibilityLabel={t("Messaggio {name}", { name: thread.name })}
@@ -671,8 +660,8 @@ export default function Chat() {
               </View>
               {!rec ? (
                 <>
-                  <Pressable accessibilityLabel={t("Libreria")} onPress={pickPhoto} style={styles.tool}><ImageIcon size={24} color={theme.text} /></Pressable>
-                  <Pressable accessibilityLabel={t("Emoji")} onPress={() => { tap(); setEmojiOpen((value) => !value); setTray(false); }} style={styles.tool}><Smile size={24} color={theme.text} /></Pressable>
+                  <Pressable accessibilityLabel={t("Libreria")} onPress={() => pickPhoto(false)} style={styles.tool}><ImageIcon size={24} color={theme.text} /></Pressable>
+                  <Pressable accessibilityLabel={t("Emoji")} onPress={() => { tap(); setEmojiOpen((value) => !value); }} style={styles.tool}><Smile size={24} color={theme.text} /></Pressable>
                 </>
               ) : null}
             </>
@@ -702,12 +691,12 @@ export default function Chat() {
               <Animated.View entering={ZoomIn.delay(40).springify().damping(16)} style={[styles.focusMenu, { backgroundColor: theme.elev }]}>
                 {[
                   { label: t("Rispondi"), icon: Reply, run: () => startReply(focusEntry) },
-                  focusEntry.message.from === "me" && (focusEntry.message.kind || "text") === "text" && (!thread.live || focusEntry.message.id) ? { label: t("Modifica"), icon: PenLine, run: () => startEdit(focusEntry) } : null,
-                  !thread.live || focusEntry.message.id ? { label: isPinned(focusEntry) ? t("Togli dai fissati") : t("Fissa"), icon: Pin, run: () => togglePinned(focusEntry) } : null,
+                  focusEntry.message.from === "me" && (focusEntry.message.kind || "text") === "text" && focusEntry.message.id ? { label: t("Modifica"), icon: PenLine, run: () => startEdit(focusEntry) } : null,
+                  focusEntry.message.id ? { label: isPinned(focusEntry) ? t("Togli dai fissati") : t("Fissa"), icon: Pin, run: () => togglePinned(focusEntry) } : null,
                   { label: t("Inoltra"), icon: Forward, run: () => setForwarding(focusEntry.message) },
                   focusEntry.message.text ? { label: t("Copia"), icon: Copy, run: () => { Clipboard.setStringAsync(focusEntry.message.text).catch(() => {}); flash(t("Copiato")); } } : null,
                   focusEntry.message.kind === "image" ? { label: t("Visualizza"), icon: Eye, run: () => setZoom(focusEntry.message.image) } : null,
-                  focusEntry.message.from === "me" && (!thread.live || focusEntry.message.id) ? { label: t("Annulla l'invio"), icon: RotateCcw, warn: true, run: () => unsend(focusEntry) } : null,
+                  focusEntry.message.from === "me" && focusEntry.message.id ? { label: t("Annulla l'invio"), icon: RotateCcw, warn: true, run: () => unsend(focusEntry) } : null,
                 ].filter(Boolean).map((item, index) => (
                   <Pressable key={item.label} onPress={() => { tap(); setFocus(null); item.run(); }} style={({ pressed }) => [styles.focusItem, index && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line }, pressed && { backgroundColor: theme.fill }]}>
                     <T size={15} color={item.warn ? theme.red : theme.text}>{item.label}</T>
@@ -728,7 +717,7 @@ export default function Chat() {
               <ThreadFace thread={item} size={44} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <T size={15} weight="600" lines={1}>{item.name}</T>
-                <T size={13} color={theme.text2}>{item.group || item.members ? t("Gruppo") : item.live ? t("Su iywa") : t("Chat")}</T>
+                <T size={13} color={theme.text2}>{item.group ? t("Gruppo") : item.other?.handle ? `@${item.other.handle}` : t("Chat")}</T>
               </View>
             </Pressable>
           ))}
@@ -799,10 +788,7 @@ const styles = StyleSheet.create({
   downWrap: { position: "absolute", right: 14, bottom: 16, zIndex: 4 },
   down: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
   downBadge: { position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 5, alignItems: "center", justifyContent: "center" },
-  tray: { paddingTop: 8, paddingHorizontal: 10, borderTopWidth: StyleSheet.hairlineWidth },
-  trayHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, paddingBottom: 8 },
-  trayGrid: { flexDirection: "row", flexWrap: "wrap", gap: 2 },
-  trayCell: { width: "24.5%", aspectRatio: 1, overflow: "hidden" },
+  hintRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 6 },
   hint: { marginTop: 6, marginHorizontal: INSET, textAlign: "center" },
   composer: { paddingTop: 6, paddingHorizontal: 10, borderTopWidth: StyleSheet.hairlineWidth },
   mentions: { marginHorizontal: 4, marginBottom: 8, borderRadius: 14, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, shadowColor: "#000", shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },

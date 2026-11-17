@@ -12,6 +12,9 @@ import { useTheme } from "../theme";
 import { useLive } from "../live/LiveStore";
 import { LaunchScreen } from "../ui/launch";
 import { TimeLimit } from "../ui/time-limit";
+import { loadSession } from "../lib/session";
+
+loadSession();
 
 
 function Shell() {

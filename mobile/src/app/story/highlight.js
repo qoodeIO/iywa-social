@@ -1,58 +1,55 @@
 import { useState } from "react";
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { INSET, useTheme } from "../../theme";
-import { useStore } from "../../lib/store";
+import { useUserStories, createHighlight } from "../../lib/social";
+import { useMe } from "../../lib/session";
+import { errorText } from "../../lib/api";
 import { Camera } from "../../ui/icons";
-import { Empty, Header, T, tap } from "../../ui/kit";
+import { Btn, Empty, Header, T, tap } from "../../ui/kit";
 import { StoryMedia } from "../../ui/story";
 import { frameCover } from "../../lib/stories";
 import { t } from "../../lib/i18n";
 
-// New highlight: pick your stories, then name it and choose the cover (web HighlightNew).
+// New highlight: pick from your stories of the last 24 hours, then name it and choose the cover
+// (web HighlightNew). The server keeps a copy of the frames, so the highlight outlives the stories.
 export default function HighlightNew() {
   const theme = useTheme();
-  const store = useStore();
+  const me = useMe();
   const { width } = useWindowDimensions();
-  const stories = (store.myStories || []).slice().reverse();
+  const { data, loading, error, refresh } = useUserStories(me?.handle || null);
+  const stories = (data?.frames || []).slice().reverse();
   const [picked, setPicked] = useState([]);
   const [step, setStep] = useState("pick");
   const [name, setName] = useState(t("In evidenza"));
   const [cover, setCover] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState("");
   const chosen = stories.filter((item) => picked.includes(item.id));
   const coverItem = stories.find((item) => item.id === (cover || picked[0]));
   const tile = (width - 2) / 3;
-  const disabled = !picked.length || (step === "name" && !name.trim());
+  const disabled = saving || !picked.length || (step === "name" && !name.trim());
 
-  function next() {
+  async function next() {
     if (disabled) return;
     tap();
     if (step === "pick") {
       setStep("name");
       return;
     }
+    // Oldest first, like the stories were posted.
+    const frames = stories.filter((item) => picked.includes(item.id)).reverse()
+      .map(({ id, media, text, stickers, style, createdAt }) => ({ id, media, text, stickers, style, createdAt }));
     const cov = coverItem || chosen[0];
-    store.addHighlight({
-      id: `hl-${Date.now()}`,
-      name: name.trim().slice(0, 16),
-      full: store.profile.name,
-      src: frameCover(cov) || frameCover(chosen.find((item) => frameCover(item))) || store.profile.src,
-      mine: true,
-      frames: chosen.map((item) => ({
-        id: `${item.id}-hl`,
-        image: item.image || "",
-        video: item.video || "",
-        cells: item.cells,
-        layout: item.layout,
-        gradient: item.gradient,
-        muted: item.muted,
-        filter: item.filter,
-        stickers: item.stickers || [],
-        text: item.text || "",
-        time: item.time || "",
-      })),
-    });
-    router.back();
+    setSaving(true);
+    setProblem("");
+    try {
+      await createHighlight({ title: name.trim(), cover: frameCover(cov) || frameCover(chosen.find((item) => frameCover(item))) || "", frames });
+      router.back();
+    } catch (err) {
+      setProblem(errorText(err, t));
+      setSaving(false);
+    }
   }
 
   return (
@@ -62,14 +59,21 @@ export default function HighlightNew() {
         onBack={step === "name" ? () => setStep("pick") : undefined}
         right={(
           <Pressable hitSlop={8} disabled={disabled} onPress={next} style={{ paddingHorizontal: 8 }}>
-            <T size={16} weight="700" color={theme.blue} style={{ opacity: disabled ? 0.4 : 1 }}>{step === "pick" ? t("Avanti") : t("Fine")}</T>
+            {saving ? <ActivityIndicator color={theme.text2} /> : <T size={16} weight="700" color={theme.blue} style={{ opacity: disabled ? 0.4 : 1 }}>{step === "pick" ? t("Avanti") : t("Fine")}</T>}
           </Pressable>
         )}
       />
       {step === "pick" ? (
-        stories.length ? (
+        !data && (loading || !error) ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={theme.text2} /></View>
+        ) : !data && error ? (
+          <Empty icon={Camera} title={t("Non caricato")} text={errorText(error, t)}>
+            <Btn title={t("Riprova")} kind="primary" onPress={refresh} />
+          </Empty>
+        ) : stories.length ? (
           <FlatList
             data={stories}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={theme.text2} />}
             numColumns={3}
             keyExtractor={(item) => item.id}
             columnWrapperStyle={{ gap: 1 }}
@@ -93,7 +97,9 @@ export default function HighlightNew() {
             }}
           />
         ) : (
-          <Empty icon={Camera} title={t("Nessuna storia ancora")} text={t("Pubblica una storia e potrai metterla in evidenza.")} />
+          <Empty icon={Camera} title={t("Nessuna storia attiva")} text={t("Le storie restano 24 ore: pubblicane una e potrai metterla in evidenza.")}>
+            <Btn title={t("Nuova storia")} kind="primary" onPress={() => router.replace("/story/new")} />
+          </Empty>
         )
       ) : (
         <ScrollView contentContainerStyle={{ alignItems: "center", paddingTop: 28, paddingHorizontal: INSET, gap: 14 }} keyboardShouldPersistTaps="handled">
@@ -104,13 +110,14 @@ export default function HighlightNew() {
           </View>
           <TextInput
             value={name}
-            maxLength={16}
+            maxLength={30}
             autoFocus
             onChangeText={setName}
             accessibilityLabel={t("Nome highlight")}
             selectionColor={theme.blue}
             style={{ minWidth: 200, textAlign: "center", fontSize: 18, fontWeight: "600", color: theme.text, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.line }}
           />
+          {problem ? <T size={13} color={theme.red} style={{ textAlign: "center" }}>{problem}</T> : null}
           <T size={13} color={theme.text2}>{t("Scegli la copertina")}</T>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 4 }}>
             {chosen.map((item) => {

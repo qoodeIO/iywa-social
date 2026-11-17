@@ -8,40 +8,16 @@ import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router } from "expo-router";
-import { WORKS } from "../data";
 import { T } from "./kit";
-import { t, tk } from "../lib/i18n";
+import { t } from "../lib/i18n";
 import { openTab } from "../lib/tabs";
 
 // ---------------------------------------------------------------------------
 // Constants copied from the web app
 // ---------------------------------------------------------------------------
 export const REEL_SPEEDS = [0.5, 1, 1.5, 2];
-export const REEL_LENGTHS = [15, 30, 60, 90];
-export const REEL_RECORD_SPEEDS = [0.5, 1, 2, 3];
+export const REEL_LENGTHS = [15, 30, 60];
 export const REEL_EMOJI = ["❤️", "🙌", "🔥", "👏", "😢", "😍", "😮", "😂"];
-
-export const STORY_MUSIC = [
-  { title: "Forno lento", artist: "Giulia Neri" },
-  { title: "Rosso di Prato", artist: "Adele Romano" },
-  { title: "Impasto", artist: "Marta Colle" },
-  { title: "Secondo fuoco", artist: "Leo Bassi" },
-];
-
-// The web uses CSS filter() strings. Native views have no CSS filters, so each look is
-// rebuilt from colour layers blended over the picture (mixBlendMode), close to the web.
-export const STORY_FILTERS = [
-  { id: "normal", label: tk("Normale"), layers: [] },
-  { id: "alba", label: tk("Alba"), layers: [{ color: "rgba(255,190,140,0.22)", mode: "soft-light" }, { color: "rgba(255,255,255,0.06)", mode: "screen" }] },
-  { id: "nord", label: tk("Nord"), layers: [{ color: "rgba(128,128,128,0.28)", mode: "saturation" }, { color: "rgba(110,160,255,0.2)", mode: "soft-light" }] },
-  { id: "terra", label: tk("Terracotta"), layers: [{ color: "rgba(200,105,55,0.32)", mode: "soft-light" }, { color: "rgba(150,90,40,0.12)", mode: "color" }] },
-  { id: "pastello", label: tk("Pastello"), layers: [{ color: "rgba(255,255,255,0.16)", mode: "screen" }, { color: "rgba(128,128,128,0.18)", mode: "saturation" }] },
-  { id: "vivido", label: tk("Vivido"), layers: [{ color: "rgba(128,128,128,0.32)", mode: "overlay" }, { color: "rgba(255,60,80,0.08)", mode: "soft-light" }] },
-  { id: "miele", label: tk("Miele"), layers: [{ color: "rgba(230,165,60,0.34)", mode: "soft-light" }, { color: "rgba(160,110,40,0.12)", mode: "color" }] },
-  { id: "cinema", label: tk("Cinema"), layers: [{ color: "rgba(128,128,128,0.35)", mode: "saturation" }, { color: "rgba(20,40,60,0.3)", mode: "soft-light" }, { color: "rgba(0,0,0,0.08)", mode: "normal" }] },
-  { id: "noir", label: tk("Noir"), layers: [{ color: "rgb(128,128,128)", mode: "saturation" }, { color: "rgba(128,128,128,0.35)", mode: "overlay" }] },
-  { id: "polvere", label: tk("Polvere"), layers: [{ color: "rgba(170,130,90,0.45)", mode: "color" }, { color: "rgba(255,255,255,0.08)", mode: "screen" }] },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers (same as the web)
@@ -57,46 +33,27 @@ export function clockLabel(seconds) {
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
 }
 
+// A reel plays its video; durations are filled in by the player once the file is loaded.
 export function reelClips(reel) {
   if (Array.isArray(reel.clips) && reel.clips.length) return reel.clips;
   if (reel.video) return [{ type: "video", src: reel.video, duration: parseLength(reel.length) }];
   return [{ type: "image", src: reel.image || reel.src, duration: parseLength(reel.length) }];
 }
 
-function parseCount(label) {
-  const text = String(label ?? "").trim().toLowerCase().replace(",", ".");
-  if (/k$/.test(text)) {
-    const n = Number(text.slice(0, -1));
-    return Number.isFinite(n) ? Math.round(n * 1000) : 0;
-  }
-  const n = Number(text.replace(/[^\d]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
-
-export function tally(label, on) {
-  if (!on) return label;
-  return String(parseCount(label) + 1);
-}
-
+// Hidden by my preferences: a blocked or muted author (lists hold names or handles) or a hidden word.
 export function reelHidden(prefs, reel) {
-  const name = reel?.name;
-  if (name && ((prefs?.blocked || []).includes(name) || (prefs?.muted || []).includes(name))) return true;
-  const blob = String(reel?.text || reel?.caption || "").toLowerCase();
+  const people = new Set([...(prefs?.blocked || []), ...(prefs?.muted || [])].map((value) => String(value).replace(/^@/, "").toLowerCase()));
+  if (people.has(String(reel?.owner || "").toLowerCase()) || people.has(String(reel?.name || "").toLowerCase())) return true;
+  const blob = String(reel?.text || "").toLowerCase();
   return (prefs?.hiddenWords || []).some((word) => {
     const needle = String(word || "").trim().toLowerCase();
     return needle && blob.includes(needle);
   });
 }
 
-// Reels I made (newest first), for the profile grid. They live in store.library with kind "reel",
-// exactly like the web's space.library.
-export function myReels(store) {
-  return (store.library || []).filter((item) => item.kind === "reel");
-}
-
-// The still picture that stands for a reel (grid tiles, share messages).
+// The still picture uploaded with a reel, if any.
 export function reelPoster(reel) {
-  return reel.src || reel.image || reelClips(reel).find((clip) => clip.type === "image")?.src || WORKS[0].src;
+  return (reel?.media || []).find((item) => item.type === "video")?.poster || null;
 }
 
 // Open the Reels tab on a given reel (profile grid, shared links).
@@ -110,21 +67,6 @@ export function openReelCamera() {
 }
 
 // ---------------------------------------------------------------------------
-// Filter look: colour layers blended over the picture.
-// ---------------------------------------------------------------------------
-export const FilterLayer = memo(function FilterLayer({ id, style }) {
-  const look = STORY_FILTERS.find((item) => item.id === id);
-  if (!look || !look.layers.length) return null;
-  return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
-      {look.layers.map((layer, index) => (
-        <View key={index} style={[StyleSheet.absoluteFill, { backgroundColor: layer.color, mixBlendMode: layer.mode }]} />
-      ))}
-    </View>
-  );
-});
-
-// ---------------------------------------------------------------------------
 // ReelPlayer: plays a list of clips (video, or photo with Ken Burns motion) as one reel.
 // One clock on the UI thread drives progress and the photo motion.
 // ---------------------------------------------------------------------------
@@ -134,14 +76,15 @@ const KB = [
   [1.08, 1.2, -0.03, 0.03, 0.02, -0.03],
 ];
 
-export function ReelPlayer({ clips, active, paused, rate = 1, muted, filter, loop = true, seekRef, progress, poster }) {
+export function ReelPlayer({ clips, active, paused, rate = 1, muted, loop = true, seekRef, progress, poster }) {
   const [index, setIndex] = useState(0);
+  const [known, setKnown] = useState({}); // video src -> real duration in seconds
   const [nonce, setNonce] = useState(0);
   const indexRef = useRef(0);
   const startRef = useRef(0);
   const safe = Math.min(index, clips.length - 1);
   const clip = clips[safe];
-  const lengths = useMemo(() => clips.map((item) => Math.max(0.5, (item.duration || 3) / (item.rate || 1))), [clips]);
+  const lengths = useMemo(() => clips.map((item) => Math.max(0.5, (known[item.src] || item.duration || 3) / (item.rate || 1))), [clips, known]);
   const total = lengths.reduce((sum, value) => sum + value, 0);
   const befores = useMemo(() => lengths.map((_, i) => lengths.slice(0, i).reduce((sum, value) => sum + value, 0)), [lengths]);
 
@@ -238,13 +181,12 @@ export function ReelPlayer({ clips, active, paused, rate = 1, muted, filter, loo
           startRef={startRef}
           offset={offset}
           onEnd={advance}
+          onDuration={(seconds) => setKnown((prev) => (prev[clip.src] === seconds ? prev : { ...prev, [clip.src]: seconds }))}
           poster={poster}
-          filtered={filter && filter !== "normal"}
         />
       ) : (
         <ImageClip key={`${safe}-${clip.src}`} clip={clip} kb={safe % 3} len={lengths[safe]} offset={offset} dims={dims} />
       )}
-      <FilterLayer id={filter} />
     </View>
   );
 }
@@ -269,7 +211,7 @@ const ImageClip = memo(function ImageClip({ clip, kb, len, offset, dims }) {
   );
 });
 
-function VideoClip({ clip, playing, rate, muted, loop, nonce, startRef, offset, onEnd, poster, filtered }) {
+function VideoClip({ clip, playing, rate, muted, loop, nonce, startRef, offset, onEnd, onDuration, poster }) {
   const [ready, setReady] = useState(false);
   const player = useVideoPlayer(clip.src, (p) => {
     p.loop = loop;
@@ -279,6 +221,8 @@ function VideoClip({ clip, playing, rate, muted, loop, nonce, startRef, offset, 
   });
   const onEndRef = useRef(onEnd);
   onEndRef.current = onEnd;
+  const onDurationRef = useRef(onDuration);
+  onDurationRef.current = onDuration;
 
   useEffect(() => {
     player.loop = loop;
@@ -305,9 +249,18 @@ function VideoClip({ clip, playing, rate, muted, loop, nonce, startRef, offset, 
     const end = player.addListener("playToEnd", () => {
       if (!player.loop) onEndRef.current?.();
     });
+    const report = (seconds) => {
+      if (Number.isFinite(seconds) && seconds > 0) onDurationRef.current?.(seconds);
+    };
+    const load = player.addListener("sourceLoad", (event) => report(event?.duration));
+    const status = player.addListener("statusChange", ({ status: value }) => {
+      if (value === "readyToPlay") report(player.duration);
+    });
     return () => {
       time.remove();
       end.remove();
+      load.remove();
+      status.remove();
     };
   }, [player, offset, clip.rate]);
 
@@ -319,7 +272,6 @@ function VideoClip({ clip, playing, rate, muted, loop, nonce, startRef, offset, 
         contentFit="cover"
         nativeControls={false}
         allowsPictureInPicture={false}
-        surfaceType={filtered && Platform.OS === "android" ? "textureView" : undefined}
         onFirstFrameRender={() => setReady(true)}
       />
       {!ready && poster ? <Image source={{ uri: poster }} style={StyleSheet.absoluteFill} contentFit="cover" transition={0} /> : null}

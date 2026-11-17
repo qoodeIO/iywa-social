@@ -3,6 +3,7 @@
   "main": "src/worker.js",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "iywa-media" }],
   "durable_objects": {
     "bindings": [{ "name": "HUB", "class_name": "Hub" }]
   },

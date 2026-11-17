@@ -50,3 +50,8 @@ export { SealCheckIcon as Verified } from "phosphor-react-native/src/icons/SealC
 export { CircleIcon as Ring } from "phosphor-react-native/src/icons/Circle";
 export { ArchiveIcon as Archive } from "phosphor-react-native/src/icons/Archive";
 export { ChatTextIcon as ChatText } from "phosphor-react-native/src/icons/ChatText";
+export { LockSimpleIcon as Lock } from "phosphor-react-native/src/icons/LockSimple";
+export { ProhibitIcon as Block } from "phosphor-react-native/src/icons/Prohibit";
+export { BellSlashIcon as Mute } from "phosphor-react-native/src/icons/BellSlash";
+export { ArrowCounterClockwiseIcon as Restore } from "phosphor-react-native/src/icons/ArrowCounterClockwise";
+export { UserIcon as User } from "phosphor-react-native/src/icons/User";

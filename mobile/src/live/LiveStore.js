@@ -1,18 +1,19 @@
 // Live state for chats, groups, presence and calls (React context), ported from
 // src/live/LiveStore.jsx: optimistic sends with a clientId replaced by the server
 // copy, failed after 15 s with retry, typing with expiry, reads only while the chat
-// is on screen. Also hosts the offline "demo" side of the web app: demo contacts
-// answer locally, and calls to them are logged in the local thread (LiveBridge).
+// is on screen. Every chat lives on the hub; there is no offline/local chat.
 
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useSyncExternalStore } from "react";
 import { AppState } from "react-native";
 import { createHub } from "./hub";
+import { apiToken } from "../lib/api";
+import { receiveServerEvent } from "../lib/social";
 import { CallController } from "./calls";
 import { sounds } from "./sounds";
 import { useStore } from "../lib/store";
-import { emitOrderEvent, payApi, payHandle } from "../lib/pay";
+import { emitOrderEvent } from "../lib/pay";
 import { t } from "../lib/i18n";
-import { avatarFor, euro } from "../data";
+import { euro } from "../data";
 
 const Live = createContext(null);
 
@@ -167,13 +168,6 @@ function reducer(state, action) {
   }
 }
 
-const DEMO_REPLIES = {
-  image: ["Che bello! 😍", "Wow, si vede benissimo il lavoro.", "Mandamene altre 📸"],
-  audio: ["Ascoltato! Ti rispondo dal laboratorio 🎧", "Perfetto, ci sentiamo dopo."],
-  question: ["Sì, certo! Passa quando vuoi.", "Domani mattina va benissimo.", "Credo di sì, ti confermo stasera."],
-  text: ["Perfetto 🙌", "Ahah sì!", "Grazie! ❤️", "Ci vediamo in laboratorio.", "Ottimo, allora siamo d'accordo."],
-};
-
 export function LiveProvider({ children }) {
   const store = useStore();
   const storeRef = useRef(store);
@@ -195,54 +189,9 @@ export function LiveProvider({ children }) {
   userRef.current = user;
   const visible = () => AppState.currentState === "active";
 
-  // Sellers publish their catalogue to the server so buyers on other devices can pay
-  // (web App "/products/sync"): business accounts with the shop on, 800 ms after a change.
-  const payAs = payHandle(store);
-  const selling = store.accountType === "business" && store.business?.shop !== false && Boolean(payAs);
-  useEffect(() => {
-    if (!selling) return undefined;
-    const business = store.business || {};
-    const products = (store.myProducts || []).map((item) => ({
-      id: item.id, name: item.name, price: item.price, image: item.images?.[0], stock: item.madeToOrder && !item.stock ? null : item.stock, madeToOrder: item.madeToOrder || null, service: Boolean(item.service),
-    }));
-    const id = setTimeout(() => {
-      payApi("/products/sync", { handle: payAs, shop: { title: business.title, city: business.city, category: business.category }, products }).catch(() => {});
-    }, 800);
-    return () => clearTimeout(id);
-  }, [selling, payAs, store.business, store.myProducts]);
-
   const send = useCallback((message) => hubRef.current?.send(message) || false, []);
   const calls = useMemo(() => new CallController({ send, me: () => userRef.current?.handle }), [send]);
   const call = useSyncExternalStore(calls.subscribe, calls.getSnapshot);
-
-  // Demo contacts write back, so the chat feels alive without a second account.
-  const [demoTyping, setDemoTyping] = useState({});
-  const answered = useRef({});
-  const answerLater = useCallback((target, payload) => {
-    const id = target.id;
-    if (answered.current[id]) return;
-    answered.current[id] = true;
-    const text = typeof payload === "string" ? payload : payload.text || "";
-    const pool = payload.kind === "image" ? DEMO_REPLIES.image : payload.kind === "audio" ? DEMO_REPLIES.audio : /\?\s*$/.test(text) ? DEMO_REPLIES.question : DEMO_REPLIES.text;
-    const reply = pool[Math.floor(Math.random() * pool.length)];
-    setTimeout(() => setDemoTyping((prev) => ({ ...prev, [id]: true })), 900);
-    setTimeout(() => {
-      setDemoTyping((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      storeRef.current.receiveChatMessage?.(id, reply, viewing.current === id && visible());
-      if (calls.getSnapshot().phase === "idle") sounds.message();
-      setTimeout(() => { answered.current[id] = false; }, 4000);
-    }, 900 + 1400 + reply.length * 40);
-  }, [calls]);
-
-  // LiveBridge: demo-contact calls never reach the hub, log them in the local thread.
-  useEffect(() => {
-    calls.onLog = (entry) => storeRef.current.addChatMessage(entry.convId, { kind: "call", call: entry.call, duration: entry.duration });
-    return () => { calls.onLog = null; };
-  }, [calls]);
 
   const markRead = useCallback((convId) => {
     const conv = stateRef.current.convs[convId];
@@ -277,6 +226,13 @@ export function LiveProvider({ children }) {
         if (message.ref && waiters.current.has(message.ref)) {
           waiters.current.get(message.ref).reject(new Error(message.code));
           waiters.current.delete(message.ref);
+        } else if (message.code === "no-user") {
+          // dm_open answers "no-user" without the ref: fail the pending opens instead of waiting.
+          for (const [ref, waiter] of waiters.current) {
+            if (waiter.type !== "dm_open") continue;
+            waiters.current.delete(ref);
+            waiter.reject(new Error("no-user"));
+          }
         }
         return;
       }
@@ -328,13 +284,14 @@ export function LiveProvider({ children }) {
         const push = storeRef.current.pushNote;
         if (message.event === "sold") {
           const what = `${order.qty > 1 ? `${order.qty} × ` : ""}${order.name}`;
-          push?.({ type: "order", name: `@${order.buyer}`, src: avatarFor(order.buyer) || order.image || undefined, text: t("ha acquistato {what} · {total}", { what, total: euro(order.total) }), target: { kind: "orders" } });
+          push?.({ type: "order", name: `@${order.buyer}`, src: current.people[order.buyer]?.src || order.image || undefined, text: t("ha acquistato {what} · {total}", { what, total: euro(order.total) }), target: { kind: "orders" } });
         }
         if (message.event === "shipped" && (mine.has(order.buyer) || !mine.has(order.seller))) {
-          push?.({ type: "order", name: `@${order.seller}`, src: avatarFor(order.seller) || order.image || undefined, text: t("ha spedito il tuo ordine: {name}", { name: order.name }), target: { kind: "orders" } });
+          push?.({ type: "order", name: `@${order.seller}`, src: current.people[order.seller]?.src || order.image || undefined, text: t("ha spedito il tuo ordine: {name}", { name: order.name }), target: { kind: "orders" } });
         }
         return;
       }
+      case "notify": receiveServerEvent(message); return;
       default:
         if (String(message.type || "").startsWith("call_")) calls.onMessage(message);
     }
@@ -347,10 +304,9 @@ export function LiveProvider({ children }) {
   useEffect(() => {
     if (!user?.handle) return undefined;
     const hub = createHub({
+      // The hub signs the socket in with the session token; name and photo come from the account.
       hello: () => ({
-        handle: userRef.current.handle,
-        name: userRef.current.name,
-        src: String(userRef.current.src || "").length < 40_000 ? userRef.current.src : "",
+        token: apiToken(),
         receipts: prefsRef.current?.readReceipts !== false,
         showOnline: prefsRef.current?.activity !== false,
       }),
@@ -395,7 +351,7 @@ export function LiveProvider({ children }) {
 
   const ask = useCallback((message) => new Promise((resolve, reject) => {
     const ref = clientId();
-    waiters.current.set(ref, { resolve, reject });
+    waiters.current.set(ref, { resolve, reject, type: message.type });
     if (!send({ ...message, ref })) {
       waiters.current.delete(ref);
       reject(new Error("offline"));
@@ -482,11 +438,12 @@ export function LiveProvider({ children }) {
       updateGroup: (convId, patch) => send({ type: "group_update", convId, ...patch }),
       leaveGroup: (convId) => send({ type: "group_leave", convId }),
       dismissToast: () => dispatch({ type: "toast", toast: null }),
-      answerLater,
+      // Ask the hub for the whole inbox again (pull to refresh); false when offline.
+      sync: () => send({ type: "sync" }),
     };
     return out;
-  }, [ask, markRead, send, answerLater]);
+  }, [ask, markRead, send]);
 
-  const value = useMemo(() => ({ ...state, unread, call, calls, demoTyping, ...api }), [state, unread, call, calls, demoTyping, api]);
+  const value = useMemo(() => ({ ...state, unread, call, calls, ...api }), [state, unread, call, calls, api]);
   return createElement(Live.Provider, { value }, children);
 }

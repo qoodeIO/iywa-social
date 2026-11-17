@@ -1,29 +1,24 @@
-// Reel camera: record clips (or add them from the gallery), then edit and publish.
+// Reel camera: record one video (or pick one from the gallery), add a caption and publish it.
 // Port of the web's ReelCamera (src/App.jsx).
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useFrameCallback, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
-import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
-import { scheduleOnRN } from "react-native-worklets";
-import { Image } from "expo-image";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import Animated, { Easing, FadeIn, useAnimatedStyle, useFrameCallback, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, router, useIsFocused } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useStore } from "../lib/store";
 import { t } from "../lib/i18n";
-import { AVATAR, WORKS } from "../data";
+import { createPost, createStory } from "../lib/social";
+import { errorText, mimeOf } from "../lib/api";
 import { tap } from "../ui/kit";
-import { DarkSheet, FilterLayer, REEL_LENGTHS, REEL_RECORD_SPEEDS, ReelPlayer, STORY_FILTERS, STORY_MUSIC, Toast, clockLabel, openReel, useToast } from "../ui/reels-kit";
-import { Camera, ChevronLeft, ChevronRight, Music, Plus, Sparkle, SwitchCamera, Timer, Undo, X } from "../ui/reels-icons";
-import { keepAll, keepMedia } from "../lib/media-store";
+import { REEL_LENGTHS, ReelPlayer, Toast, clockLabel, openReel, useToast } from "../ui/reels-kit";
+import { Camera, ChevronLeft, ChevronRight, Plus, SquarePlay, SwitchCamera, Timer, Undo, X } from "../ui/reels-icons";
 import { openTab } from "../lib/tabs";
 
 const SPRING_OUT = Easing.bezier(0.32, 0.72, 0, 1);
 
 export default function ReelCamera() {
-  const store = useStore();
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const cam = useRef(null);
@@ -33,28 +28,22 @@ export default function ReelCamera() {
   const [ready, setReady] = useState(false);
   const [facing, setFacing] = useState("front");
   const [flipping, setFlipping] = useState(false);
-  const [clips, setClips] = useState([]);
+  const [clip, setClip] = useState(null); // { uri, duration, w, h, mime, mirror }
   const [recording, setRecording] = useState(0);
   const [now, setNow] = useState(0);
   const [limit, setLimit] = useState(30);
-  const [speed, setSpeed] = useState(1);
-  const [speedOpen, setSpeedOpen] = useState(false);
   const [timer, setTimer] = useState(0);
   const [countdown, setCountdown] = useState(0);
-  const [music, setMusic] = useState(null);
-  const [sheet, setSheet] = useState(null);
   const [stage, setStage] = useState("capture");
-  const [filter, setFilter] = useState("normal");
-  const [filterHint, setFilterHint] = useState(0);
+  const [typing, setTyping] = useState(false);
   const [caption, setCaption] = useState("");
-  const [cover, setCover] = useState(0);
   const [alsoStory, setAlsoStory] = useState(false);
+  const [sending, setSending] = useState(null); // null | "upload" | "publish"
   const [toast, note] = useToast(1500);
   const countTimer = useRef(0);
 
-  const used = clips.reduce((sum, item) => sum + item.duration / (item.rate || 1), 0);
-  const live = recording ? (now - recording) / 1000 / speed : 0;
-  const left = Math.max(0, limit - used - live);
+  const live = recording ? (now - recording) / 1000 : 0;
+  const left = Math.max(0, limit - live);
   const camOn = Boolean(camPerm?.granted) && !mountError;
 
   useEffect(() => {
@@ -65,7 +54,7 @@ export default function ReelCamera() {
   }, [camPerm?.granted, micPerm, requestMic]);
   useEffect(() => () => clearInterval(countTimer.current), []);
 
-  // Clock for the remaining time while a clip records.
+  // Clock for the remaining time while the clip records.
   useEffect(() => {
     if (!recording) return undefined;
     const id = setInterval(() => setNow(Date.now()), 100);
@@ -79,27 +68,21 @@ export default function ReelCamera() {
   // Smooth red segment while recording (UI thread).
   const liveStart = useSharedValue(0);
   const liveWidth = useSharedValue(0);
-  const liveMeta = useSharedValue({ speed: 1, limit: 30 });
+  const liveLimit = useSharedValue(30);
   useEffect(() => {
-    liveMeta.value = { speed, limit };
-  }, [speed, limit, liveMeta]);
+    liveLimit.value = limit;
+  }, [limit, liveLimit]);
   useFrameCallback(() => {
     "worklet";
     if (!liveStart.value) return;
-    const seconds = (Date.now() - liveStart.value) / 1000 / liveMeta.value.speed;
-    liveWidth.value = Math.min(1, seconds / liveMeta.value.limit);
+    liveWidth.value = Math.min(1, (Date.now() - liveStart.value) / 1000 / liveLimit.value);
   });
 
   async function startClip() {
-    if (left <= 0.3) {
-      note(t("Il reel è completo"));
-      return;
-    }
     if (!camOn || !ready || !cam.current) {
-      note(t("Fotocamera non disponibile: aggiungi clip dalla galleria"));
+      note(t("Fotocamera non disponibile: scegli un video dalla galleria"));
       return;
     }
-    const rate = speed;
     const startedAt = Date.now();
     setRecording(startedAt);
     setNow(startedAt);
@@ -107,12 +90,12 @@ export default function ReelCamera() {
     liveWidth.value = 0;
     tap("medium");
     try {
-      const result = await cam.current.recordAsync({ maxDuration: Math.max(1, left * rate) });
+      const result = await cam.current.recordAsync({ maxDuration: limit });
       const seconds = (Date.now() - startedAt) / 1000;
-      if (result?.uri && seconds >= 0.3) {
-        const src = await keepMedia(result.uri, "reel");
-        setClips((prev) => [...prev, { type: "video", src, duration: seconds, rate }]);
-      }
+      if (result?.uri && seconds >= 0.5) {
+        // Recorded in portrait at 720p.
+        setClip({ uri: result.uri, duration: Math.min(seconds, limit), w: 720, h: 1280, mime: mimeOf(result.uri, "video/mp4") });
+      } else if (result?.uri) note(t("Tieni premuto un po' di più"));
     } catch {
       note(t("Registrazione non supportata qui"));
     } finally {
@@ -133,6 +116,10 @@ export default function ReelCamera() {
       stopClip();
       return;
     }
+    if (clip) {
+      note(t("Elimina la clip per registrarne un'altra"));
+      return;
+    }
     if (countdown) return;
     if (timer) {
       let n = timer;
@@ -151,216 +138,104 @@ export default function ReelCamera() {
     startClip();
   }
 
-  function removeLast() {
+  function removeClip() {
     tap();
-    setClips((prev) => prev.slice(0, -1));
-  }
-
-  function addPhotoClip(src) {
-    if (left < 1) {
-      note(t("Il reel è completo"));
-      return;
-    }
-    tap();
-    setClips((prev) => [...prev, { type: "image", src, duration: Math.min(3, left), rate: 1 }]);
+    setClip(null);
   }
 
   async function fromLibrary() {
     tap();
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, selectionLimit: 10, quality: 0.85, orderedSelection: true }).catch(() => null);
-    if (!result || result.canceled) return;
-    let room = left;
-    const added = [];
-    for (const asset of result.assets || []) {
-      if (room <= 0.5) break;
-      if (asset.type === "video") {
-        const seconds = Math.min(asset.duration ? asset.duration / 1000 : 5, room);
-        room -= seconds;
-        added.push({ type: "video", src: asset.uri, duration: seconds, rate: 1 });
-      } else {
-        room -= 3;
-        added.push({ type: "image", src: asset.uri, duration: 3, rate: 1 });
-      }
+    const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,  mediaTypes: ["videos"], allowsMultipleSelection: false, videoMaxDuration: REEL_LENGTHS[REEL_LENGTHS.length - 1], quality: 1 }).catch(() => null);
+    const asset = result && !result.canceled ? result.assets?.[0] : null;
+    if (!asset) return;
+    const seconds = asset.duration ? asset.duration / 1000 : 0;
+    if (seconds > REEL_LENGTHS[REEL_LENGTHS.length - 1] + 0.5) {
+      note(t("Il video può durare al massimo {n} secondi", { n: REEL_LENGTHS[REEL_LENGTHS.length - 1] }));
+      return;
     }
-    if (!added.length) return;
-    const kept = await keepAll(added.map((item) => item.src));
-    setClips((prev) => [...prev, ...added.map((item, i) => ({ ...item, src: kept[i] }))]);
+    setClip({ uri: asset.uri, duration: seconds || limit, w: asset.width || undefined, h: asset.height || undefined, mime: asset.mimeType || mimeOf(asset.uri, "video/mp4") });
+    setStage("edit");
   }
 
-  function publish() {
+  async function publish() {
+    if (!clip || sending) return;
     tap("medium");
-    const coverSrc = clips.find((item, i) => i === cover && item.type === "image")?.src || clips.find((item) => item.type === "image")?.src;
-    const poster = coverSrc || WORKS[0].src;
-    const total = clips.reduce((sum, item) => sum + item.duration / (item.rate || 1), 0);
-    const avatar = store.profile.src || AVATAR;
-    const text = caption.trim();
-    const item = {
-      id: `made-${Date.now()}`,
-      kind: "reel",
-      clips,
-      image: poster,
-      src: poster,
-      videoOnly: !coverSrc,
-      filter,
-      caption: text,
-      text,
-      music,
-      audio: music ? music.title : t("Audio originale"),
-      length: clockLabel(total),
-      name: store.profile.name,
-      handle: store.profile.handle,
-      avatar,
-      likes: "0",
-      comments: "0",
-      saves: "0",
-      time: "Now",
-      at: Date.now(),
-      mine: true,
-      thread: [],
-    };
-    store.publish(item);
-    if (alsoStory) {
-      store.publish({ id: `made-${Date.now()}-s`, kind: "story", image: poster, text: "", stickers: [], time: "Now", at: Date.now(), mine: true, src: avatar, avatar, name: t("Tu"), filter });
+    setTyping(false);
+    setSending("upload");
+    try {
+      const post = await createPost({
+        kind: "reel",
+        text: caption.trim(),
+        media: [{ uri: clip.uri, type: "video", w: clip.w, h: clip.h, mime: clip.mime }],
+        onProgress: (value) => { if (value >= 1) setSending("publish"); },
+      });
+      if (alsoStory && post?.media?.[0]?.url) {
+        await createStory({ uri: post.media[0].url, type: "video" }).catch(() => note(t("Storia non pubblicata")));
+      }
+      openReel(post?.id);
+    } catch (error) {
+      setSending(null);
+      Alert.alert(t("Reel non pubblicato"), errorText(error, t));
     }
-    openReel();
   }
 
   function close() {
+    if (sending) return;
     if (router.canGoBack()) router.back();
     else openTab("reels");
   }
 
-  function cycleFilter(dir) {
-    const i = STORY_FILTERS.findIndex((item) => item.id === filter);
-    const next = STORY_FILTERS[(i + dir + STORY_FILTERS.length) % STORY_FILTERS.length];
-    setFilter(next.id);
-    setFilterHint(Date.now());
-    tap();
-  }
-
-  const swipe = usePanGesture({
-    activeOffsetX: [-20, 20],
-    failOffsetY: [-20, 20],
-    onDeactivate: (event) => {
-      "worklet";
-      if (Math.abs(event.translationX) >= 50) scheduleOnRN(cycleFilter, event.translationX < 0 ? 1 : -1);
-    },
-  });
-
-  const filterNow = STORY_FILTERS.find((item) => item.id === filter) || STORY_FILTERS[0];
-  const thumb = clips.find((item) => item.type === "image")?.src || WORKS[0].src;
-
-  const musicTray = (
-    <DarkSheet tray open={sheet === "music"} title={t("Musica")} onClose={() => setSheet(null)} bottomPad={insets.bottom + 14}>
-      <ScrollView contentContainerStyle={styles.trayBody} showsVerticalScrollIndicator={false}>
-        {music ? (
-          <TrayRow onPress={() => { setMusic(null); setSheet(null); }}>
-            <X size={18} color="#fff" />
-            <Text style={styles.trayStrong}>{t("Togli la musica")}</Text>
-          </TrayRow>
-        ) : null}
-        {STORY_MUSIC.map((song) => (
-          <TrayRow key={song.title} onPress={() => { setMusic(song); setSheet(null); }}>
-            <Music size={18} color="#fff" />
-            <Text style={styles.trayStrong}>{song.title}</Text>
-            <Text style={styles.trayMuted}>{song.artist}</Text>
-          </TrayRow>
-        ))}
-      </ScrollView>
-    </DarkSheet>
-  );
-
-  if (stage === "edit") {
+  if (stage === "edit" && clip) {
+    const clips = [{ type: "video", src: clip.uri, duration: clip.duration, mirror: false }];
     return (
       <View style={styles.root}>
-        <GestureDetector gesture={swipe}>
-          <Animated.View entering={FadeIn.duration(420)} style={StyleSheet.absoluteFill}>
-            <ReelPlayer clips={clips} active={focused} paused={sheet === "caption"} muted={false} filter={filter} poster={clips[0]?.src} />
-          </Animated.View>
-        </GestureDetector>
-        {filterHint ? <FilterName key={filterHint} label={t(filterNow.label)} /> : null}
+        <Animated.View entering={FadeIn.duration(420)} style={StyleSheet.absoluteFill}>
+          <ReelPlayer clips={clips} active={focused} paused={typing || Boolean(sending)} muted={false} />
+        </Animated.View>
         <Scrim />
         <View style={[styles.top, { top: insets.top + 8 }]}>
-          <GlassBtn icon={ChevronLeft} label={t("Indietro")} onPress={() => { setStage("capture"); setSheet(null); }} />
-          <View style={styles.tools}>
-            <GlassBtn icon={Music} label={t("Musica")} onPress={() => setSheet("music")} />
-            <GlassBtn icon={Sparkle} label={t("Filtri")} on={sheet === "filters"} onPress={() => setSheet(sheet === "filters" ? null : "filters")} />
-          </View>
+          <GlassBtn icon={ChevronLeft} label={t("Indietro")} onPress={() => { if (!sending) setStage("capture"); }} />
+          <Text style={styles.left}>{clockLabel(clip.duration)}</Text>
         </View>
-        {music ? (
-          <View pointerEvents="none" style={[styles.musicChip, { top: insets.top + 60 }]}>
-            <Music size={14} color="#fff" />
-            <Text numberOfLines={1} style={styles.chipText}>{music.title} · {music.artist}</Text>
-          </View>
-        ) : null}
 
-        {sheet === "filters" ? (
-          <Animated.View entering={FadeIn.duration(220)} style={[styles.filters, { paddingBottom: 22 + insets.bottom }]}>
-            <LinearGradient pointerEvents="none" colors={["transparent", "rgba(0,0,0,0.75)"]} style={StyleSheet.absoluteFill} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-              {STORY_FILTERS.map((item) => {
-                const on = filter === item.id;
-                return (
-                  <Pressable key={item.id} onPress={() => { tap(); setFilter(item.id); setFilterHint(Date.now()); }} style={styles.filterBtn}>
-                    <View style={[styles.filterThumb, on ? styles.filterThumbOn : null]}>
-                      <Image source={{ uri: thumb }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                      <FilterLayer id={item.id} />
-                    </View>
-                    <Text style={styles.filterLabel}>{t(item.label)}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Pressable hitSlop={8} onPress={() => setSheet(null)} style={styles.done}>
-              <Text style={styles.doneText}>{t("Fine")}</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.finishWrap} pointerEvents="box-none">
+          <View style={[styles.finish, { paddingBottom: 20 + insets.bottom }]}>
+            <LinearGradient pointerEvents="none" colors={["transparent", "rgba(0,0,0,0.6)", "rgba(0,0,0,0.85)"]} locations={[0, 0.3, 1]} style={StyleSheet.absoluteFill} />
+            <TextInput
+              multiline
+              maxLength={2200}
+              value={caption}
+              onChangeText={setCaption}
+              editable={!sending}
+              placeholder={t("Scrivi una didascalia… #hashtag @menzione")}
+              placeholderTextColor="rgba(255,255,255,0.55)"
+              accessibilityLabel={t("Didascalia")}
+              keyboardAppearance="dark"
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
+              style={[styles.caption, typing ? styles.captionOn : null]}
+            />
+            <Pressable accessibilityRole="switch" accessibilityState={{ checked: alsoStory }} disabled={Boolean(sending)} onPress={() => { tap(); setAlsoStory((value) => !value); }} style={styles.toggleRow}>
+              <Text style={styles.toggleText}>{t("Condividi anche nella storia")}</Text>
+              <Switch on={alsoStory} />
             </Pressable>
-          </Animated.View>
-        ) : (
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.finishWrap} pointerEvents="box-none">
-            <View style={[styles.finish, { paddingBottom: 20 + insets.bottom }]}>
-              <LinearGradient pointerEvents="none" colors={["transparent", "rgba(0,0,0,0.6)", "rgba(0,0,0,0.85)"]} locations={[0, 0.3, 1]} style={StyleSheet.absoluteFill} />
-              <TextInput
-                multiline
-                maxLength={2200}
-                value={caption}
-                onChangeText={setCaption}
-                placeholder={t("Scrivi una didascalia… #hashtag @menzione")}
-                placeholderTextColor="rgba(255,255,255,0.55)"
-                accessibilityLabel={t("Didascalia")}
-                keyboardAppearance="dark"
-                onFocus={() => setSheet("caption")}
-                onBlur={() => setSheet(null)}
-                style={[styles.caption, sheet === "caption" ? styles.captionOn : null]}
-              />
-              {clips.some((item) => item.type === "image") ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.covers} keyboardShouldPersistTaps="handled">
-                  <Text style={styles.coversLabel}>{t("Copertina")}</Text>
-                  {clips.map((item, i) => (item.type === "image" ? (
-                    <Pressable key={i} onPress={() => { tap(); setCover(i); }} style={[styles.cover, cover === i ? styles.coverOn : null]}>
-                      <Image source={{ uri: item.src }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                    </Pressable>
-                  ) : null))}
-                </ScrollView>
-              ) : null}
-              <Pressable accessibilityRole="switch" accessibilityState={{ checked: alsoStory }} onPress={() => { tap(); setAlsoStory((value) => !value); }} style={styles.toggleRow}>
-                <Text style={styles.toggleText}>{t("Condividi anche nella storia")}</Text>
-                <Switch on={alsoStory} />
-              </Pressable>
-              <Pressable onPress={publish} style={({ pressed }) => [styles.share, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
-                <Text style={styles.shareText}>{t("Condividi reel")}</Text>
-              </Pressable>
-            </View>
-          </KeyboardAvoidingView>
-        )}
-        {musicTray}
+            <Pressable onPress={publish} disabled={Boolean(sending)} style={({ pressed }) => [styles.share, { opacity: sending ? 0.75 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
+              {sending ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <ActivityIndicator color="#fff" />
+                  <Text style={styles.shareText}>{sending === "upload" ? t("Caricamento del video…") : t("Pubblicazione…")}</Text>
+                </View>
+              ) : <Text style={styles.shareText}>{t("Condividi reel")}</Text>}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
         <Toast text={toast} bottom={84} />
       </View>
     );
   }
 
-  const lastImage = clips.length && !recording && clips[clips.length - 1].type === "image" ? clips[clips.length - 1].src : null;
-  let offset = 0;
   const chromeHidden = Boolean(recording);
+  const filled = clip ? Math.min(100, (clip.duration / limit) * 100) : 0;
 
   return (
     <View style={styles.root}>
@@ -374,7 +249,7 @@ export default function ReelCamera() {
             mode="video"
             mirror={facing === "front"}
             mute={!micPerm?.granted}
-            videoQuality="1080p"
+            videoQuality="720p"
             onCameraReady={() => { setReady(true); setFlipping(false); }}
             onMountError={() => setMountError(true)}
           />
@@ -385,78 +260,52 @@ export default function ReelCamera() {
             <Camera size={28} color="#fff" />
           </Pressable>
           <Text style={styles.nocamTitle}>{t("Fotocamera non disponibile")}</Text>
-          <Text style={styles.nocamText}>{t("Aggiungi foto o video per creare il reel")}</Text>
-          <View style={styles.demo}>
-            {WORKS.map((work) => (
-              <Pressable key={work.src} accessibilityLabel={work.caption} onPress={() => addPhotoClip(work.src)} style={({ pressed }) => [styles.demoTile, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
-                <Image source={{ uri: work.src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
-                <View style={styles.demoPlus}><Plus size={13} weight="bold" color="#fff" /></View>
-              </Pressable>
-            ))}
-          </View>
+          <Text style={styles.nocamText}>{t("Scegli un video dalla galleria per creare il reel")}</Text>
+          <Pressable onPress={fromLibrary} style={({ pressed }) => [styles.pick, { opacity: pressed ? 0.7 : 1 }]}>
+            <Text style={styles.pickText}>{t("Scegli un video")}</Text>
+          </Pressable>
         </LinearGradient>
       )}
-      {lastImage ? <Image pointerEvents="none" source={{ uri: lastImage }} style={[StyleSheet.absoluteFill, { opacity: 0.18 }]} contentFit="cover" /> : null}
       <Scrim />
       {countdown ? <Count key={countdown} value={countdown} /> : null}
 
-      <View style={[styles.segments, { top: insets.top + 4 }]} accessibilityLabel={t("{used} di {limit} secondi", { used: Math.round(used), limit })}>
-        {clips.map((item, i) => {
-          const width = ((item.duration / (item.rate || 1)) / limit) * 100;
-          const style = { left: `${offset}%`, width: `${width}%` };
-          offset += width;
-          return <Animated.View key={i} entering={FadeIn.duration(220)} style={[styles.segment, style]} />;
-        })}
-        {recording ? <LiveSegment left={offset} width={liveWidth} /> : null}
+      <View style={[styles.segments, { top: insets.top + 4 }]} accessibilityLabel={t("{used} di {limit} secondi", { used: Math.round(clip ? clip.duration : live), limit })}>
+        {clip ? <Animated.View entering={FadeIn.duration(220)} style={[styles.segment, { left: 0, width: `${filled}%` }]} /> : null}
+        {recording ? <LiveSegment left={0} width={liveWidth} /> : null}
       </View>
 
       <View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.top, { top: insets.top + 16, opacity: chromeHidden ? 0 : 1 }]}>
         <GlassBtn icon={X} label={t("Chiudi")} onPress={close} />
-        <Pressable onPress={() => { tap(); setSheet("music"); }} style={styles.musicPill}>
-          <Music size={15} color="#fff" />
-          <Text numberOfLines={1} style={styles.musicText}>{music ? music.title : t("Aggiungi musica")}</Text>
-        </Pressable>
-        <Text style={styles.left}>{clockLabel(left)}</Text>
+        <Text style={styles.left}>{clockLabel(clip ? clip.duration : left)}</Text>
       </View>
 
-      <View pointerEvents={chromeHidden ? "none" : "box-none"} style={[styles.rail, { top: insets.top + 72, opacity: chromeHidden ? 0 : 1 }]}>
+      <View pointerEvents={chromeHidden || clip ? "none" : "box-none"} style={[styles.rail, { top: insets.top + 72, opacity: chromeHidden || clip ? 0 : 1 }]}>
         <RailBtn label={t("Durata")} onPress={() => setLimit((value) => REEL_LENGTHS[(REEL_LENGTHS.indexOf(value) + 1) % REEL_LENGTHS.length])}>
           <Text style={styles.len}>{limit}</Text>
         </RailBtn>
-        <RailBtn label={t("Velocità")} on={speed !== 1} onPress={() => setSpeedOpen((value) => !value)}>
-          <Text style={[styles.len, { color: speed !== 1 ? "#111" : "#fff" }]}>{speed}×</Text>
-        </RailBtn>
-        {speedOpen ? (
-          <Animated.View entering={FadeIn.duration(180)} style={styles.speeds}>
-            {REEL_RECORD_SPEEDS.map((value) => (
-              <Pressable key={value} onPress={() => { tap(); setSpeed(value); setSpeedOpen(false); }} style={[styles.speed, speed === value ? styles.speedOn : null]}>
-                <Text style={[styles.speedText, { color: speed === value ? "#111" : "#fff" }]}>{value}×</Text>
-              </Pressable>
-            ))}
-          </Animated.View>
-        ) : null}
         <RailBtn label={t("Timer")} on={Boolean(timer)} badge={timer || null} onPress={() => setTimer((value) => (value === 0 ? 3 : value === 3 ? 10 : 0))}>
           <Timer size={21} color={timer ? "#111" : "#fff"} />
         </RailBtn>
       </View>
 
       <Text pointerEvents="none" style={[styles.tip, { bottom: 140 + insets.bottom }]}>
-        {recording ? t("Tocca per fermare") : clips.length ? (clips.length === 1 ? t("1 clip · tocca per aggiungerne") : t("{n} clip · tocca per aggiungerne", { n: clips.length })) : t("Tocca per registrare una clip")}
+        {recording ? t("Tocca per fermare") : clip ? t("Clip pronta · tocca la freccia per continuare") : t("Tocca per registrare")}
       </Text>
 
       <View style={[styles.bottom, { bottom: 40 + insets.bottom }]}>
         <View style={styles.side}>
           <Pressable accessibilityLabel={t("Galleria")} pointerEvents={chromeHidden ? "none" : "auto"} onPress={fromLibrary} style={({ pressed }) => [styles.roll, { opacity: chromeHidden ? 0 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
-            <Image source={{ uri: WORKS[clips.length % WORKS.length].src }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+            <SquarePlay size={20} color="#fff" />
+            <View style={styles.rollPlus}><Plus size={9} weight="bold" color="#fff" /></View>
           </Pressable>
         </View>
         <Shutter recording={Boolean(recording)} onPress={shutter} />
         <View style={[styles.side, styles.right, { opacity: chromeHidden ? 0 : 1 }]} pointerEvents={chromeHidden ? "none" : "box-none"}>
-          {clips.length && !recording ? (
+          {clip && !recording ? (
             <>
-              <GlassBtn icon={Undo} label={t("Elimina ultima clip")} onPress={removeLast} />
+              <GlassBtn icon={Undo} label={t("Elimina la clip")} onPress={removeClip} />
               <Animated.View entering={FadeIn.duration(260)}>
-                <Pressable accessibilityLabel={t("Avanti")} onPress={() => { tap(); setStage("edit"); setSheet(null); setSpeedOpen(false); }} style={({ pressed }) => [styles.next, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+                <Pressable accessibilityLabel={t("Avanti")} onPress={() => { tap(); setStage("edit"); }} style={({ pressed }) => [styles.next, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
                   <ChevronRight size={22} weight="bold" color="#111" />
                 </Pressable>
               </Animated.View>
@@ -475,7 +324,6 @@ export default function ReelCamera() {
         </View>
       </View>
 
-      {musicTray}
       <Toast text={toast} bottom={84} />
     </View>
   );
@@ -576,31 +424,6 @@ function Count({ value }) {
   );
 }
 
-function FilterName({ label }) {
-  return (
-    <Animated.View pointerEvents="none" entering={FadeIn.duration(160)} exiting={FadeOut.duration(300)} style={styles.filterName}>
-      <FilterNameFade label={label} />
-    </Animated.View>
-  );
-}
-
-function FilterNameFade({ label }) {
-  const alpha = useSharedValue(1);
-  useEffect(() => {
-    alpha.value = withSequence(withTiming(1, { duration: 700 }), withTiming(0, { duration: 400 }));
-  }, [alpha]);
-  const style = useAnimatedStyle(() => ({ opacity: alpha.value }));
-  return <Animated.Text style={[styles.filterNameText, style]}>{label}</Animated.Text>;
-}
-
-function TrayRow({ onPress, children }) {
-  return (
-    <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => [styles.trayRow, { backgroundColor: pressed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)" }]}>
-      {children}
-    </Pressable>
-  );
-}
-
 function Switch({ on }) {
   const x = useSharedValue(on ? 1 : 0);
   useEffect(() => {
@@ -622,18 +445,15 @@ const styles = StyleSheet.create({
   nocamIcon: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: "rgba(255,255,255,0.6)", alignItems: "center", justifyContent: "center", marginBottom: 6 },
   nocamTitle: { color: "#fff", fontSize: 17, fontWeight: "700" },
   nocamText: { color: "rgba(255,255,255,0.65)", fontSize: 13.5, textAlign: "center" },
-  demo: { flexDirection: "row", gap: 8, marginTop: 14 },
-  demoTile: { width: 64, height: 96, borderRadius: 10, overflow: "hidden", backgroundColor: "#222" },
-  demoPlus: { position: "absolute", right: 4, bottom: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: "#0095f6", alignItems: "center", justifyContent: "center" },
+  pick: { marginTop: 14, height: 38, paddingHorizontal: 18, borderRadius: 10, backgroundColor: "#0095f6", alignItems: "center", justifyContent: "center" },
+  pickText: { color: "#fff", fontSize: 14.5, fontWeight: "700" },
+  rollPlus: { position: "absolute", right: -5, bottom: -5, width: 16, height: 16, borderRadius: 8, backgroundColor: "#0095f6", alignItems: "center", justifyContent: "center" },
   segments: { position: "absolute", zIndex: 12, left: 10, right: 10, height: 4, borderRadius: 99, backgroundColor: "rgba(255,255,255,0.28)", overflow: "hidden" },
   segment: { position: "absolute", top: 0, bottom: 0, backgroundColor: "#fff", borderRightWidth: 2, borderRightColor: "rgba(0,0,0,0.6)" },
   segmentLive: { backgroundColor: "#ff3040", borderRightWidth: 0 },
   top: { position: "absolute", zIndex: 12, left: 10, right: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  tools: { flexDirection: "row", gap: 6 },
   glass: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.3)" },
   glassOn: { backgroundColor: "#fff" },
-  musicPill: { flexDirection: "row", alignItems: "center", gap: 6, height: 34, maxWidth: 200, paddingHorizontal: 14, borderRadius: 99, backgroundColor: "rgba(0,0,0,0.35)" },
-  musicText: { color: "#fff", fontSize: 13.5, fontWeight: "600", flexShrink: 1 },
   left: { minWidth: 40, textAlign: "right", color: "#fff", fontSize: 14, fontWeight: "700", fontVariant: ["tabular-nums"], ...TEXT_SHADOW },
   rail: { position: "absolute", zIndex: 10, left: 10, gap: 14, alignItems: "flex-start" },
   railBtn: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -643,48 +463,24 @@ const styles = StyleSheet.create({
   len: { color: "#fff", fontSize: 12.5, fontWeight: "800" },
   badge: { position: "absolute", right: -2, bottom: -2, minWidth: 17, height: 17, paddingHorizontal: 3, borderRadius: 99, backgroundColor: "#ffd60a", alignItems: "center", justifyContent: "center" },
   badgeText: { color: "#111", fontSize: 10.5, fontWeight: "700" },
-  speeds: { flexDirection: "row", gap: 6, marginLeft: 50, marginTop: -6, padding: 4, borderRadius: 99, backgroundColor: "rgba(0,0,0,0.45)" },
-  speed: { width: 38, height: 30, borderRadius: 99, alignItems: "center", justifyContent: "center" },
-  speedOn: { backgroundColor: "#fff" },
-  speedText: { fontSize: 12.5, fontWeight: "700" },
   tip: { position: "absolute", zIndex: 9, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.8)", fontSize: 12.5, ...TEXT_SHADOW },
   bottom: { position: "absolute", zIndex: 10, left: 0, right: 0, flexDirection: "row", alignItems: "center", paddingHorizontal: 26 },
   side: { flex: 1, flexDirection: "row", alignItems: "center" },
   right: { justifyContent: "flex-end", gap: 10 },
-  roll: { width: 40, height: 40, borderRadius: 10, overflow: "hidden", borderWidth: 2, borderColor: "#fff", backgroundColor: "#222" },
+  roll: { width: 40, height: 40, borderRadius: 10, borderWidth: 2, borderColor: "#fff", backgroundColor: "rgba(0,0,0,0.3)", alignItems: "center", justifyContent: "center" },
   next: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
   shutter: { width: 84, height: 84, borderRadius: 42, borderWidth: 5, borderColor: "#fff", alignItems: "center", justifyContent: "center" },
   shutterDot: { width: 64, height: 64, backgroundColor: "#ff3040" },
   countWrap: { zIndex: 20, alignItems: "center", justifyContent: "center" },
   count: { color: "#fff", fontSize: 140, fontWeight: "800", textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 6 }, textShadowRadius: 30 },
-  musicChip: { position: "absolute", zIndex: 11, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "80%", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: "rgba(0,0,0,0.45)" },
-  chipText: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  filterName: { position: "absolute", zIndex: 6, top: "44%", left: 0, right: 0, alignItems: "center" },
-  filterNameText: { color: "#fff", fontSize: 30, fontWeight: "700", letterSpacing: -0.6, textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
-  filters: { position: "absolute", zIndex: 14, left: 0, right: 0, bottom: 0, paddingTop: 14, alignItems: "center", gap: 10 },
-  filterRow: { gap: 10, paddingHorizontal: 14 },
-  filterBtn: { alignItems: "center", gap: 6 },
-  filterThumb: { width: 58, height: 58, borderRadius: 29, overflow: "hidden", borderWidth: 2, borderColor: "transparent", backgroundColor: "#222" },
-  filterThumbOn: { borderColor: "#fff", transform: [{ scale: 1.12 }] },
-  filterLabel: { color: "#fff", fontSize: 11.5, fontWeight: "600" },
-  done: { height: 34, paddingHorizontal: 14, justifyContent: "center" },
-  doneText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   finishWrap: { ...StyleSheet.absoluteFill, zIndex: 12, justifyContent: "flex-end" },
   finish: { gap: 10, paddingTop: 16, paddingHorizontal: 14 },
   caption: { minHeight: 52, maxHeight: 120, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)", borderRadius: 12, backgroundColor: "rgba(0,0,0,0.35)", color: "#fff", fontSize: 14.5, lineHeight: 19.5, textAlignVertical: "top" },
   captionOn: { borderColor: "#fff" },
-  covers: { alignItems: "center", gap: 6 },
-  coversLabel: { color: "#fff", fontSize: 13, fontWeight: "600", marginRight: 4 },
-  cover: { width: 40, height: 60, borderRadius: 6, overflow: "hidden", borderWidth: 2, borderColor: "transparent" },
-  coverOn: { borderColor: "#fff", transform: [{ scale: 1.06 }] },
   toggleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   toggleText: { color: "#fff", fontSize: 14, fontWeight: "600" },
   switch: { width: 44, height: 26, borderRadius: 99, padding: 3 },
   knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
   share: { height: 48, borderRadius: 12, backgroundColor: "#0095f6", alignItems: "center", justifyContent: "center" },
   shareText: { color: "#fff", fontSize: 15.5, fontWeight: "700" },
-  trayBody: { gap: 6, paddingBottom: 8 },
-  trayRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12 },
-  trayStrong: { color: "#fff", fontSize: 14.5, fontWeight: "700" },
-  trayMuted: { marginLeft: "auto", color: "rgba(255,255,255,0.55)", fontSize: 12.5 },
 });

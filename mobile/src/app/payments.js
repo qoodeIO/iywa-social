@@ -5,19 +5,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
 import { t } from "../lib/i18n";
-import { payApi, payBase, payHandle } from "../lib/pay";
+import { payApi, payBase } from "../lib/pay";
+import { useMe } from "../lib/session";
+import { router } from "expo-router";
 import { Bag, Bell, Check, Directions, PriceTag, Warn } from "../ui/icons-profile";
-import { Header, T, tap } from "../ui/kit";
+import { Btn, Header, T, tap } from "../ui/kit";
 import { settingsColors } from "../ui/profile-kit";
 
 // Pagamenti: connect a Stripe account to sell directly in the app (web PaymentsSetup).
-// It talks to the iywa hub; when the hub is not reachable the card says so.
+// Every call acts for the signed-in account (token); when the server is not reachable the card says so.
 export default function Payments() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const store = useStore();
   const st = settingsColors(theme);
-  const handle = payHandle(store);
+  const me = useMe();
+  const handle = me?.handle || null;
+  const business = store.accountType === "business";
   const [config, setConfig] = useState(null);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -26,7 +30,7 @@ export default function Payments() {
   const load = useCallback(() => {
     setError("");
     payApi("/config").then(setConfig).catch(() => setConfig({ enabled: false, offline: true }));
-    if (handle) payApi(`/connect/status?handle=${encodeURIComponent(handle)}`).then(setStatus).catch((err) => setStatus({ connected: false, error: err.code }));
+    if (handle) payApi("/connect/status").then(setStatus).catch((err) => setStatus({ connected: false, error: err.code }));
   }, [handle]);
   useEffect(load, [load]);
 
@@ -36,7 +40,7 @@ export default function Payments() {
     setBusy(true);
     setError("");
     try {
-      const { url } = await payApi("/connect/onboard", { handle, returnUrl: back, country: "IT" });
+      const { url } = await payApi("/connect/onboard", { returnUrl: back, country: "IT", email: store.business?.email || undefined, shopName: store.business?.title || me?.name || undefined });
       await WebBrowser.openBrowserAsync(url);
       load();
     } catch (err) {
@@ -48,7 +52,7 @@ export default function Payments() {
   async function dashboard() {
     setBusy(true);
     try {
-      const { url } = await payApi("/connect/dashboard", { handle });
+      const { url } = await payApi("/connect/dashboard", {});
       await WebBrowser.openBrowserAsync(url);
     } catch (err) {
       setError(err.detail || err.code || "error");
@@ -64,7 +68,7 @@ export default function Payments() {
     pending: t("Completa la verifica su Stripe"),
     none: t("Vendi direttamente nell'app"),
     server: t("Stripe non è configurato sul server"),
-    nouser: t("Prima collegati al Direct"),
+    nouser: t("Accedi per vendere"),
     offline: t("Server non raggiungibile"),
     loading: t("Controllo…"),
   }[state];
@@ -132,7 +136,12 @@ export default function Payments() {
             </View>
           ))}
         </View>
-        <T size={12.5} color={theme.text2} style={{ marginTop: 10, marginHorizontal: 30, lineHeight: 17 }}>{t("I prodotti con foto caricate dal telefono si sincronizzano senza foto: per ora usa foto dal web.")}</T>
+        {handle && !business ? (
+          <View style={{ marginTop: 14, marginHorizontal: INSET, gap: 8 }}>
+            <T size={12.5} color={theme.text2} style={{ marginHorizontal: 16, lineHeight: 17 }}>{t("Per pubblicare prodotti passa a un account Azienda e attiva lo shop.")}</T>
+            <Btn title={t("Passa ad Azienda")} height={42} onPress={() => router.push("/settings/account-type")} />
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );

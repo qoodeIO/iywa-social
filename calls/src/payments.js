@@ -10,8 +10,8 @@
 //   STRIPE_WEBHOOK_SECRET  whsec_...   (from the webhook endpoint or `stripe listen`)
 //   PLATFORM_FEE_PERCENT   e.g. 5
 //
-// Identity note: the hub trusts the handle the client declares. Until Space has
-// real authentication, keep Stripe in test mode.
+// Identity: every route except the public shop listings and the webhook needs a session
+// token (Authorization: Bearer), and acts for that account only.
 
 const STRIPE = "https://api.stripe.com/v1";
 const MAX_QTY = 20;
@@ -135,7 +135,7 @@ function orderOut(row) {
   };
 }
 
-export async function handlePayments(hub, request, url) {
+export async function handlePayments(hub, request, url, me = null) {
   const env = hub.env;
   const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "access-control-allow-origin": "*" } });
   const path = url.pathname.replace(/^\/calls\/api/, "");
@@ -143,7 +143,15 @@ export async function handlePayments(hub, request, url) {
   const feePercent = Math.max(0, Math.min(30, Number(env.PLATFORM_FEE_PERCENT ?? 5)));
   const body = request.method === "POST" && path !== "/stripe/webhook" ? await request.json().catch(() => ({})) : {};
   const one = (query, ...args) => hub.one(query, ...args);
-  const userExists = (handle) => Boolean(handle && one("SELECT 1 AS ok FROM users WHERE handle = ?", handle));
+  const userExists = (handle) => Boolean(handle && one("SELECT 1 AS ok FROM accounts WHERE handle = ?", handle));
+  // Everything that acts for someone uses the signed-in account, never a handle in the request.
+  const PUBLIC = new Set(["/config", "/shop", "/shops", "/stripe/webhook"]);
+  if (!PUBLIC.has(path) && !me) return json({ error: "auth" }, 401);
+  if (me) {
+    body.handle = me;
+    body.buyer = me;
+    if (!PUBLIC.has(path)) url.searchParams.set("handle", me);
+  }
 
   try {
     if (path === "/config") return json({ enabled: configured, feePercent, testMode: String(env.STRIPE_SECRET_KEY || "").startsWith("sk_test_") });
@@ -184,11 +192,11 @@ export async function handlePayments(hub, request, url) {
         if (!item.id || !Number.isFinite(cents) || cents < 50 || cents > 5_000_000) continue;
         const image = /^https:\/\//.test(String(item.image || "")) ? clean(item.image, 600) : null;
         hub.sql.exec(
-          "INSERT INTO pay_products (seller, id, name, price_cents, image, stock, made_to_order, service, shop, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO pay_products (seller, id, name, price_cents, image, stock, made_to_order, service, shop, updated_at, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           seller, clean(item.id, 64), clean(item.name, 120) || "Prodotto", cents, image,
           item.stock == null ? null : Math.max(0, Math.round(Number(item.stock) || 0)),
           item.madeToOrder ? Math.max(1, Math.round(Number(item.madeToOrder))) : null,
-          item.service ? 1 : 0, shop, now,
+          item.service ? 1 : 0, shop, now, JSON.stringify({ ...item, images: (item.images || [image]).filter((u) => /^https:\/\//.test(String(u || ""))).slice(0, 10) }).slice(0, 40_000),
         );
       }
       return json({ ok: true, count: hub.one("SELECT count(*) AS n FROM pay_products WHERE seller = ?", seller).n });

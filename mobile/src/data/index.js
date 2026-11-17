@@ -1,49 +1,29 @@
 import seed from "./seed.json";
 import { localeTag, t, tk } from "../lib/i18n";
 
-// Seed times were frozen when the data was extracted; shift them so "2h ago" stays "2h ago".
-const SHIFT = Date.now() - seed.BOOT_AT;
-const NOTE_SHIFT = Date.now() - seed.NOW0;
-
-export const AVATAR = seed.AVATAR;
-export const PORTRAIT = seed.PORTRAIT;
-export const PEOPLE = seed.SEARCH_PEOPLE;
-export const CONTACTS = seed.CONTACTS;
-export const WORKS = seed.WORKS;
-export const REELS = seed.REELS;
-export const HIGHLIGHTS = seed.HIGHLIGHTS;
-export const PROFILE = { ...seed.PROFILE_SEED, src: AVATAR, followers: 1400, following: 86 };
-export const POSTS = seed.POSTS.map((post) => ({ ...post, avatar: post.mine ? AVATAR : post.avatar }));
-export const STORY_DECKS = seed.STORY_DECKS;
-export const SHOPS = seed.SHOPS;
-export const MY_PRODUCTS = seed.MY_PRODUCTS_SEED;
-export const BUSINESS = seed.DEFAULT_BUSINESS;
-export const REVIEW_LINES = seed.REVIEW_LINES;
+// No demo content: every person, post, story, shop and chat comes from the iywa server
+// (lib/social.js). These names stay exported, empty, for code that still reads them.
+export const AVATAR = "";
+export const PORTRAIT = "";
+export const PEOPLE = [];
+export const CONTACTS = [];
+export const WORKS = [];
+export const REELS = [];
+export const HIGHLIGHTS = [];
+export const PROFILE = { name: "", handle: "", bio: "", src: "", followers: 0, following: 0 };
+export const POSTS = [];
+export const STORY_DECKS = [];
+export const SHOPS = {};
+export const MY_PRODUCTS = [];
+// Empty business details for a new shop.
+export const BUSINESS = { title: "", category: "", address: "", city: "", phone: "", email: "", hours: { days: [1, 2, 3, 4, 5], open: "09:00", close: "18:00" }, shop: false };
+export const REVIEW_LINES = [];
 export const SHOP_TOPICS = seed.SHOP_TOPICS;
 export const EXPLORE_TOPICS = seed.EXPLORE_TOPICS;
-
-const rebaseThought = (item) => ({ ...item, created: item.created + SHIFT, replies: (item.replies || []).map(rebaseThought), poll: item.poll ? { ...item.poll, endsAt: item.poll.endsAt + SHIFT } : undefined });
-export const THOUGHTS = seed.THOUGHT_SEED.map(rebaseThought);
-export const NOTIFICATIONS = seed.NOTIFY_SEED.map((note) => ({ ...note, at: note.at + NOTE_SHIFT }));
-
-export const CHATS = seed.THREADS.map((thread) => ({ ...thread, messages: thread.messages || [] }));
-
-const shot = (id, w = 900, h = 1125) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
-export const EXPLORE = seed.EXPLORE_SEED.map(([id, who, photo, text, likes, tag, extra]) => {
-  const person = PEOPLE[who % PEOPLE.length];
-  return { id, name: person.name, handle: person.handle, avatar: person.src, image: shot(photo), images: [shot(photo), ...(extra || []).map((x) => shot(x))], text, likes, tag, place: person.city };
-});
-
-// People tagged in the photo and shoppable products, like the web EXPLORE_POSTS.
-const EXPLORE_TAGS = { x8: ["Pietro Lama", "Nico Serra"], x7: ["Giulia Neri"], x1: ["Elena Marini"] };
-const EXPLORE_PRODUCTS = {
-  x1: [["Sara Conte", "sc4"]], x7: [["Sara Conte", "sc2"], ["Sara Conte", "sc1"]], x14: [["Sara Conte", "sc3"]], x21: [["Sara Conte", "sc1"]],
-  x4: [["Adele Romano", "ar1"]], x13: [["Adele Romano", "ar2"]], x3: [["Leo Bassi", "lb1"]], x5: [["Pietro Lama", "pl3"]], x11: [["Pietro Lama", "pl3"]], x24: [["Pietro Lama", "pl2"]],
-};
-for (const post of EXPLORE) {
-  if (EXPLORE_TAGS[post.id]) post.tags = EXPLORE_TAGS[post.id];
-  if (EXPLORE_PRODUCTS[post.id]) post.products = EXPLORE_PRODUCTS[post.id].map(([owner, id]) => ({ owner, id }));
-}
+export const THOUGHTS = [];
+export const NOTIFICATIONS = [];
+export const CHATS = [];
+export const EXPLORE = [];
 
 // The products tagged on a post that still exist in a shop: [{ owner, product }].
 export function postProducts(post) {
@@ -216,6 +196,9 @@ export function storeRefs(store) {
 }
 
 export function seededReviews(key) {
+  return { count: 0, avg: 0, list: [] };
+}
+function unusedSeededReviews(key) {
   const hash = hashOf(key);
   const count = 3 + (hash % 40);
   const stars = [5, 5, 5, 4, 5, 4, 5].slice(0, 3 + (hash % 3));
@@ -318,6 +301,6 @@ export const SORTS = [["relevance", tk("Rilevanza")], ["rating", tk("Più votati
 // ---------------------------------------------------------------------------
 // Home feed (web FEED_PAGES, MEET)
 // ---------------------------------------------------------------------------
-export const MEET = seed.MEET || [];
-export const FEED_PAGES = seed.FEED_PAGES || [];
-export const HERO = seed.HERO;
+export const MEET = [];
+export const FEED_PAGES = [];
+export const HERO = null;

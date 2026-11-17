@@ -1,83 +1,102 @@
 import { useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
-import { Image } from "expo-image";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useTheme, INSET } from "../theme";
 import { useStore } from "../lib/store";
-import { PEOPLE } from "../data";
-import { Heart } from "./icons";
+import { addComment, ago, deleteComment, toggleCommentLike, useComments } from "../lib/social";
+import { myHandle, useMe } from "../lib/session";
+import { Close, Heart } from "./icons";
 import { T, tap } from "./kit";
-import { MentionSuggest, Rich, openPerson } from "./feed";
-import { canReach, faceOf, textHidden } from "./feedData";
-import { commentPost } from "./feedEcho";
+import { Face, MentionSuggest, Rich, failAlert, openHandle } from "./feed";
+import { personHidden, textHidden } from "./feedData";
 import { t } from "../lib/i18n";
 
 export const EMOJI = ["❤️", "🙌", "🔥", "👏", "😢", "😍", "😮", "😂"];
 
-export function commentsLocked(store, post) {
-  return post.name !== store.profile.name && !canReach(store.prefs, store.follows, post.name, "comments");
-}
-
-// Lines of a post's thread plus my own comments (web CommentThread).
-export function useCommentLines(post) {
+// Comments of a post from the server, each top-level comment followed by its replies.
+export function useCommentLines(postId) {
   const store = useStore();
-  const me = store.profile;
-  const mine = store.postComments?.[post.id];
-  return useMemo(() => [
-    ...(post.thread || []).map((note, i) => ({ ...note, id: `t-${i}`, time: t("{n} h", { n: i + 2 }) })),
-    ...(mine || []).map((text, i) => ({ id: `m-${i}`, name: me.name, text, mine: true, time: t("ora") })),
-  ].filter((note) => !textHidden(store.prefs, note.text)), [post.thread, mine, me.name, store.prefs]);
+  const prefs = store.prefs;
+  const { data, loading, error, refresh } = useComments(postId);
+  const lines = useMemo(() => {
+    const me = myHandle();
+    const visible = (data || []).filter((c) => c.author?.handle === me || (!personHidden(prefs, c.author?.handle, true) && !textHidden(prefs, c.text)));
+    const ids = new Set(visible.map((c) => c.id));
+    const byTime = (a, b) => a.createdAt - b.createdAt;
+    const top = visible.filter((c) => !c.parent || !ids.has(c.parent)).sort(byTime);
+    const out = [];
+    for (const comment of top) {
+      out.push({ ...comment, depth: 0 });
+      for (const reply of visible.filter((c) => c.parent === comment.id).sort(byTime)) out.push({ ...reply, depth: 1 });
+    }
+    return out;
+  }, [data, prefs]);
+  return { lines, loading: loading && !data, error: data ? null : error, refresh };
 }
 
+// The caption as the first line (post page).
 export function CaptionRow({ post }) {
   const theme = useTheme();
   return (
     <View style={styles.row}>
-      <Image source={{ uri: post.src || post.avatar || faceOf(post.name) }} style={styles.face} transition={120} />
+      <Pressable onPress={() => openHandle(post.owner)}>
+        <Face src={post.src} name={post.name || post.owner} size={34} />
+      </Pressable>
       <View style={{ flex: 1 }}>
-        <Rich text={post.text} prefix={<T size={14} weight="600">{post.name} </T>} />
-        {post.time ? <T size={12.5} color={theme.text2} style={{ marginTop: 3 }}>{post.time === "Now" ? t("Adesso") : typeof post.time === "string" ? t(post.time) : post.time}</T> : null}
+        <Rich text={post.text} prefix={<T size={14} weight="600" onPress={() => openHandle(post.owner)}>{post.owner} </T>} />
+        {post.time ? <T size={12.5} color={theme.text2} style={{ marginTop: 3 }}>{post.time}</T> : null}
       </View>
     </View>
   );
 }
 
+// One comment: like, reply, and (long press) delete when it is mine or on my post.
 export function CommentRow({ post, note, onReply }) {
   const theme = useTheme();
-  const store = useStore();
-  const key = `${post.id}:${note.id}`;
-  const on = (store.commentLikes || []).includes(key);
-  const restricted = (store.prefs?.restricted || []).includes(note.name);
+  const author = note.author || {};
+  const me = myHandle();
+  const canDelete = author.handle === me || post.owner === me;
+  const remove = () => {
+    if (!canDelete) return;
+    tap("medium");
+    Alert.alert(t("Eliminare il commento?"), note.depth ? undefined : t("Verranno eliminate anche le risposte."), [
+      { text: t("Annulla"), style: "cancel" },
+      { text: t("Elimina"), style: "destructive", onPress: () => deleteComment(post.id, note.id).catch(failAlert) },
+    ]);
+  };
   return (
-    <View style={styles.row}>
-      <Pressable onPress={() => openPerson(note.name)}>
-        <Image source={{ uri: faceOf(note.name, store.profile) }} style={styles.face} transition={120} />
+    <Pressable onLongPress={canDelete ? remove : undefined} delayLongPress={350} style={[styles.row, note.depth ? styles.reply : null]}>
+      <Pressable onPress={() => openHandle(author.handle)}>
+        <Face src={author.avatar} name={author.name || author.handle} size={note.depth ? 26 : 34} />
       </Pressable>
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-          <T size={13} weight="600" onPress={() => openPerson(note.name)}>{note.name}</T>
-          <T size={12} color={theme.text2}>{note.time}</T>
+          <T size={13} weight="600" onPress={() => openHandle(author.handle)}>{author.handle}</T>
+          <T size={12} color={theme.text2}>{ago(note.createdAt)}</T>
+          {author.handle === post.owner ? <T size={12} color={theme.text2}>{t("· Autore")}</T> : null}
         </View>
         <Rich text={note.text} />
-        {restricted ? <T size={12} color={theme.text2}>{t("Solo tu")}</T> : null}
         <View style={styles.tools}>
-          {on ? <T size={12.5} weight="600" color={theme.text2}>{t("1 Mi piace")}</T> : null}
-          <Pressable hitSlop={6} onPress={() => onReply(note)}><T size={12.5} weight="600" color={theme.text2}>{t("Rispondi")}</T></Pressable>
+          {note.likes > 0 ? <T size={12.5} weight="600" color={theme.text2}>{note.likes === 1 ? t("1 Mi piace") : t("{n} Mi piace", { n: note.likes })}</T> : null}
+          {onReply ? <Pressable hitSlop={6} onPress={() => onReply(note)}><T size={12.5} weight="600" color={theme.text2}>{t("Rispondi")}</T></Pressable> : null}
+          {canDelete ? <Pressable hitSlop={6} onPress={remove}><T size={12.5} weight="600" color={theme.text2}>{t("Elimina")}</T></Pressable> : null}
         </View>
       </View>
-      <Pressable accessibilityLabel={t("Mi piace al commento")} hitSlop={10} onPress={() => { tap(); store.toggleCommentLike(key); }} style={styles.like}>
-        <Heart size={15} weight={on ? "fill" : "regular"} color={on ? theme.red : theme.text2} />
+      <Pressable accessibilityLabel={t("Mi piace al commento")} accessibilityState={{ selected: Boolean(note.liked) }} hitSlop={10} onPress={() => { tap(); toggleCommentLike(post.id, note).catch(failAlert); }} style={styles.like}>
+        <Heart size={15} weight={note.liked ? "fill" : "regular"} color={note.liked ? theme.red : theme.text2} />
       </Pressable>
-    </View>
+    </Pressable>
   );
 }
 
-// Footer: @ suggestions, quick emoji, avatar + input + "Pubblica".
-export function CommentComposer({ post, draft, setDraft, inputRef, onSent, bottom = 0 }) {
+// Footer: @ suggestions, quick emoji, my face + input + "Pubblica".
+export function CommentComposer({ post, draft, setDraft, inputRef, replyTo, setReplyTo, onSent, bottom = 0 }) {
   const theme = useTheme();
+  const me = useMe();
   const store = useStore();
-  const locked = commentsLocked(store, post) || post.noComments;
-  if (locked) {
+  const [busy, setBusy] = useState(false);
+  const mine = post.owner === me?.handle;
+  if (post.commentsOff && !mine) {
     return (
       <View style={[styles.foot, { borderTopColor: theme.line, paddingBottom: bottom + 14 }]}>
         <T size={13} color={theme.text2} style={{ textAlign: "center", paddingTop: 4 }}>{t("I commenti sono disattivati.")}</T>
@@ -86,16 +105,33 @@ export function CommentComposer({ post, draft, setDraft, inputRef, onSent, botto
   }
   const send = () => {
     const text = draft.trim();
-    if (!text || textHidden(store.prefs, text)) return;
+    if (!text || busy) return;
+    if (textHidden(store.prefs, text)) {
+      Alert.alert(t("Il commento contiene una parola che hai nascosto."));
+      return;
+    }
     tap();
-    commentPost(store, post.id, text);
-    setDraft("");
-    onSent?.();
+    setBusy(true);
+    addComment(post.id, text, replyTo?.id)
+      .then(() => {
+        setDraft("");
+        setReplyTo?.(null);
+        onSent?.();
+      })
+      .catch(failAlert)
+      .finally(() => setBusy(false));
   };
-  const first = String(post.name || "").split(" ")[0];
   return (
     <View style={[styles.foot, { borderTopColor: theme.line, backgroundColor: theme.bg, paddingBottom: bottom + 8 }]}>
       <MentionSuggest value={draft} onPick={(next) => { setDraft(next); inputRef.current?.focus(); }} style={{ marginHorizontal: INSET }} />
+      {replyTo ? (
+        <View style={[styles.replying, { backgroundColor: theme.fill }]}>
+          <T size={13} color={theme.text2} style={{ flex: 1 }}>{t("Rispondi a {name}", { name: replyTo.handle })}</T>
+          <Pressable accessibilityLabel={t("Annulla")} hitSlop={8} onPress={() => { setReplyTo?.(null); setDraft(""); }}>
+            <Close size={16} color={theme.text2} />
+          </Pressable>
+        </View>
+      ) : null}
       <View style={styles.emoji}>
         {EMOJI.map((char) => (
           <Pressable key={char} hitSlop={4} onPress={() => { tap(); setDraft((value) => `${value}${char}`); }} style={({ pressed }) => ({ transform: [{ scale: pressed ? 1.25 : 1 }] })}>
@@ -104,40 +140,41 @@ export function CommentComposer({ post, draft, setDraft, inputRef, onSent, botto
         ))}
       </View>
       <View style={styles.compose}>
-        <Image source={{ uri: store.profile.src }} style={styles.meFace} />
+        <Face src={me?.avatar} name={me?.name || me?.handle} size={34} />
         <TextInput
           ref={inputRef}
           value={draft}
           onChangeText={setDraft}
-          placeholder={t("Commenta per {name}…", { name: first })}
+          maxLength={1000}
+          placeholder={t("Commenta per {name}…", { name: post.owner })}
           placeholderTextColor={theme.text2}
           accessibilityLabel={t("Aggiungi un commento")}
           returnKeyType="send"
           onSubmitEditing={send}
           blurOnSubmit={false}
+          editable={!busy}
           style={[styles.input, { color: theme.text, borderColor: theme.line }]}
         />
         {draft.trim() ? (
-          <Pressable hitSlop={8} onPress={send}><T size={15} weight="700" color={theme.blue}>{t("Pubblica")}</T></Pressable>
+          <Pressable hitSlop={8} disabled={busy} onPress={send}><T size={15} weight="700" color={busy ? theme.text3 : theme.blue}>{t("Pubblica")}</T></Pressable>
         ) : null}
       </View>
     </View>
   );
 }
 
-export function useReply(setDraft, inputRef) {
-  return (note) => {
-    const who = PEOPLE.find((entry) => entry.name === note.name);
-    setDraft(`@${who ? who.handle : String(note.name).split(" ")[0].toLowerCase()} `);
-    setTimeout(() => inputRef.current?.focus(), 30);
-  };
-}
-
+// Draft, input and the comment being answered. A reply always hangs under the top-level comment.
 export function useComposerState() {
   const [draft, setDraft] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
   const inputRef = useRef(null);
-  const reply = useReply(setDraft, inputRef);
-  return { draft, setDraft, inputRef, reply };
+  const reply = (note) => {
+    const handle = note.author?.handle || "";
+    setReplyTo({ id: note.parent || note.id, handle });
+    setDraft(handle ? `@${handle} ` : "");
+    setTimeout(() => inputRef.current?.focus(), 30);
+  };
+  return { draft, setDraft, inputRef, reply, replyTo, setReplyTo };
 }
 
 // Lifts content above the keyboard; `under` is how far the screen's bottom edge sits above the
@@ -147,19 +184,24 @@ export function useKeyboardPad(under = 0) {
   return useAnimatedStyle(() => ({ paddingBottom: Math.max(0, keyboard.height.value - under) }));
 }
 
-export function NoComments() {
+export function NoComments({ off }) {
   const theme = useTheme();
-  return <T size={14} color={theme.text2} style={{ textAlign: "center", paddingVertical: 28 }}>{t("Ancora nessun commento. Inizia tu.")}</T>;
+  return (
+    <View style={{ alignItems: "center", paddingVertical: 28, gap: 4 }}>
+      <T size={17} weight="700">{off ? t("I commenti sono disattivati.") : t("Ancora nessun commento")}</T>
+      {off ? null : <T size={14} color={theme.text2}>{t("Inizia tu la conversazione.")}</T>}
+    </View>
+  );
 }
 
 export const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12, paddingVertical: 9, paddingHorizontal: INSET },
-  face: { width: 34, height: 34, borderRadius: 17 },
+  reply: { paddingLeft: INSET + 46 },
   tools: { flexDirection: "row", gap: 14, marginTop: 3 },
   like: { alignSelf: "center", paddingLeft: 4 },
   foot: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 6 },
+  replying: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: INSET, marginBottom: 2, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
   emoji: { flexDirection: "row", justifyContent: "space-around", paddingVertical: 8, paddingHorizontal: 12 },
   compose: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: INSET, paddingTop: 6 },
-  meFace: { width: 34, height: 34, borderRadius: 17 },
   input: { flex: 1, minHeight: 40, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, fontSize: 15 },
 });

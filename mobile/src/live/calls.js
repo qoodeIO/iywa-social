@@ -6,8 +6,6 @@ import { setAudioModeAsync } from "expo-audio";
 import { PeerSession } from "./peer";
 import { loop, sounds } from "./sounds";
 
-const DEMO_RING_MS = 30_000;
-
 function mediaError(error) {
   const text = `${error?.name || ""} ${error?.message || ""}`;
   if (/NotAllowed|Security|denied|permission/i.test(text)) return "denied";
@@ -38,7 +36,6 @@ const IDLE = {
   convId: null,
   callId: null,
   video: false,
-  demo: null, // { name, src } for a demo contact that cannot answer
   startedAt: 0,
   peers: {}, // handle -> { stream, v, mic, cam, state }
   local: null,
@@ -59,9 +56,7 @@ export class CallController {
     this.request = 0;
     this.stopRing = null;
     this.stopBack = null;
-    this.demoTimer = 0;
     this.state = { ...IDLE, incoming: null, rooms: {}, notice: null };
-    this.onLog = null;
   }
 
   subscribe = (listener) => {
@@ -114,32 +109,6 @@ export class CallController {
     this.set({ incoming: null });
   }
 
-  async startDemo(thread, video) {
-    // Demo contacts are not real accounts: ring, then "no answer".
-    if (this.state.phase !== "idle") this.hangup();
-    const ticket = ++this.request;
-    this.set({ ...IDLE, phase: "joining", convId: thread.id, video, cam: video, demo: { name: thread.name, src: thread.src, photo: thread.photo, group: Boolean(thread.group || thread.members) } });
-    let local = null;
-    try {
-      local = await grab(video);
-    } catch {
-      // A demo contact never answers, so ring without local media (mic/camera denied or
-      // unavailable, e.g. the simulator) instead of aborting the call UI.
-      local = null;
-    }
-    if (ticket !== this.request) { local?.getTracks().forEach((t) => t.stop()); return; }
-    this.localStream = local;
-    if (!local) this.set({ cam: false });
-    routeAudio(true);
-    this.set({ phase: "active", local, localV: this.state.localV + 1 });
-    this.demoTimer = setTimeout(() => {
-      const convId = this.state.convId;
-      this.onLog?.({ convId, demo: true, call: video ? "video" : "voice", duration: 0 });
-      this.reset();
-      this.notice("no-answer");
-    }, DEMO_RING_MS);
-  }
-
   async enter(convId, video, type) {
     if (this.state.phase !== "idle" && this.state.convId !== convId) this.hangup();
     const ticket = ++this.request;
@@ -169,8 +138,7 @@ export class CallController {
 
   hangup() {
     if (this.state.phase === "idle") return;
-    if (!this.state.demo) this.send({ type: "call_leave" });
-    else if (this.state.convId) this.onLog?.({ convId: this.state.convId, demo: true, call: this.state.video ? "video" : "voice", duration: 0 });
+    this.send({ type: "call_leave" });
     sounds.leave();
     this.reset();
   }
@@ -225,7 +193,7 @@ export class CallController {
   }
 
   broadcastMedia() {
-    if (this.state.phase !== "idle" && !this.state.demo) {
+    if (this.state.phase !== "idle") {
       this.send({ type: "call_media", mic: this.state.mic, cam: this.state.cam });
     }
   }
@@ -233,7 +201,7 @@ export class CallController {
   // ---------- server messages ----------
 
   onHubStatus(status) {
-    if (status === "reconnecting" && this.state.phase !== "idle" && !this.state.demo) {
+    if (status === "reconnecting" && this.state.phase !== "idle") {
       // The server drops us from the room on disconnect; rebuild on reconnect.
       for (const session of this.sessions.values()) session.close();
       this.sessions.clear();
@@ -366,7 +334,6 @@ export class CallController {
 
   reset() {
     this.request += 1;
-    clearTimeout(this.demoTimer);
     for (const session of this.sessions.values()) session.close();
     this.sessions.clear();
     const hadMedia = Boolean(this.localStream);

@@ -1,51 +1,50 @@
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
-import { CONTACTS } from "../../data";
-import { useStore } from "../../lib/store";
 import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
-import { personHidden, seenText } from "../../live/format";
+import { usePeople } from "../../live/people";
 import { EmptyState, Face, Hint, SubHead, Toast, useChatTheme, useFlash } from "../../ui/chat";
-import { ChevronRight, Search, Users } from "../../ui/chatIcons";
+import { ChevronRight, Search, Users, Verified } from "../../ui/chatIcons";
 import { T, tap } from "../../ui/kit";
 import { INSET } from "../../theme";
 
+// Start a 1:1 chat: search everyone on iywa, or pick from who I follow and suggestions.
 export default function NewMessage() {
   const theme = useChatTheme();
-  const store = useStore();
   const live = useLive();
   const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null);
   const [hint, flash] = useFlash();
-  const needle = query.trim().toLowerCase();
-  const me = live?.me?.handle;
+  const people = usePeople(query);
   const online = live?.status === "open";
-  const livePeople = live
-    ? Object.values(live.people)
-      .filter((person) => person.handle !== me && !personHidden(store.prefs, person.name, true))
-      .filter((person) => !needle || `${person.name} ${person.handle}`.toLowerCase().includes(needle))
-      .sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name))
-    : [];
-  const people = CONTACTS.filter((person) => !personHidden(store.prefs, person.name, true) && (!needle || `${person.name} ${person.meta}`.toLowerCase().includes(needle)));
+
+  const data = [];
+  if (people.searching) {
+    for (const person of people.results) data.push({ type: "person", key: `r:${person.handle}`, person });
+  } else {
+    if (people.following.length) data.push({ type: "section", key: "s-following", title: t("Persone che segui") });
+    for (const person of people.following) data.push({ type: "person", key: `f:${person.handle}`, person });
+    if (people.suggested.length) data.push({ type: "section", key: "s-suggested", title: t("Suggeriti") });
+    for (const person of people.suggested) data.push({ type: "person", key: `s:${person.handle}`, person });
+  }
 
   function startChat(person) {
-    tap();
-    const id = store.ensureChat(person);
-    router.replace(`/chat/${id}`);
-  }
-
-  function startLiveChat(person) {
     if (busy) return;
     tap();
-    setBusy(true);
+    if (!online) {
+      flash(t("Connessione… riprova tra un attimo."), 2200);
+      return;
+    }
+    setBusy(person.handle);
     live.openDm(person.handle)
       .then((id) => router.replace(`/chat/${id}`))
-      .catch(() => flash(t("Chat live non raggiungibile. Riprova."), 2200))
-      .finally(() => setBusy(false));
+      .catch((error) => flash(error?.message === "no-user"
+        ? t("{name} non ha ancora aperto i messaggi su iywa.", { name: person.name })
+        : t("Impossibile aprire la chat. Riprova."), 2600))
+      .finally(() => setBusy(null));
   }
 
-  // "On iywa" shows only when the hub has answered: offline, the page is the demo contacts, like the web without a server.
   const head = (
     <View>
       <Pressable onPress={() => { tap(); router.replace("/chat/group"); }} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}>
@@ -56,22 +55,21 @@ export default function NewMessage() {
         </View>
         <ChevronRight size={16} color={theme.text2} />
       </Pressable>
-      {online ? (
-        <>
-          <T size={15} weight="700" style={styles.section}>{t("Su iywa")}</T>
-          {livePeople.length ? livePeople.map((person) => (
-            <Pressable key={person.handle} disabled={busy} onPress={() => startLiveChat(person)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }, busy && { opacity: 0.5 }]}>
-              <Face src={person.src} name={person.name} size={46} online={person.online} dot={13} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <T size={14.5} weight="600" lines={1}>{person.name}</T>
-                <T size={13.5} color={theme.text2} lines={1}>@{person.handle} · {seenText(person)}</T>
-              </View>
-            </Pressable>
-          )) : <Hint>{needle ? t("Nessuno con questo nome su iywa.") : t("Ancora nessun altro iscritto. Accedi con un secondo account su un altro telefono per provare chat e chiamate dal vivo.")}</Hint>}
-          <T size={15} weight="700" style={styles.section}>{t("Suggeriti")}</T>
-        </>
-      ) : null}
+      {!online ? <Hint>{t("Connessione…")}</Hint> : null}
     </View>
+  );
+
+  const empty = people.loading ? (
+    <ActivityIndicator style={{ marginTop: 40 }} color={theme.text2} />
+  ) : people.error ? (
+    <Pressable onPress={() => { tap(); people.refresh(); }} style={{ alignItems: "center", marginTop: 32, gap: 6 }}>
+      <T size={14} color={theme.text2}>{t("Impossibile caricare le persone.")}</T>
+      <T size={14} weight="600" color={theme.blue}>{t("Riprova")}</T>
+    </Pressable>
+  ) : people.searching ? (
+    <EmptyState icon={Search} title={t("Nessun account trovato")} text={t("Prova con un altro nome o nome utente.")} />
+  ) : (
+    <EmptyState icon={Search} title={t("Cerca qualcuno")} text={t("Scrivi un nome o un nome utente per iniziare una chat.")} />
   );
 
   return (
@@ -82,21 +80,31 @@ export default function NewMessage() {
         <TextInput value={query} onChangeText={setQuery} autoFocus placeholder={t("Cerca…")} placeholderTextColor={theme.text2} autoCorrect={false} autoCapitalize="none" accessibilityLabel={t("Cerca persone")} style={{ flex: 1, height: 34, color: theme.text, fontSize: 15 }} />
       </View>
       <FlatList
-        data={people}
-        keyExtractor={(person) => person.name}
+        data={data}
+        keyExtractor={(cell) => cell.key}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         ListHeaderComponent={head}
-        renderItem={({ item: person }) => (
-          <Pressable onPress={() => startChat(person)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}>
-            <Face src={person.src} name={person.name} size={48} />
+        ListEmptyComponent={empty}
+        ListFooterComponent={people.moreLoading ? <ActivityIndicator style={{ marginVertical: 16 }} color={theme.text2} /> : null}
+        onEndReached={people.more}
+        onEndReachedThreshold={0.5}
+        refreshControl={<RefreshControl refreshing={people.refreshing} onRefresh={people.refresh} tintColor={theme.text2} />}
+        renderItem={({ item: cell }) => (cell.type === "section" ? (
+          <T size={15} weight="700" style={styles.section}>{cell.title}</T>
+        ) : (
+          <Pressable disabled={Boolean(busy)} onPress={() => startChat(cell.person)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }, busy && busy !== cell.person.handle && { opacity: 0.5 }]}>
+            <Face src={cell.person.src} name={cell.person.name} size={48} online={cell.person.online} dot={13} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <T size={14.5} weight="600" lines={1}>{person.name}</T>
-              <T size={13.5} color={theme.text2} lines={1}>{person.meta}</T>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <T size={14.5} weight="600" lines={1} style={{ flexShrink: 1 }}>{cell.person.name}</T>
+                {cell.person.verified ? <Verified size={14} weight="fill" color={theme.blue} /> : null}
+              </View>
+              <T size={13.5} color={cell.person.online ? theme.blue : theme.text2} lines={1}>{cell.person.meta}</T>
             </View>
+            {busy === cell.person.handle ? <ActivityIndicator color={theme.text2} /> : null}
           </Pressable>
-        )}
-        ListEmptyComponent={!livePeople.length ? <EmptyState icon={Search} title={t("Nessun account trovato")} /> : null}
+        ))}
         contentContainerStyle={{ paddingBottom: 30 }}
       />
       <Toast text={hint} />

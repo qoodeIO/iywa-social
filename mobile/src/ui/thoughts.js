@@ -1,72 +1,105 @@
-// Pensieri (thoughts): cards, polls, photos, quotes, threads and lists, ported from the web app.
+// Pensieri (thoughts): cards, polls, photos and lists, on the server's posts of kind "thought".
 import { Fragment, memo, useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { INSET, useTheme } from "../theme";
 import { useStore } from "../lib/store";
-import { AVATAR, THOUGHTS, compact, personByHandle } from "../data";
-import { TIME, agoLabel, fullStamp, openPersonByName } from "../lib/profile-data";
-import { Check, Feather, Heart, ImageIcon, LinkIcon, MessageCircle, MoreHorizontal, Plus, Poll, Quote, Repost, Send, Trash, UserMinus, UserPlus, Verified } from "./icons-profile";
+import { compact } from "../data";
+import { fullStamp } from "../lib/profile-data";
+import { ago, deletePost, like as likePost, toggleLike, toggleRepost, useUserPosts, vote } from "../lib/social";
+import { myHandle, useMe } from "../lib/session";
+import { errorText } from "../lib/api";
+import { Check, Feather, Heart, ImageIcon, LinkIcon, MessageCircle, MoreHorizontal, Poll, Repost, Send, Trash, Verified } from "./icons-profile";
 import { showToast } from "./feedEcho";
-import { T, tap } from "./kit";
+import { Btn, T, tap } from "./kit";
 import { ActionSheet, IgEmpty } from "./profile-kit";
-import { localeTag, t } from "../lib/i18n";
+import { t } from "../lib/i18n";
 import { openTab } from "../lib/tabs";
 
 const W = Dimensions.get("window").width;
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
 
 // ---------------------------------------------------------------------------
-// Everything the UI needs about thoughts, merged from the seed and the store.
+// One shape for whatever arrives: a server post, or a postCard() of one.
 // ---------------------------------------------------------------------------
-let memo1 = { key: null, value: null };
+export function thoughtShape(item) {
+  if (!item) return null;
+  const author = item.author || {
+    handle: String(item.owner || item.handle || "").replace(/^@/, ""),
+    name: item.name || "",
+    avatar: item.avatar || item.src || "",
+    verified: Boolean(item.verified),
+  };
+  const images = Array.isArray(item.media)
+    ? item.media.map((m) => (m.type === "video" ? m.poster || m.url : m.url)).filter(Boolean)
+    : (item.images || []).filter(Boolean);
+  return {
+    id: item.id,
+    author,
+    text: item.text || "",
+    images,
+    poll: item.poll && Array.isArray(item.poll.counts) ? item.poll : null,
+    likes: Number(item.likes) || 0,
+    comments: Number(item.comments) || 0,
+    reposts: Number(item.reposts) || 0,
+    liked: Boolean(item.liked),
+    reposted: Boolean(item.reposted),
+    hideLikes: Boolean(item.hideLikes),
+    createdAt: item.createdAt || item.created || 0,
+    replyTo: item.replyTo || null,
+    parent: item.parent || null,
+    mine: Boolean(author.handle) && author.handle === myHandle(),
+  };
+}
 
-function hiddenText(prefs, text) {
+// Muted / blocked people (by name or handle) and hidden words from the privacy settings.
+export function thoughtHidden(prefs, item) {
+  if (!item) return true;
+  const a = item.author || {};
+  const people = new Set([...(prefs?.blocked || []), ...(prefs?.muted || [])].map((x) => String(x).replace(/^@/, "")));
+  if (people.has(a.handle) || people.has(a.name)) return true;
   const words = (prefs?.hiddenWords || []).map((word) => String(word).toLowerCase()).filter(Boolean);
-  const lower = String(text || "").toLowerCase();
+  const lower = String(item.text || "").toLowerCase();
   return words.some((word) => lower.includes(word));
 }
 
-export function buildThoughts(store) {
-  const { myThoughts, thoughtReplies, profile, prefs } = store;
-  const key = [myThoughts, thoughtReplies, profile, prefs];
-  if (memo1.key && memo1.key.every((item, index) => item === key[index])) return memo1.value;
-  const me = profile;
-  const myHandle = String(me.handle || "").replace(/^@/, "");
-  const shape = (item) => (item.mine ? { ...item, name: me.name, handle: myHandle, src: me.src || AVATAR } : item);
-  const hidden = new Set([...(prefs?.blocked || []), ...(prefs?.muted || [])]);
-  const mine = (myThoughts || []).map(shape);
-  const seeded = THOUGHTS.map((item) => ({
-    ...item,
-    // A thread written by the author is stored as replies of their own.
-    replies: [
-      ...(item.chain || []).map((text, index) => ({ id: `${item.id}-c${index}`, name: item.name, handle: item.handle, src: item.src, verified: item.verified, created: item.created + (index + 1) * 1000, likes: Math.round(item.likes / (4 + index)), text, chained: true })),
-      ...(item.replies || []),
-    ],
-  }));
-  const all = [...mine, ...seeded].filter((item) => !hidden.has(item.name) && !hiddenText(prefs, item.text));
-  const byId = new Map();
-  for (const item of all) {
-    byId.set(item.id, item);
-    for (const reply of item.replies || []) byId.set(reply.id, { ...reply, parentId: item.id });
-  }
-  const extras = {};
-  for (const [parentId, list] of Object.entries(thoughtReplies || {})) {
-    extras[parentId] = (list || []).map(shape).filter((item) => !hiddenText(prefs, item.text));
-    for (const reply of extras[parentId]) if (!byId.has(reply.id)) byId.set(reply.id, { ...reply, parentId });
-  }
-  function repliesOf(id) {
-    const node = byId.get(id);
-    return [...(node && !node.parentId ? node.replies || [] : []), ...(extras[id] || [])];
-  }
-  const value = { all, byId, repliesOf, me: { ...me, handle: myHandle } };
-  memo1 = { key, value };
-  return value;
+// Kept for older callers: thoughts now live on the server (useThoughtsFeed, usePost, useUserPosts).
+const NOTHING = Object.freeze({ all: [], byId: new Map(), repliesOf: () => [], me: {} });
+export function buildThoughts() {
+  return NOTHING;
+}
+export function useThoughts() {
+  return NOTHING;
+}
+export function thoughtRows() {
+  return [];
 }
 
-export function useThoughts() {
-  return buildThoughts(useStore());
+// ---------------------------------------------------------------------------
+// Avatar: the photo, or the initial on a grey circle.
+// ---------------------------------------------------------------------------
+export function Face({ person, size = 38, style }) {
+  const theme = useTheme();
+  const src = person?.avatar || person?.src || "";
+  const box = { width: size, height: size, borderRadius: size / 2, backgroundColor: theme.fill };
+  if (src) return <Image source={{ uri: src }} recyclingKey={src} style={[box, style]} contentFit="cover" transition={120} />;
+  const initial = String(person?.name || person?.handle || "?").trim().charAt(0).toUpperCase() || "?";
+  return (
+    <View style={[box, { alignItems: "center", justifyContent: "center" }, style]}>
+      <T size={Math.round(size * 0.42)} weight="600" color={theme.text2}>{initial}</T>
+    </View>
+  );
+}
+
+export function openPerson(handle) {
+  const clean = String(handle || "").replace(/^@/, "").toLowerCase();
+  if (!clean) return;
+  if (clean === myHandle()) openTab("profile");
+  else router.push(`/person/${encodeURIComponent(clean)}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -99,49 +132,54 @@ export function RichText({ text, size = 15, color, lines, style, onTag }) {
 }
 
 export function openTag(tag) {
-  if (tag.startsWith("#")) {
-    router.push(`/hashtag/${encodeURIComponent(tag.slice(1).toLowerCase())}`);
-    return;
-  }
-  const handle = tag.slice(1);
-  const person = personByHandle(handle);
-  if (person) router.push(`/person/${person.handle}`);
-  else if (handle === "forno.neri") openTab("profile");
+  if (tag.startsWith("#")) router.push(`/hashtag/${encodeURIComponent(tag.slice(1).toLowerCase())}`);
+  else openPerson(tag.slice(1));
 }
 
 // ---------------------------------------------------------------------------
-// Poll, photos and quotes.
+// Poll and photos.
 // ---------------------------------------------------------------------------
+function timeLeft(ms) {
+  if (ms <= 0) return t("Concluso");
+  if (ms > DAY) return t("{n} giorni rimasti", { n: Math.ceil(ms / DAY) });
+  if (ms > HOUR) return t("{n} ore rimaste", { n: Math.ceil(ms / HOUR) });
+  return t("{n} min rimasti", { n: Math.max(1, Math.ceil(ms / MIN)) });
+}
+
 export function ThoughtPoll({ thought }) {
   const theme = useTheme();
-  const store = useStore();
-  const voted = store.votes[thought.id];
-  const options = thought.poll.options.map((option, index) => ({ ...option, votes: option.votes + (voted === index ? 1 : 0) }));
-  const total = options.reduce((sum, option) => sum + option.votes, 0);
-  const left = Math.max(0, thought.poll.endsAt - Date.now());
+  const poll = thought.poll;
+  const counts = poll.counts || [];
+  const total = counts.reduce((sum, n) => sum + n, 0);
+  const left = Math.max(0, (poll.endsAt || 0) - Date.now());
   const ended = left === 0;
+  const voted = poll.voted;
   const showResults = voted != null || ended || thought.mine;
-  const lead = Math.max(...options.map((option) => option.votes));
+  const lead = Math.max(0, ...counts);
+  async function choose(index) {
+    tap();
+    try {
+      await vote(thought, index);
+    } catch (error) {
+      showToast({ text: errorText(error, t) });
+    }
+  }
   return (
     <View style={{ gap: 7, marginTop: 10 }}>
-      {options.map((option, index) => {
-        const share = total ? Math.round((option.votes / total) * 100) : 0;
-        const mine = voted === index;
-        return (
-          <PollOption
-            key={index}
-            text={option.text}
-            share={showResults ? share : 0}
-            showResults={showResults}
-            mine={mine}
-            lead={showResults && option.votes === lead}
-            onPress={() => { tap(); store.vote(thought.id, index); }}
-            theme={theme}
-          />
-        );
-      })}
+      {poll.options.map((text, index) => (
+        <PollOption
+          key={index}
+          text={text}
+          share={showResults && total ? Math.round(((counts[index] || 0) / total) * 100) : 0}
+          showResults={showResults}
+          mine={voted === index}
+          lead={showResults && total > 0 && counts[index] === lead}
+          onPress={() => choose(index)}
+          theme={theme}
+        />
+      ))}
       <T size={13} color={theme.text3}>
-        {t("{n} voti", { n: total.toLocaleString(localeTag()) })} · {ended ? t("Concluso") : left > TIME.DAY ? t("{n} giorni rimasti", { n: Math.ceil(left / TIME.DAY) }) : t("{n} ore rimaste", { n: Math.ceil(left / TIME.HOUR) })}
+        {total === 1 ? t("1 voto") : t("{n} voti", { n: compact(total) })} · {timeLeft(left)}
       </T>
     </View>
   );
@@ -186,30 +224,32 @@ export function ThoughtMedia({ images, onZoom }) {
   );
 }
 
+// A small preview of another thought (the one you are replying to, in the composer).
 export function QuotedThought({ thought, onOpen }) {
   const theme = useTheme();
-  if (!thought) {
+  const item = thoughtShape(thought);
+  if (!item) {
     return <View style={[styles.quote, { borderColor: theme.line }]}><T size={13.5} color={theme.text2}>{t("Questo pensiero non è più disponibile.")}</T></View>;
   }
   return (
-    <Pressable onPress={() => onOpen?.(thought)} style={({ pressed }) => [styles.quote, { borderColor: theme.line, backgroundColor: pressed ? theme.fill : "transparent" }]}>
+    <Pressable onPress={() => onOpen?.(item)} style={({ pressed }) => [styles.quote, { borderColor: theme.line, backgroundColor: pressed ? theme.fill : "transparent" }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Image source={{ uri: thought.src || AVATAR }} style={{ width: 20, height: 20, borderRadius: 10 }} />
-        <T size={13.5} weight="700">{thought.handle}</T>
-        {thought.verified ? <Verified size={13} weight="fill" color={theme.blue} /> : null}
-        <T size={13} color={theme.text3}>{agoLabel(thought.created)}</T>
+        <Face person={item.author} size={20} />
+        <T size={13.5} weight="700">{item.author.handle}</T>
+        {item.author.verified ? <Verified size={13} weight="fill" color={theme.blue} /> : null}
+        <T size={13} color={theme.text3}>{ago(item.createdAt)}</T>
       </View>
-      <T size={14} lines={4} style={{ marginTop: 4, lineHeight: 20 }}>{thought.text}</T>
-      {thought.images?.length ? <Image source={{ uri: thought.images[0] }} style={{ width: "100%", height: 160, marginTop: 8, borderRadius: 8 }} contentFit="cover" /> : null}
+      {item.text ? <T size={14} lines={4} style={{ marginTop: 4, lineHeight: 20 }}>{item.text}</T> : null}
+      {item.images[0] ? <Image source={{ uri: item.images[0] }} style={{ width: "100%", height: 160, marginTop: 8, borderRadius: 8 }} contentFit="cover" /> : null}
     </Pressable>
   );
 }
 
 export function openThought(thought) {
-  if (!thought) return;
-  router.push(`/thought/${thought.parentId && !thought.chained ? thought.id : thought.id}`);
+  if (thought?.id) router.push(`/thought/${thought.id}`);
 }
 
+// reply: the id of the thought you answer.
 export function composeThought(params = {}) {
   router.push({ pathname: "/compose", params: { kind: "thought", ...params } });
 }
@@ -217,24 +257,20 @@ export function composeThought(params = {}) {
 // ---------------------------------------------------------------------------
 // One thought.
 // ---------------------------------------------------------------------------
-export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, lineUp = false, big = false, repostedBy, replyCount, onOpen, onDeleted }) {
+export const ThoughtCard = memo(function ThoughtCard({ thought: raw, line = false, lineUp = false, big = false, repostedBy, onOpen, onDeleted }) {
   const theme = useTheme();
   const store = useStore();
-  const { byId } = buildThoughts(store);
-  const [menu, setMenu] = useState(null);
+  const thought = thoughtShape(raw);
+  const [menu, setMenu] = useState(false);
   const [zoom, setZoom] = useState(null);
   const burst = useRef(new Animated.Value(0)).current;
   const heart = useRef(new Animated.Value(1)).current;
   const taps = useRef({ at: 0, timer: 0 });
-  const liked = store.thoughtLikes.includes(thought.id);
-  const reposted = store.reposts.includes(thought.id);
-  const likes = (thought.likes || 0) + (liked ? 1 : 0);
-  const reposts = (thought.reposts || 0) + (reposted ? 1 : 0);
-  const replies = replyCount ?? 0;
-  const follows = store.follows.includes(thought.name);
-  const showCounts = store.prefs.likeCounts !== false;
-  const open = () => (onOpen ? onOpen(thought) : router.push(`/thought/${thought.id}`));
   useEffect(() => () => clearTimeout(taps.current.timer), []);
+  const showCounts = store.prefs.likeCounts !== false && !thought.hideLikes;
+  const { author } = thought;
+  const link = `https://iywa.app/t/${thought.id}`;
+  const open = () => (onOpen ? onOpen(thought) : router.push(`/thought/${thought.id}`));
 
   function pop() {
     burst.setValue(0);
@@ -244,13 +280,21 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
     ]).start();
   }
 
-  function like() {
-    if (!liked) {
+  function onLike() {
+    if (!thought.liked) {
       tap();
       heart.setValue(0.6);
       Animated.spring(heart, { toValue: 1, useNativeDriver: true, damping: 7, stiffness: 300 }).start();
     }
-    store.toggleThoughtLike(thought.id);
+    toggleLike(thought).catch((error) => showToast({ text: errorText(error, t) }));
+  }
+
+  function onRepost() {
+    tap();
+    const was = thought.reposted;
+    toggleRepost(thought)
+      .then(() => showToast({ text: was ? t("Ripubblicazione rimossa") : t("Ripubblicato") }))
+      .catch((error) => showToast({ text: errorText(error, t) }));
   }
 
   function onCardPress() {
@@ -258,7 +302,10 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
     if (now - taps.current.at < 280) {
       clearTimeout(taps.current.timer);
       taps.current.at = 0;
-      if (!liked) like();
+      if (!thought.liked) {
+        tap();
+        likePost(thought).catch(() => {});
+      }
       pop();
       return;
     }
@@ -267,7 +314,15 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
     taps.current.timer = setTimeout(() => { taps.current.at = 0; open(); }, 260);
   }
 
-  const goPerson = () => (thought.mine ? openTab("profile") : openPersonByName(thought.name, store.profile.name));
+  function remove() {
+    setMenu(false);
+    deletePost(thought.id)
+      .then(() => { showToast({ text: t("Eliminato") }); onDeleted?.(thought.id); })
+      .catch((error) => showToast({ text: errorText(error, t) }));
+  }
+
+  const goPerson = () => openPerson(author.handle);
+  const share = () => Share.share({ message: `${thought.text ? `${thought.text}\n` : ""}${link}` }).catch(() => {});
 
   return (
     <Pressable onPress={onCardPress} style={[styles.card, { paddingTop: lineUp ? 4 : 12, paddingBottom: line ? 0 : 6, borderBottomWidth: line ? 0 : StyleSheet.hairlineWidth, borderBottomColor: theme.line }]}>
@@ -279,45 +334,42 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
       ) : null}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={styles.side}>
-          <Pressable onPress={goPerson} accessibilityLabel={thought.name}>
-            <Image source={{ uri: thought.src || AVATAR }} recyclingKey={thought.src} style={[styles.face, { backgroundColor: theme.fill }]} contentFit="cover" transition={120} />
-            {!thought.mine && !follows && !lineUp ? (
-              <Pressable accessibilityLabel={t("Segui")} hitSlop={6} onPress={() => { tap(); store.toggleFollow(thought.name); }} style={[styles.follow, { backgroundColor: theme.text, borderColor: theme.bg }]}>
-                <Plus size={10} weight="bold" color={theme.bg} />
-              </Pressable>
-            ) : null}
+          <Pressable onPress={goPerson} accessibilityLabel={author.name || author.handle}>
+            <Face person={author} size={38} />
           </Pressable>
           {line ? <View style={[styles.line, { backgroundColor: theme.line }]} /> : null}
         </View>
         <View style={{ flex: 1, minWidth: 0, paddingBottom: 4 }}>
           <View style={styles.head}>
             <Pressable onPress={goPerson} style={{ flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 }}>
-              <T size={14.5} weight="700" lines={1} style={{ flexShrink: 1 }}>{thought.handle}</T>
-              {thought.verified ? <Verified size={14} weight="fill" color={theme.blue} /> : null}
+              <T size={14.5} weight="700" lines={1} style={{ flexShrink: 1 }}>{author.handle}</T>
+              {author.verified ? <Verified size={14} weight="fill" color={theme.blue} /> : null}
             </Pressable>
-            {!big ? <T size={14} color={theme.text3}>{agoLabel(thought.created)}</T> : null}
-            <Pressable accessibilityLabel={t("Altro")} hitSlop={8} onPress={() => setMenu("more")} style={styles.more}><MoreHorizontal size={18} weight="bold" color={theme.text2} /></Pressable>
+            {!big ? <T size={14} color={theme.text3}>{ago(thought.createdAt)}</T> : null}
+            <Pressable accessibilityLabel={t("Altro")} hitSlop={8} onPress={() => setMenu(true)} style={styles.more}><MoreHorizontal size={18} weight="bold" color={theme.text2} /></Pressable>
           </View>
-          {thought.replyTo ? <T size={13} color={theme.text2} style={{ marginTop: 1 }}>{t("In risposta a")}{" "}<T size={13} color={theme.blue}>@{thought.replyTo}</T></T> : null}
+          {big && author.name && author.name !== author.handle ? <T size={13} color={theme.text2}>{author.name}</T> : null}
+          {thought.replyTo && !lineUp ? (
+            <T size={13} color={theme.text2} style={{ marginTop: 1 }}>{t("In risposta a")}{" "}<T size={13} color={theme.blue} onPress={() => openPerson(thought.replyTo)}>@{thought.replyTo}</T></T>
+          ) : null}
           {thought.text ? <RichText text={thought.text} size={big ? 17 : 15} style={{ marginTop: big ? 6 : 2 }} /> : null}
           <ThoughtMedia images={thought.images} onZoom={setZoom} />
           {thought.poll ? <ThoughtPoll thought={thought} /> : null}
-          {thought.quote ? <QuotedThought thought={byId.get(thought.quote)} onOpen={(item) => router.push(`/thought/${item.id}`)} /> : null}
-          {big ? <T size={13} color={theme.text3} style={{ marginTop: 12 }}>{fullStamp(thought.created)}</T> : null}
+          {big ? <T size={13} color={theme.text3} style={{ marginTop: 12 }}>{fullStamp(thought.createdAt)}</T> : null}
           <View style={styles.actions}>
-            <Pressable accessibilityLabel={t("Mi piace")} onPress={like} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
-              <Animated.View style={{ transform: [{ scale: heart }] }}><Heart size={20} weight={liked ? "fill" : "regular"} color={liked ? theme.red : theme.text} /></Animated.View>
-              {showCounts && likes ? <T size={13.5} weight="500" color={liked ? theme.red : theme.text2}>{compact(likes)}</T> : null}
+            <Pressable accessibilityLabel={t("Mi piace")} onPress={onLike} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+              <Animated.View style={{ transform: [{ scale: heart }] }}><Heart size={20} weight={thought.liked ? "fill" : "regular"} color={thought.liked ? theme.red : theme.text} /></Animated.View>
+              {showCounts && thought.likes ? <T size={13.5} weight="500" color={thought.liked ? theme.red : theme.text2}>{compact(thought.likes)}</T> : null}
             </Pressable>
             <Pressable accessibilityLabel={t("Rispondi")} onPress={() => composeThought({ reply: thought.id })} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <MessageCircle size={20} color={theme.text} />
-              {replies ? <T size={13.5} weight="500" color={theme.text2}>{compact(replies)}</T> : null}
+              {thought.comments ? <T size={13.5} weight="500" color={theme.text2}>{compact(thought.comments)}</T> : null}
             </Pressable>
-            <Pressable accessibilityLabel={t("Ripubblica")} onPress={() => setMenu("repost")} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
-              <Repost size={20} color={reposted ? "#00ba7c" : theme.text} weight={reposted ? "bold" : "regular"} />
-              {reposts ? <T size={13.5} weight="500" color={reposted ? "#00ba7c" : theme.text2}>{compact(reposts)}</T> : null}
+            <Pressable accessibilityLabel={thought.reposted ? t("Rimuovi ripubblicazione") : t("Ripubblica")} onPress={onRepost} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+              <Repost size={20} color={thought.reposted ? "#00ba7c" : theme.text} weight={thought.reposted ? "bold" : "regular"} />
+              {thought.reposts ? <T size={13.5} weight="500" color={thought.reposted ? "#00ba7c" : theme.text2}>{compact(thought.reposts)}</T> : null}
             </Pressable>
-            <Pressable accessibilityLabel={t("Condividi")} onPress={() => Share.share({ message: `${thought.handle}: ${thought.text || ""}\nhttps://iywa.app/t/${thought.id}` }).catch(() => {})} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
+            <Pressable accessibilityLabel={t("Condividi")} onPress={share} style={({ pressed }) => [styles.act, { backgroundColor: pressed ? theme.fill : "transparent" }]}>
               <Send size={20} color={theme.text} />
             </Pressable>
           </View>
@@ -327,21 +379,13 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
         <Heart size={84} weight="fill" color={theme.red} />
       </Animated.View>
       <ActionSheet
-        open={menu === "repost"}
-        onClose={() => setMenu(null)}
+        open={menu}
+        onClose={() => setMenu(false)}
         items={[
-          { icon: Repost, label: reposted ? t("Rimuovi ripubblicazione") : t("Ripubblica"), danger: reposted, onPress: () => { store.toggleThoughtRepost(thought.id); setMenu(null); showToast({ text: reposted ? t("Ripubblicazione rimossa") : t("Ripubblicato") }); } },
-          { icon: Quote, label: t("Cita"), onPress: () => { setMenu(null); composeThought({ quote: thought.id }); } },
-        ]}
-      />
-      <ActionSheet
-        open={menu === "more"}
-        onClose={() => setMenu(null)}
-        items={[
-          { icon: LinkIcon, label: t("Copia link"), onPress: () => { Clipboard.setStringAsync(`https://iywa.app/t/${thought.id}`).catch(() => {}); setMenu(null); } },
-          !thought.mine ? { icon: follows ? UserMinus : UserPlus, label: follows ? t("Non seguire più {handle}", { handle: thought.handle }) : t("Segui {handle}", { handle: thought.handle }), onPress: () => { store.toggleFollow(thought.name); setMenu(null); } } : null,
-          thought.mine ? { icon: Trash, label: t("Elimina"), danger: true, onPress: () => { store.deleteThought(thought.id); setMenu(null); onDeleted?.(thought.id); showToast({ text: t("Eliminato") }); } } : null,
-        ]}
+          { icon: LinkIcon, label: t("Copia link"), onPress: () => { Clipboard.setStringAsync(link).catch(() => {}); setMenu(false); showToast({ text: t("Link copiato") }); } },
+          { icon: Send, label: t("Condividi"), onPress: () => { setMenu(false); share(); } },
+          thought.mine ? { icon: Trash, label: t("Elimina"), danger: true, onPress: remove } : null,
+        ].filter(Boolean)}
       />
       <Modal visible={Boolean(zoom)} transparent animationType="fade" onRequestClose={() => setZoom(null)} statusBarTranslucent>
         <Pressable style={styles.zoom} onPress={() => setZoom(null)}>
@@ -352,46 +396,26 @@ export const ThoughtCard = memo(function ThoughtCard({ thought, line = false, li
   );
 });
 
-// A thought in a list, followed by the first part of its thread when the author wrote one.
+// A thought in a list. `repostedBy` adds the "Hai ripubblicato" line on top.
 export const ThoughtEntry = memo(function ThoughtEntry({ thought, repostedBy }) {
-  const theme = useTheme();
-  const { repliesOf } = useThoughts();
-  const replies = repliesOf(thought.id);
-  const chain = replies.filter((item) => item.chained);
-  const others = replies.length - chain.length;
-  return (
-    <View>
-      <ThoughtCard thought={thought} line={chain.length > 0} replyCount={others} repostedBy={repostedBy} />
-      {chain.length ? (
-        <>
-          <ThoughtCard thought={chain[0]} lineUp line={chain.length > 1} replyCount={0} onOpen={() => router.push(`/thought/${thought.id}`)} />
-          {chain.length > 1 ? (
-            <Pressable onPress={() => router.push(`/thought/${thought.id}`)} style={[styles.moreThread, { borderBottomColor: theme.line }]}>
-              <View style={styles.dots}>{[0, 1, 2].map((i) => <View key={i} style={[styles.dot, { backgroundColor: theme.text3 }]} />)}</View>
-              <T size={14} weight="600" color={theme.blue}>{t("Mostra il thread ({n} in più)", { n: chain.length - 1 })}</T>
-            </Pressable>
-          ) : null}
-        </>
-      ) : null}
-    </View>
-  );
+  const store = useStore();
+  if (!thought || thoughtHidden(store.prefs, thoughtShape(thought))) return null;
+  return <ThoughtCard thought={thought} repostedBy={repostedBy} />;
 });
 
-// Rows of thoughts written by one person (and, on your own profile, your reposts).
-export function thoughtRows(store, { name, mine }) {
-  const { all, byId } = buildThoughts(store);
-  const own = all.filter((item) => (mine ? item.mine : item.name === name));
-  const reposts = mine ? store.reposts.map((id) => ({ id, at: store.repostAt?.[id] || 0, thought: byId.get(id) })).filter((row) => row.thought) : [];
-  return [
-    ...own.map((thought) => ({ key: thought.id, at: thought.created, thought })),
-    ...reposts.map((row) => ({ key: `rp-${row.id}`, at: row.at, thought: row.thought, repost: true })),
-  ].sort((a, b) => b.at - a.at);
-}
-
-export function ThoughtList({ name, mine, emptyAction }) {
-  const store = useStore();
-  const rows = thoughtRows(store, { name, mine });
-  if (!rows.length) {
+// The thoughts written by one person (not virtualized: meant to sit inside a profile tab).
+export function ThoughtList({ handle, mine, emptyAction }) {
+  const theme = useTheme();
+  const { items, loading, moreLoading, done, error, refresh, more } = useUserPosts(handle, "thoughts");
+  if (loading && !items.length) return <ActivityIndicator style={{ marginVertical: 30 }} color={theme.text2} />;
+  if (error && !items.length) {
+    return (
+      <IgEmpty icon={Feather} title={t("Impossibile caricare i pensieri")} text={errorText(error, t)}>
+        <Btn title={t("Riprova")} onPress={refresh} height={30} style={{ marginTop: 8, paddingHorizontal: 16 }} />
+      </IgEmpty>
+    );
+  }
+  if (!items.length) {
     return (
       <IgEmpty icon={Feather} title={mine ? t("Condividi il tuo primo pensiero") : t("Ancora nessun pensiero")} text={mine ? t("Una frase, una domanda, un sondaggio.") : null}>
         {emptyAction}
@@ -400,17 +424,22 @@ export function ThoughtList({ name, mine, emptyAction }) {
   }
   return (
     <View>
-      {rows.map((row) => <ThoughtEntry key={row.key} thought={row.thought} repostedBy={row.repost ? t("Hai ripubblicato") : undefined} />)}
+      {items.map((item) => <ThoughtEntry key={item.id} thought={item} />)}
+      {!done ? (
+        <Pressable onPress={more} style={{ paddingVertical: 16, alignItems: "center" }}>
+          {moreLoading ? <ActivityIndicator color={theme.text2} /> : <T size={14} weight="600" color={theme.blue}>{t("Mostra altri")}</T>}
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 export function ComposePrompt({ onCompose }) {
   const theme = useTheme();
-  const store = useStore();
+  const me = useMe();
   return (
     <Pressable onPress={() => { tap(); (onCompose || (() => composeThought()))(); }} style={({ pressed }) => [styles.prompt, { borderBottomColor: theme.line, backgroundColor: pressed ? theme.fill : "transparent" }]}>
-      <Image source={{ uri: store.profile.src || AVATAR }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+      <Face person={me} size={36} />
       <T size={15} color={theme.text2} style={{ flex: 1 }}>{t("Cosa c'è di nuovo?")}</T>
       <ImageIcon size={21} color={theme.text3} />
       <Poll size={21} color={theme.text3} />
@@ -422,8 +451,6 @@ const styles = StyleSheet.create({
   card: { paddingHorizontal: INSET },
   reposted: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -2, marginBottom: 6, marginLeft: 16 },
   side: { width: 40, alignItems: "center" },
-  face: { width: 38, height: 38, borderRadius: 19 },
-  follow: { position: "absolute", right: -4, bottom: -4, width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   line: { flex: 1, width: 2, minHeight: 18, marginTop: 6, marginBottom: -2, borderRadius: 99 },
   head: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 20 },
   more: { marginLeft: "auto", width: 28, height: 24, alignItems: "center", justifyContent: "center" },
@@ -435,8 +462,5 @@ const styles = StyleSheet.create({
   quote: { marginTop: 10, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderRadius: 12 },
   burst: { position: "absolute", left: 0, right: 0, top: "30%", alignItems: "center" },
   zoom: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
-  moreThread: { flexDirection: "row", alignItems: "center", gap: 14, paddingTop: 6, paddingBottom: 12, paddingHorizontal: INSET, borderBottomWidth: StyleSheet.hairlineWidth },
-  dots: { width: 40, alignItems: "center", gap: 3 },
-  dot: { width: 3, height: 3, borderRadius: 1.5 },
   prompt: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: INSET, borderBottomWidth: StyleSheet.hairlineWidth },
 });

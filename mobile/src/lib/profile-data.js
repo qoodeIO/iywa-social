@@ -1,37 +1,18 @@
-// Data helpers for Search, profiles, Pensieri and the shop tools, ported from the web app.
-import { useEffect, useState } from "react";
+// Helpers for Search, profiles, Pensieri and the shop tools: opening grids and people, and
+// small formatting helpers.
+import { useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
-import seed from "../data/seed.json";
-import { AVATAR, CHATS, EXPLORE, PEOPLE, PORTRAIT, POSTS, REELS, WORKS, personByName } from "../data";
+import { myHandle } from "./session";
 import { localeTag, t } from "./i18n";
 import { openTab } from "./tabs";
 
-export const SEARCH_PEOPLE = PEOPLE;
-
-// "Scopri persone" suggestions on your profile (web MEET).
-export const MEET = [
-  { name: "Chiara Valli", meta: "Tessuti · Firenze", src: CHATS[4]?.src },
-  { name: "Pietro Lama", meta: "Cucina · Genova", src: CHATS[5]?.src },
-  { name: "Sara Conte", meta: "Ceramica · Faenza", src: CHATS[6]?.src },
-  { name: "Elena Marini", meta: "Ricerca · Padova", src: CHATS[7]?.src },
-  ...(seed.PEOPLE || []),
-];
-
-export const DIRECTORY = [
-  ...SEARCH_PEOPLE.map((person) => ({ name: person.name, handle: `@${person.handle}`, craft: person.craft, city: person.city, src: person.src })),
-  { name: "Giulia Neri", handle: "@forno.neri", craft: "Ceramica", city: "Milano", src: AVATAR },
-];
-
-export const CITIES = ["Milano", "Torino", "Cremona", "Prato", "Bologna"];
-
-export const DEMO_GALLERY = [...new Set([
-  ...WORKS.map((work) => work.src),
-  PORTRAIT,
-  ...(seed.PEOPLE || []).map((person) => person.src),
-  ...POSTS.map((post) => post.image).filter(Boolean),
-])];
-
-export const CONTACTS = seed.CONTACTS || [];
+// The demo directories are gone; these stay (empty) for screens that still import them.
+export const SEARCH_PEOPLE = [];
+export const MEET = [];
+export const DIRECTORY = [];
+export const CITIES = [];
+export const DEMO_GALLERY = [];
+export const CONTACTS = [];
 
 export function hashtagsOf(text) {
   return (String(text || "").match(/#[\p{L}\d_]+/gu) || []).map((tag) => tag.slice(1).toLowerCase());
@@ -47,33 +28,9 @@ export function parseCount(label) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function reelAsPost(reel) {
-  return {
-    id: `reel-${reel.id}`,
-    reelId: reel.id,
-    name: reel.name,
-    handle: reel.handle,
-    avatar: reel.avatar || reel.src,
-    image: reel.image || reel.src,
-    text: reel.caption,
-    likes: reel.likes,
-    kind: "reel",
-    views: reel.likes ? `${((parseCount(reel.likes) * 7) / 1000).toFixed(0)}k` : "",
-    tag: personByName(reel.name)?.craft,
-  };
-}
-
-// Everything the explore grid can show: published posts, explore posts and reels, each photo once.
-export function explorePool({ library = [], prefs } = {}) {
-  const hidden = new Set([...(prefs?.blocked || []), ...(prefs?.muted || [])]);
-  const mine = library.filter((item) => item.image && (item.kind === "post" || item.kind === "reel" || !item.kind)).map((item) => ({ ...item, mine: true, reelId: item.kind === "reel" ? item.id : undefined }));
-  const seen = new Set();
-  return [...mine, ...POSTS.filter((post) => post.image), ...EXPLORE, ...REELS.map(reelAsPost)].filter((post) => {
-    if (!post.image || seen.has(post.image) || String(post.image).startsWith("blob:")) return false;
-    if (hidden.has(post.name)) return false;
-    seen.add(post.image);
-    return true;
-  });
+// Kept for old callers: the explore grid now comes from the server (useExplore).
+export function explorePool() {
+  return [];
 }
 
 let feed = { list: [], start: 0, title: "" };
@@ -81,33 +38,39 @@ export function gridFeed() {
   return feed;
 }
 
-// Open a grid tile: reels go to the Reels tab; a post opens the grid as a feed starting at
-// that post when the grid is known, otherwise the single post page.
+// Open a grid tile (server posts in postCard shape): a thought opens its thread; otherwise the
+// grid opens as a feed starting at that post, or the single post page when it is alone.
 export function openGridItem(post, list, title) {
-  if (post.kind === "reel" && (post.reelId || String(post.id).startsWith("reel-") || REELS.some((reel) => reel.id === post.id))) {
-    const id = post.reelId || String(post.id).replace(/^reel-/, "");
-    if (router.canDismiss()) router.dismissAll();
-    openTab("reels", { id });
+  if (!post) return;
+  if (post.serverKind === "thought" || post.kind === "tweet" || post.kind === "thought") {
+    router.push(`/thought/${encodeURIComponent(post.id)}`);
     return;
   }
   const ids = new Set();
-  const posts = (list || []).filter((item) => item.kind !== "reel" && (item.image || item.images?.[0]) && !ids.has(item.id) && ids.add(item.id));
+  const posts = (list || []).filter((item) => item && item.serverKind !== "thought" && item.kind !== "tweet" && !ids.has(item.id) && ids.add(item.id));
   const start = posts.findIndex((item) => item.id === post.id);
   if (posts.length > 1 && start >= 0) {
     feed = { list: posts, start, title };
     router.push("/posts");
     return;
   }
-  router.push(`/post/${post.id}`);
+  router.push(`/post/${encodeURIComponent(post.id)}`);
 }
 
-export function openPersonByName(name, myName) {
-  if (name && name === myName) {
+// A profile by handle ("@x" or "x"): mine opens the Profile tab.
+export function openProfile(handle) {
+  const clean = String(handle || "").replace(/^@/, "").toLowerCase();
+  if (!clean) return;
+  if (clean === myHandle()) {
     openTab("profile");
     return;
   }
-  const person = personByName(name);
-  if (person?.handle) router.push(`/person/${String(person.handle).replace(/^@/, "")}`);
+  router.push(`/person/${encodeURIComponent(clean)}`);
+}
+
+// Old callers pass a name; people are identified by handle now, so a handle-looking value opens it.
+export function openPersonByName(name) {
+  if (/^@?[a-z0-9._]{2,30}$/i.test(String(name || ""))) openProfile(name);
 }
 
 const MIN = 60_000;
@@ -158,21 +121,23 @@ export function daysLabel(days) {
   return order.length > 2 ? `${names[order[0]]}–${names[order[order.length - 1]]}` : order.map((day) => names[day]).join(", ");
 }
 
-// Numbers that count up when a profile opens, like the web app.
+// Numbers that count up when a profile opens, like the web app; later changes (a new
+// follower) move on from the number already shown.
 export function useCountUp(target, ms = 700) {
   const [value, setValue] = useState(0);
+  const shown = useRef(0);
   useEffect(() => {
     const end = Number(target) || 0;
-    if (end === 0) {
-      setValue(0);
-      return undefined;
-    }
+    const from = shown.current;
+    if (end === from) return undefined;
     let raf = 0;
     const start = Date.now();
     const tick = () => {
       const progress = Math.min(1, (Date.now() - start) / ms);
       const eased = 1 - (1 - progress) ** 3;
-      setValue(Math.round(end * eased));
+      const next = Math.round(from + (end - from) * eased);
+      shown.current = next;
+      setValue(next);
       if (progress < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

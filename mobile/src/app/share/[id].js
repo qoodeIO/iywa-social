@@ -1,41 +1,55 @@
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, Share, StyleSheet, TextInput, View } from "react-native";
-import { Image } from "expo-image";
+import { ActivityIndicator, FlatList, Pressable, Share, StyleSheet, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INSET, useTheme } from "../../theme";
-import { useStore } from "../../lib/store";
-import { AVATAR, CONTACTS, avatarFor } from "../../data";
 import { Check, PlusSquare, Search } from "../../ui/icons";
 import { ArrowUpRightGlyph, LinkGlyph } from "../../ui/feedIcons";
 import { T, tap } from "../../ui/kit";
-import { SHARE_BASE, findPost, personHidden } from "../../ui/feedData";
+import { SHARE_BASE, findPost } from "../../ui/feedData";
 import { useKeyboardPad } from "../../ui/comments";
 import { useLive } from "../../live/LiveStore";
+import { useThreads } from "../../live/threads";
+import { usePeople } from "../../live/people";
+import { Face, GroupAvatar } from "../../ui/chat";
+import { createStory, postCard, usePost } from "../../lib/social";
 import { t } from "../../lib/i18n";
 
 // Send a post to people, add it to your story, copy its link or open the system share sheet (web ShareScreen).
 export default function ShareSheet() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const store = useStore();
   const { id } = useLocalSearchParams();
-  const post = findPost(String(id), store.library);
+  const fetched = usePost(findPost(String(id)) ? null : String(id));
+  const post = findPost(String(id)) || postCard(fetched.data?.post);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState([]);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [toast, setToast] = useState("");
   const pad = useKeyboardPad(0);
   const needle = query.trim().toLowerCase();
   const live = useLive();
-  // People on iywa (live hub) first, then the demo contacts, like the web ShareScreen.
+  const threads = useThreads();
+  const found = usePeople(query);
+  // Recent conversations first, then the people I follow (or the search results), each once.
   const people = useMemo(() => {
-    const online = live ? Object.values(live.people || {}).filter((person) => person.handle !== live.me?.handle).map((person) => ({ key: `live:${person.handle}`, name: person.name || person.handle, src: person.src || avatarFor(person.name || person.handle), live: person })) : [];
-    const demo = CONTACTS.map((person) => ({ ...person, key: `demo:${person.name}`, demo: person }));
-    return [...online, ...demo].filter((person) => !personHidden(store.prefs, person.name, true) && (!needle || person.name.toLowerCase().includes(needle)));
-  }, [live?.people, live?.me, store.prefs, needle]); // eslint-disable-line react-hooks/exhaustive-deps
+    const out = [];
+    const seen = new Set();
+    for (const thread of threads) {
+      if (needle && !thread.name.toLowerCase().includes(needle) && !thread.other?.handle?.includes(needle)) continue;
+      if (thread.other?.handle) seen.add(thread.other.handle);
+      out.push({ key: `c:${thread.id}`, name: thread.name, src: thread.src, convId: thread.id, group: thread.group ? thread : null });
+    }
+    for (const person of found.searching ? found.results : found.following) {
+      if (seen.has(person.handle)) continue;
+      seen.add(person.handle);
+      out.push({ key: `p:${person.handle}`, name: person.name, src: person.src, handle: person.handle });
+    }
+    return out;
+  }, [threads, found.searching, found.results, found.following, needle]);
   const image = post?.image || "";
   const link = `${SHARE_BASE}${post?.id || ""}`;
   const sheetBg = theme.scheme === "dark" ? "#1c1c1e" : theme.bg;
@@ -45,21 +59,27 @@ export default function ShareSheet() {
     setTimeout(() => setToast(""), 1300);
   }
 
+  // The post goes as its link (the chat shows it as a card); a note, if any, goes first.
   function send() {
-    if (!post) return;
-    tap("medium");
-    const text = message.trim();
-    const payload = image ? { kind: "image", image, text: text || `${post.name}: ${post.text || ""}`.trim() } : { text: `${text ? `${text} · ` : ""}${post.name}: ${post.text || link}` };
-    const chosen = people.filter((person) => picked.includes(person.key));
-    for (const person of chosen.filter((entry) => entry.demo)) {
-      const chatId = store.ensureChat(person.demo);
-      setTimeout(() => store.sendMessage(chatId, payload), 0);
+    if (!post || busy) return;
+    if (live?.status !== "open") {
+      note(t("Connessione…"));
+      return;
     }
-    const online = chosen.filter((entry) => entry.live);
-    Promise.all(online.map((person) => live.openDm(person.live.handle).then((convId) => live.send(convId, image ? payload : payload.text)))).then(() => {
+    tap("medium");
+    setBusy(true);
+    const text = message.trim();
+    const chosen = people.filter((person) => picked.includes(person.key));
+    Promise.all(chosen.map(async (person) => {
+      const convId = person.convId || await live.openDm(person.handle);
+      live.send(convId, text ? `${text}\n${link}` : link);
+    })).then(() => {
       note(t("Inviato"));
       setTimeout(() => router.back(), 650);
-    }).catch(() => note(t("Invio non riuscito")));
+    }).catch(() => {
+      setBusy(false);
+      note(t("Invio non riuscito"));
+    });
   }
 
   return (
@@ -71,6 +91,11 @@ export default function ShareSheet() {
       </View>
       <FlatList
         data={people}
+        ListEmptyComponent={found.loading ? <ActivityIndicator style={{ marginTop: 32 }} color={theme.text2} /> : (
+          <T size={14} color={theme.text2} style={{ textAlign: "center", marginTop: 32 }}>{needle ? t("Nessun account trovato.") : t("Segui qualcuno o cercalo per inviargli il post.")}</T>
+        )}
+        onEndReached={found.more}
+        onEndReachedThreshold={0.5}
         numColumns={3}
         keyExtractor={(person) => person.key}
         keyboardShouldPersistTaps="handled"
@@ -83,7 +108,7 @@ export default function ShareSheet() {
           return (
             <Pressable style={styles.cell} onPress={() => { tap(); setPicked((prev) => (on ? prev.filter((key) => key !== person.key) : [...prev, person.key])); }}>
               <View>
-                <Image source={{ uri: person.src }} style={[styles.face, on && { opacity: 0.75 }]} transition={120} recyclingKey={person.src} />
+                <View style={on && { opacity: 0.75 }}>{person.group ? <GroupAvatar photo={person.group.photo} title={person.name} size={64} /> : <Face src={person.src} name={person.name} size={64} />}</View>
                 {on ? <View style={[styles.check, { borderColor: sheetBg, backgroundColor: theme.blue }]}><Check size={13} weight="bold" color={theme.accentInk || "#fff"} /></View> : null}
               </View>
               <T size={12.5} lines={1} style={{ textAlign: "center" }}>{person.name}</T>
@@ -95,16 +120,21 @@ export default function ShareSheet() {
         {picked.length ? (
           <View style={[styles.send, { borderTopColor: theme.line, paddingBottom: insets.bottom + 10 }]}>
             <TextInput value={message} onChangeText={setMessage} placeholder={t("Scrivi un messaggio…")} placeholderTextColor={theme.text2} accessibilityLabel={t("Messaggio")} style={[styles.message, { color: theme.text }]} />
-            <Pressable onPress={send} style={({ pressed }) => [styles.sendBtn, { backgroundColor: theme.blue, opacity: pressed ? 0.8 : 1 }]}>
-              <T size={15} weight="600" color="#fff">{picked.length > 1 ? t("Invia separatamente ({n})", { n: picked.length }) : t("Invia")}</T>
+            <Pressable disabled={busy} onPress={send} style={({ pressed }) => [styles.sendBtn, { backgroundColor: theme.blue, opacity: pressed || busy ? 0.7 : 1 }]}>
+              {busy ? <ActivityIndicator color="#fff" /> : <T size={15} weight="600" color="#fff">{picked.length > 1 ? t("Invia separatamente ({n})", { n: picked.length }) : t("Invia")}</T>}
             </Pressable>
           </View>
         ) : (
           <View style={[styles.actions, { borderTopColor: theme.line, paddingBottom: insets.bottom + 10 }]}>
             <ShareAction icon={PlusSquare} label={t("Aggiungi alla storia")} onPress={() => {
               if (!post) return;
-              store.addStory?.({ id: `st-me-${Date.now()}`, image: image || AVATAR, text: "", stickers: [{ type: "tag", name: post.name, x: 50, y: 82, s: 1, r: 0 }], time: t("ora"), at: Date.now() });
-              note(t("Aggiunto alla tua storia"));
+              if (!image) {
+                note(t("Solo i post con una foto vanno nella storia"));
+                return;
+              }
+              createStory({ uri: image, stickers: [{ type: "tag", name: post.name, x: 50, y: 82, s: 1, r: 0 }] })
+                .then(() => note(t("Aggiunto alla tua storia")))
+                .catch(() => note(t("Impossibile aggiungere alla storia")));
             }} />
             <ShareAction icon={LinkGlyph} label={t("Copia link")} onPress={() => { Clipboard.setStringAsync(link).catch(() => {}); note(t("Link copiato")); }} />
             <ShareAction icon={ArrowUpRightGlyph} label={t("Condividi su…")} onPress={() => post && Share.share({ title: post.name, message: `${post.name}: ${post.text || ""}\n${link}`.trim(), url: link }).catch(() => {})} />
@@ -135,7 +165,6 @@ const styles = StyleSheet.create({
   search: { flexDirection: "row", alignItems: "center", gap: 8, height: 38, borderRadius: 10, marginHorizontal: INSET, paddingHorizontal: 12 },
   searchInput: { flex: 1, fontSize: 16, height: 38 },
   cell: { flex: 1 / 3, alignItems: "center", gap: 6 },
-  face: { width: 64, height: 64, borderRadius: 32 },
   check: { position: "absolute", right: -2, bottom: -2, width: 24, height: 24, borderRadius: 12, borderWidth: 2, backgroundColor: "#0095f6", alignItems: "center", justifyContent: "center" },
   send: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: INSET, paddingTop: 10, gap: 10 },
   message: { fontSize: 15, minHeight: 36 },

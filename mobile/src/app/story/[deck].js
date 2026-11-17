@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Platform, Pressable, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
+import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,43 +8,125 @@ import Animated, {
   Easing, cancelAnimation, interpolate, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { useStore } from "../../lib/store";
-import { STORY_MS, STORY_REACTIONS, openFrame, useHighlightDecks, useStoryDecks } from "../../lib/stories";
-import { PEOPLE } from "../../data";
-import { Close, Eye, Heart, More, Send } from "../../ui/icons";
-import { Music } from "../../ui/storyIcons";
+import { STORY_MS, STORY_REACTIONS, frameCover, openFrame, storyFrame } from "../../lib/stories";
+import {
+  ago, createHighlight, deleteHighlight, deleteStory, likeStory, markStoryViewed, useHighlights, useStories, useStoryViewers, useUserStories,
+} from "../../lib/social";
+import { myHandle } from "../../lib/session";
+import { errorText } from "../../lib/api";
+import { useLive } from "../../live/LiveStore";
+import { Close, Eye, Heart, More, Star } from "../../ui/icons";
 import { Avatar, T, tap } from "../../ui/kit";
 import { StoryMedia, StoryStickers } from "../../ui/story";
 import { t } from "../../lib/i18n";
 
 const EASE = Easing.bezier(0.32, 0.72, 0, 1);
 
-export default function StoryViewer() {
+const leave = () => {
+  if (router.canGoBack()) router.back();
+  else router.replace("/");
+};
+
+// /story/<handle>: that person's story, then the next people in the rail, like Instagram.
+// /story/h:<id>?owner=<handle>: one highlight.
+export default function StoryScreen() {
+  const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+  const deckId = String(params.deck || "");
+  const highlightId = deckId.startsWith("h:") ? deckId.slice(2) : null;
+  const handle = highlightId ? null : deckId.replace(/^@/, "").toLowerCase();
+  const owner = highlightId ? String(params.owner || myHandle() || "").replace(/^@/, "").toLowerCase() : null;
+  const me = myHandle();
+
+  const stories = useStories();
+  // Once the rail decks are in use they stay in use (a deck emptied while watching must not switch source).
+  const railMode = useRef(false);
+  if (!highlightId && stories.data?.some((deck) => deck.handle === handle && deck.frames.length)) railMode.current = true;
+  const fromRail = railMode.current;
+  // Someone whose story is not in the rail (a public profile you don't follow).
+  const single = useUserStories(!highlightId && !fromRail && (stories.data || stories.error) ? handle : null);
+  const highlights = useHighlights(owner || null);
+
+  // The rail order as it was when the viewer opened: the server moves watched decks to the end,
+  // and the people must not shift under the finger while watching.
+  const order = useRef(null);
+  const decks = useMemo(() => {
+    if (highlightId) {
+      const item = (highlights.data || []).find((entry) => entry.id === highlightId);
+      if (!item?.frames?.length) return [];
+      return [{
+        id: deckId,
+        handle: owner,
+        name: item.title,
+        avatar: item.cover || frameCover(item.frames[0]),
+        mine: owner === me,
+        highlight: item,
+        frames: item.frames.map((frame, i) => ({ ...frame, id: frame.id || `${item.id}-${i}`, seen: true })),
+      }];
+    }
+    if (fromRail) {
+      const list = (stories.data || []).filter((deck) => deck.frames.length);
+      if (!order.current) order.current = list.map((deck) => deck.handle);
+      else for (const deck of list) if (!order.current.includes(deck.handle)) order.current.push(deck.handle);
+      return order.current.map((key) => list.find((deck) => deck.handle === key)).filter(Boolean).map((deck) => ({ ...deck, id: deck.handle }));
+    }
+    const data = single.data;
+    if (!data?.frames?.length) return [];
+    return [{ id: data.handle, handle: data.handle, name: data.name, avatar: data.avatar, verified: data.verified, mine: data.handle === me, frames: data.frames }];
+  }, [highlightId, highlights.data, deckId, owner, me, fromRail, stories.data, single.data]);
+
+  const started = useRef(false);
+  if (decks.length) started.current = true;
+  if (started.current) return <Viewer decks={decks} startId={highlightId ? deckId : handle} />;
+
+  const source = highlightId ? highlights : fromRail ? stories : single;
+  const waiting = highlightId
+    ? !highlights.data && !highlights.error
+    : (!stories.data && !stories.error) || (!fromRail && !single.data && !single.error);
+  return (
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      <Stack.Screen options={{ statusBarHidden: false }} />
+      <Pressable hitSlop={8} style={[styles.icon, { position: "absolute", top: insets.top + 8, right: 8, zIndex: 2 }]} accessibilityLabel={t("Chiudi")} onPress={leave}>
+        <Close size={26} color="#fff" />
+      </Pressable>
+      <View style={styles.spin}>
+        {waiting ? <Spinner /> : (
+          <View style={{ alignItems: "center", gap: 12, paddingHorizontal: 40 }}>
+            <T size={16} weight="700" color="#fff" style={{ textAlign: "center" }}>{source.error ? errorText(source.error, t) : t("Questa storia non è più disponibile")}</T>
+            {source.error ? (
+              <Pressable onPress={() => { tap(); source.refresh?.(); }} style={styles.pillBtn}><T size={14} weight="700" color="#111">{t("Riprova")}</T></Pressable>
+            ) : (
+              <Pressable onPress={leave} style={styles.pillBtn}><T size={14} weight="700" color="#111">{t("Chiudi")}</T></Pressable>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function Viewer({ decks, startId }) {
   const insets = useSafeAreaInsets();
   const { width: W, height: H } = useWindowDimensions();
   const u = W / 390;
-  const store = useStore();
-  const { deck: deckParam } = useLocalSearchParams();
-  const deckId = String(deckParam);
-  const highlight = deckId.startsWith("hl-");
-  const storyDecks = useStoryDecks();
-  const highlightDecks = useHighlightDecks();
-  const decks = highlight ? highlightDecks : storyDecks;
+  const live = useLive();
 
-  const [who, setWho] = useState(() => Math.max(0, decks.findIndex((deck) => deck.id === deckId)));
-  const [frame, setFrame] = useState(() => openFrame(decks[Math.max(0, decks.findIndex((deck) => deck.id === deckId))], store.seenStories));
+  const [who, setWho] = useState(() => Math.max(0, decks.findIndex((deck) => deck.id === startId)));
+  const [frame, setFrame] = useState(() => openFrame(decks[Math.max(0, decks.findIndex((deck) => deck.id === startId))]));
   const [loaded, setLoaded] = useState(false);
   const [holding, setHolding] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [menu, setMenu] = useState(false);
   const [viewers, setViewers] = useState(false);
+  const [naming, setNaming] = useState(null);
   const [focused, setFocused] = useState(false);
   const [stickerBusy, setStickerBusy] = useState(false);
   const [reply, setReply] = useState("");
   const [toast, setToast] = useState(null);
   const [reacts, setReacts] = useState([]);
   const [likePop, setLikePop] = useState(0);
+  const [likes, setLikes] = useState({});
   const [clipMs, setClipMs] = useState(0);
   const [keyboard, setKeyboard] = useState(0);
   const inputRef = useRef(null);
@@ -55,11 +137,14 @@ export default function StoryViewer() {
   const story = deck?.frames[frame];
   const prevDeck = decks[who - 1];
   const nextDeck = decks[who + 1];
-  const nextIndex = nextDeck ? openFrame(nextDeck, store.seenStories) : 0;
+  const nextIndex = nextDeck ? openFrame(nextDeck) : 0;
   const prevIndex = prevDeck ? prevDeck.frames.length - 1 : 0;
   const stateRef = useRef({});
   stateRef.current = { who, frame, deck, prevDeck, nextDeck, nextIndex, prevIndex };
-  const paused = !loaded || holding || dragging || spinning || menu || viewers || focused || stickerBusy;
+  const paused = !loaded || holding || dragging || spinning || menu || viewers || Boolean(naming) || focused || stickerBusy;
+  const mine = Boolean(deck?.mine);
+  const highlight = deck?.highlight || null;
+  const audience = useStoryViewers(mine && !highlight && story ? story.id : null);
 
   // Shared values: deck position (for the cube), progress of the current bar, the drag-to-close card.
   const pos = useSharedValue(who);
@@ -93,9 +178,9 @@ export default function StoryViewer() {
 
   useEffect(() => {
     if (!story) return undefined;
-    store.markStorySeen(story.id);
+    if (!highlight) markStoryViewed(story);
     // Warm the cache so the next taps are instant.
-    const next = [deck?.frames[frame + 1]?.image, nextDeck?.frames[nextIndex]?.image, prevDeck?.frames[prevIndex]?.image].filter(Boolean);
+    const next = [deck?.frames[frame + 1], nextDeck?.frames[nextIndex], prevDeck?.frames[prevIndex]].map((item) => storyFrame(item)?.image).filter(Boolean);
     if (next.length) Image.prefetch(next).catch(() => {});
     const safety = setTimeout(() => setLoaded(true), 4000);
     return () => clearTimeout(safety);
@@ -166,13 +251,10 @@ export default function StoryViewer() {
   function note(text) {
     setToast({ text, at: Date.now() });
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 1100);
+    toastTimer.current = setTimeout(() => setToast(null), 1300);
   }
 
-  const leave = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/");
-  }, []);
+  const goBack = useCallback(leave, []);
 
   function close(direction = "ring") {
     if (closing.current) return;
@@ -181,10 +263,16 @@ export default function StoryViewer() {
     Keyboard.dismiss();
     if (direction === "down") {
       dragY.value = withTiming(H * 0.9, { duration: 280, easing: Easing.bezier(0.4, 0, 0.6, 1) });
-      enter.value = withTiming(0, { duration: 280 }, () => runOnJS(leave)());
+      enter.value = withTiming(0, { duration: 280 }, () => runOnJS(goBack)());
     } else {
-      enter.value = withTiming(0, { duration: 260, easing: Easing.bezier(0.4, 0, 0.6, 1) }, () => runOnJS(leave)());
+      enter.value = withTiming(0, { duration: 260, easing: Easing.bezier(0.4, 0, 0.6, 1) }, () => runOnJS(goBack)());
     }
+  }
+
+  // Leaves the viewer, then opens a page (a profile, a hashtag, a product).
+  function openPage(href) {
+    close("down");
+    setTimeout(() => router.push(href), 360);
   }
 
   function landed(target, direction) {
@@ -226,8 +314,9 @@ export default function StoryViewer() {
   }
 
   function swipeUp() {
-    if (stateRef.current.deck?.mine) setViewers(true);
-    else inputRef.current?.focus();
+    const current = stateRef.current.deck;
+    if (current?.mine && !current.highlight) setViewers(true);
+    else if (!current?.mine) inputRef.current?.focus();
   }
 
   // Gestures: tap left/right, hold to pause, swipe sideways between people, down to close, up to reply.
@@ -301,54 +390,112 @@ export default function StoryViewer() {
   }));
 
   if (!deck || !story) return <View style={{ flex: 1 }} />;
-  const mine = Boolean(deck.mine);
-  const liked = store.storyLikes.includes(story.id);
-  const views = Math.max(deck.frames.length + 2, 3);
-  const canReply = (() => {
-    const rule = store.prefs?.storyReplies || "everyone";
-    if (rule === "off") return false;
-    if (rule === "following") return store.follows.includes(deck.full || deck.name);
-    return true;
-  })();
+  const liked = likes[story.id] ?? Boolean(story.liked);
+  const views = story.views || 0;
+  const people = audience.data || [];
   const chrome = holding ? 0 : 1;
   const bottom = keyboard ? keyboard + 8 : insets.bottom + 14;
+  // Text written by other clients without the editor's overlay data shows as a caption.
+  const caption = !story.style && story.text ? story.text : "";
 
-  function sendReply(text) {
-    const name = deck.full || deck.name;
-    const id = store.ensureChat({ name, src: deck.src });
-    store.sendMessage(id, { text });
+  // A reply to a story is a DM to its author (through the live hub), with the photo for context.
+  function sendReply(text, done = t("Messaggio inviato")) {
+    const target = deck.handle;
+    if (!live?.openDm || !target) {
+      note(t("Invio non riuscito"));
+      return;
+    }
+    const image = storyFrame(story).image || storyFrame(story).cells?.[0] || "";
+    const payload = image ? { kind: "image", image, text } : text;
+    live.openDm(target)
+      .then((convId) => {
+        live.send(convId, payload);
+        note(done);
+      })
+      .catch(() => note(t("Invio non riuscito")));
   }
 
   function react(char) {
     const now = Date.now();
     setReacts((prev) => [...prev, ...Array.from({ length: 6 }, (_, i) => ({ id: `${now}-${i}`, char, x: 18 + Math.random() * 64, d: i * 70, r: Math.random() * 40 - 20 }))]);
     setTimeout(() => setReacts((prev) => prev.filter((item) => !item.id.startsWith(`${now}-`))), 1800);
-    sendReply(char);
+    sendReply(char, t("Reazione inviata"));
     setReply("");
     inputRef.current?.blur();
-    note(t("Reazione inviata"));
+  }
+
+  function submitReply() {
+    const text = reply.trim();
+    if (!text) return;
+    setReply("");
+    sendReply(text);
+    inputRef.current?.blur();
+  }
+
+  function toggleLike() {
+    const next = !liked;
+    setLikes((prev) => ({ ...prev, [story.id]: next }));
+    if (next) {
+      tap("medium");
+      setLikePop(Date.now());
+    }
+    likeStory(story, next).catch((error) => {
+      setLikes((prev) => ({ ...prev, [story.id]: !next }));
+      note(errorText(error, t));
+    });
+  }
+
+  function removeStory() {
+    setMenu(false);
+    const id = story.id;
+    const run = () => deleteStory(id).catch((error) => note(errorText(error, t)));
+    if (deck.frames.length <= 1) {
+      // Last frame of this deck: close first so the next person's story never flashes in.
+      close("down");
+      setTimeout(run, 320);
+    } else {
+      run().then(() => note(t("Eliminata")));
+    }
+  }
+
+  function removeHighlight() {
+    setMenu(false);
+    const id = highlight.id;
+    close("down");
+    setTimeout(() => deleteHighlight(id).catch(() => {}), 320);
+  }
+
+  function saveHighlight() {
+    const title = (naming?.title || "").trim() || t("In evidenza");
+    const item = naming.story;
+    setNaming(null);
+    Keyboard.dismiss();
+    const { id, media, text, stickers, style, createdAt } = item;
+    createHighlight({ title, cover: frameCover(item), frames: [{ id, media, text, stickers, style, createdAt }] })
+      .then(() => note(t("Aggiunta in evidenza")))
+      .catch((error) => note(errorText(error, t)));
   }
 
   const faces = [who - 1, who, who + 1].filter((index) => decks[index]);
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ statusBarHidden: !keyboard && !menu && !viewers }} />
+      <Stack.Screen options={{ statusBarHidden: !keyboard && !menu && !viewers && !naming }} />
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }, dimStyle]} />
       <Animated.View style={[styles.card, cardStyle]}>
         {faces.map((index) => {
           const item = decks[index];
-          const live = index === who;
+          const current = index === who;
           return (
-            <CubeFace key={item.id} index={index} front={index === who} pos={pos} w={W}>
-              {live ? (
+            <CubeFace key={item.id} index={index} front={current} pos={pos} w={W}>
+              {current ? (
                 <>
                   <GestureDetector gesture={gesture}>
                     <View style={StyleSheet.absoluteFill}>
                       <StoryMedia frame={story} live paused={paused} onReady={() => setLoaded(true)} onDuration={(sec) => setClipMs(Math.min(60, sec) * 1000)} />
                       <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0.42)", "transparent"]} locations={[0, 0.22]} style={StyleSheet.absoluteFill} />
                       <LinearGradient pointerEvents="none" colors={["transparent", "rgba(0,0,0,0.45)"]} locations={[0.78, 1]} style={StyleSheet.absoluteFill} />
-                      {story.text ? <T size={26 * u} weight="700" color={story.textColor || "#fff"} style={styles.caption}>{story.text}</T> : null}
+                      {caption ? <T size={26 * u} weight="700" color="#fff" style={styles.caption}>{caption}</T> : null}
                     </View>
                   </GestureDetector>
                   <View style={[StyleSheet.absoluteFill, { opacity: focused ? 0 : 1 }]} pointerEvents={focused ? "none" : "box-none"}>
@@ -362,14 +509,24 @@ export default function StoryViewer() {
                       onNote={note}
                       onPause={setStickerBusy}
                       onLeave={(go) => { close("down"); setTimeout(go, 360); }}
+                      onReply={mine ? undefined : (text) => sendReply(text, t("Risposta inviata"))}
                     />
                   </View>
-                  <Bars count={deck.frames.length} index={frame} progress={progress} top={insets.top + 6} opacity={chrome} ids={deck.frames.map((f) => f.id)} />
-                  <Head deck={deck} story={story} top={insets.top + 16} opacity={chrome} u={u} onMore={() => setMenu(true)} onClose={() => close()} />
+                  <Bars index={frame} progress={progress} top={insets.top + 6} opacity={chrome} ids={deck.frames.map((f) => f.id)} />
+                  <Head
+                    deck={deck}
+                    story={story}
+                    top={insets.top + 16}
+                    opacity={chrome}
+                    u={u}
+                    onMore={() => setMenu(true)}
+                    onClose={() => close()}
+                    onProfile={deck.handle ? () => openPage(`/person/${encodeURIComponent(deck.handle)}`) : null}
+                  />
                   {!loaded ? <View pointerEvents="none" style={styles.spin}><Spinner /></View> : null}
                 </>
               ) : (
-                <QuietFace deck={item} index={index < who ? item.frames.length - 1 : openFrame(item, store.seenStories)} u={u} w={W} h={H} top={insets.top} />
+                <QuietFace deck={item} index={index < who ? item.frames.length - 1 : openFrame(item)} u={u} w={W} h={H} top={insets.top} />
               )}
             </CubeFace>
           );
@@ -389,16 +546,18 @@ export default function StoryViewer() {
 
         {mine ? (
           <View style={[styles.foot, { bottom, opacity: chrome, justifyContent: "space-between" }]}>
-            <Pressable onPress={() => setViewers(true)} style={{ gap: 4 }}>
-              <View style={{ flexDirection: "row" }}>
-                {PEOPLE.slice(0, 3).map((person) => <Image key={person.name} source={{ uri: person.src }} style={styles.face} />)}
-              </View>
-              <T size={12.5} weight="600" color="#fff">{t("Attività · {n}", { n: views })}</T>
-            </Pressable>
-            <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Elimina")} onPress={() => setMenu(true)}><More size={26} color="#fff" weight="bold" /></Pressable>
+            {highlight ? <View /> : (
+              <Pressable onPress={() => setViewers(true)} style={{ gap: 4 }} accessibilityLabel={t("Attività")}>
+                {people.length ? (
+                  <View style={{ flexDirection: "row" }}>
+                    {people.slice(0, 3).map((person) => <Avatar key={person.handle} src={person.avatar} size={28} style={styles.face} />)}
+                  </View>
+                ) : null}
+                <T size={12.5} weight="600" color="#fff">{views ? t("Attività · {n}", { n: views }) : t("Nessuna visualizzazione ancora")}</T>
+              </Pressable>
+            )}
+            <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Altro")} onPress={() => setMenu(true)}><More size={26} color="#fff" weight="bold" /></Pressable>
           </View>
-        ) : !canReply ? (
-          <T size={13} color="rgba(255,255,255,0.75)" style={[styles.closed, { bottom: insets.bottom + 24, opacity: chrome }]}>{t("Risposte disattivate")}</T>
         ) : (
           <View style={[styles.foot, { bottom, opacity: chrome }]}>
             <View style={[styles.reply, focused ? { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "#fff" } : null]}>
@@ -408,55 +567,22 @@ export default function StoryViewer() {
                 onChangeText={setReply}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 120)}
-                placeholder={t("Rispondi a {name}…", { name: deck.name })}
+                placeholder={t("Rispondi a {name}…", { name: highlight ? deck.handle : deck.name || deck.handle })}
                 placeholderTextColor="rgba(255,255,255,0.85)"
                 returnKeyType="send"
-                onSubmitEditing={() => {
-                  const text = reply.trim();
-                  if (!text) return;
-                  setReply("");
-                  sendReply(text);
-                  inputRef.current?.blur();
-                  note(t("Messaggio inviato"));
-                }}
+                onSubmitEditing={submitReply}
                 style={styles.replyInput}
                 accessibilityLabel={t("Rispondi alla storia")}
               />
             </View>
             {reply.trim() ? (
-              <Pressable
-                hitSlop={8}
-                style={{ paddingHorizontal: 12, height: 46, justifyContent: "center" }}
-                onPress={() => {
-                  const text = reply.trim();
-                  setReply("");
-                  sendReply(text);
-                  inputRef.current?.blur();
-                  note(t("Messaggio inviato"));
-                }}
-              >
+              <Pressable hitSlop={8} style={{ paddingHorizontal: 12, height: 46, justifyContent: "center" }} onPress={submitReply}>
                 <T size={15} weight="700" color="#fff">{t("Invia")}</T>
               </Pressable>
-            ) : (
-              <>
-                <Pressable
-                  hitSlop={6}
-                  style={styles.icon}
-                  accessibilityLabel={t("Mi piace")}
-                  onPress={() => {
-                    store.toggleStoryLike(story.id);
-                    if (!liked) {
-                      tap("medium");
-                      setLikePop(Date.now());
-                    }
-                  }}
-                >
-                  <LikeIcon on={liked} />
-                </Pressable>
-                <Pressable hitSlop={6} style={styles.icon} accessibilityLabel={t("Condividi")} onPress={() => { tap(); note(t("Inviata")); }}>
-                  <Send size={26} color="#fff" />
-                </Pressable>
-              </>
+            ) : highlight ? null : (
+              <Pressable hitSlop={6} style={styles.icon} accessibilityLabel={t("Mi piace")} onPress={toggleLike}>
+                <LikeIcon on={liked} />
+              </Pressable>
             )}
           </View>
         )}
@@ -466,30 +592,41 @@ export default function StoryViewer() {
 
       {menu ? (
         <DarkSheet onClose={() => setMenu(false)} bottom={insets.bottom}>
-          {mine ? (
-            <SheetRow
-              warn
-              label={t("Elimina")}
-              onPress={() => {
-                setMenu(false);
-                const id = story.id;
-                if (deck.frames.length <= 1) {
-                  // Last frame of this deck: close first so the next person's story never flashes in.
-                  close("down");
-                  setTimeout(() => store.deleteStory(id), 320);
-                } else {
-                  store.deleteStory(id);
-                  note(t("Eliminata"));
-                }
-              }}
-            />
-          ) : (
+          {mine && highlight ? (
+            <SheetRow warn label={t("Elimina storia in evidenza")} onPress={removeHighlight} />
+          ) : mine ? (
             <>
-              <SheetRow label={t("Silenzia {name}", { name: deck.name })} onPress={() => { setMenu(false); deck.frames.forEach((item) => store.markStorySeen(item.id)); spin(1); }} />
-              <SheetRow warn label={t("Segnala")} onPress={() => { setMenu(false); note(t("Segnalata")); }} />
+              <SheetRow label={t("Aggiungi in evidenza")} onPress={() => { setMenu(false); setNaming({ story, title: "" }); }} />
+              <SheetRow warn label={t("Elimina")} onPress={removeStory} />
             </>
-          )}
+          ) : deck.handle ? (
+            <SheetRow label={t("Vai al profilo")} onPress={() => { setMenu(false); openPage(`/person/${encodeURIComponent(deck.handle)}`); }} />
+          ) : null}
           <SheetRow label={t("Annulla")} onPress={() => setMenu(false)} />
+        </DarkSheet>
+      ) : null}
+
+      {naming ? (
+        <DarkSheet onClose={() => { setNaming(null); Keyboard.dismiss(); }} bottom={keyboard || insets.bottom}>
+          <T size={16} weight="700" color="#fff" style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 }}>{t("Nuova storia in evidenza")}</T>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingBottom: 14 }}>
+            <View style={{ width: 52, height: 52, borderRadius: 26, overflow: "hidden", backgroundColor: "#3a3a3a" }}>
+              <StoryMedia frame={naming.story} />
+            </View>
+            <TextInput
+              autoFocus
+              value={naming.title}
+              maxLength={30}
+              onChangeText={(title) => setNaming((prev) => ({ ...prev, title }))}
+              placeholder={t("In evidenza")}
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              returnKeyType="done"
+              onSubmitEditing={saveHighlight}
+              accessibilityLabel={t("Nome")}
+              style={{ flex: 1, height: 44, color: "#fff", fontSize: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.3)" }}
+            />
+          </View>
+          <Pressable onPress={() => { tap(); saveHighlight(); }} style={styles.sheetGo}><T size={15} weight="700" color="#fff">{t("Aggiungi")}</T></Pressable>
         </DarkSheet>
       ) : null}
 
@@ -499,18 +636,38 @@ export default function StoryViewer() {
             <Eye size={20} color="#fff" />
             <T size={16} weight="700" color="#fff">{views}</T>
           </View>
-          {PEOPLE.slice(0, 5).map((person, index) => (
-            <View key={person.name} style={styles.viewer}>
-              <Avatar src={person.src} size={44} />
-              <T size={14.5} weight="600" color="#fff" style={{ flex: 1 }}>{person.name}</T>
-              {index === 0 ? <Heart size={18} weight="fill" color="#ff3040" /> : null}
-              <T size={13} color="rgba(255,255,255,0.55)">{index === 0 ? t("Ora") : t("{n} h", { n: index + 1 })}</T>
-            </View>
-          ))}
+          {audience.loading && !audience.data ? (
+            <View style={{ paddingVertical: 24, alignItems: "center" }}><Spinner /></View>
+          ) : audience.error && !audience.data ? (
+            <Pressable onPress={() => audience.refresh?.()} style={{ paddingVertical: 20, alignItems: "center" }}>
+              <T size={14} color="rgba(255,255,255,0.75)">{t("Non caricato. Tocca per riprovare.")}</T>
+            </Pressable>
+          ) : people.length ? (
+            <ScrollList>
+              {people.map((person) => (
+                <Pressable key={person.handle} style={styles.viewer} onPress={() => { setViewers(false); openPage(`/person/${encodeURIComponent(person.handle)}`); }}>
+                  <Avatar src={person.avatar} size={44} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <T size={14.5} weight="600" color="#fff" lines={1}>{person.name || person.handle}</T>
+                    <T size={12.5} color="rgba(255,255,255,0.55)" lines={1}>@{person.handle}</T>
+                  </View>
+                  {person.liked ? <Heart size={18} weight="fill" color="#ff3040" /> : null}
+                  <T size={13} color="rgba(255,255,255,0.55)">{ago(person.at)}</T>
+                </Pressable>
+              ))}
+            </ScrollList>
+          ) : (
+            <T size={14} color="rgba(255,255,255,0.65)" style={{ textAlign: "center", paddingVertical: 22, paddingHorizontal: 24 }}>{t("Ancora nessuno ha visto questa storia.")}</T>
+          )}
         </DarkSheet>
       ) : null}
     </View>
   );
+}
+
+function ScrollList({ children }) {
+  const { height } = useWindowDimensions();
+  return <ScrollView style={{ maxHeight: height * 0.55 }}>{children}</ScrollView>;
 }
 
 // One side of the cube. Its place follows the deck position: -1 left, 0 front, 1 right.
@@ -541,7 +698,7 @@ const QuietFace = memo(function QuietFace({ deck, index, u, w, h, top }) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <StoryMedia frame={story} />
       <LinearGradient colors={["rgba(0,0,0,0.42)", "transparent"]} locations={[0, 0.22]} style={StyleSheet.absoluteFill} />
-      {story.text ? <T size={26 * u} weight="700" color={story.textColor || "#fff"} style={styles.caption}>{story.text}</T> : null}
+      {!story.style && story.text ? <T size={26 * u} weight="700" color="#fff" style={styles.caption}>{story.text}</T> : null}
       <StoryStickers items={story.stickers} quiet w={w} h={h} u={u} />
       <View style={[styles.bars, { top: top + 6 }]}>
         {deck.frames.map((item, i) => <View key={item.id} style={styles.bar}><View style={[styles.barFill, { width: i < index ? "100%" : "0%" }]} /></View>)}
@@ -551,7 +708,7 @@ const QuietFace = memo(function QuietFace({ deck, index, u, w, h, top }) {
   );
 });
 
-function Bars({ count, index, progress, top, opacity, ids }) {
+function Bars({ index, progress, top, opacity, ids }) {
   return (
     <View pointerEvents="none" style={[styles.bars, { top, opacity }]}>
       {ids.map((id, i) => (
@@ -568,24 +725,24 @@ function LiveBar({ progress }) {
   return <Animated.View style={[styles.barFill, style]} />;
 }
 
-function Head({ deck, story, top, opacity, u, onMore, onClose }) {
-  const music = (story.stickers || []).find((item) => item.type === "music");
-  const time = story.time === "Now" ? t("Adesso") : story.time || t("{n} h", { n: 2 });
+function Head({ deck, story, top, opacity, u, onMore, onClose, onProfile }) {
+  const time = deck.highlight ? "" : ago(story.createdAt);
+  const name = deck.highlight ? deck.name : deck.mine ? t("La tua storia") : deck.name || deck.handle;
   return (
     <View pointerEvents="box-none" style={[styles.head, { top, opacity }]}>
-      <Image source={{ uri: deck.src }} style={{ width: 34 * u, height: 34 * u, borderRadius: 17 * u }} contentFit="cover" />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 7 }}>
-          <T size={14} weight="600" color="#fff" lines={1} style={styles.textShadow}>{deck.mine ? t("La tua storia") : deck.name}</T>
-          <T size={13} color="rgba(255,255,255,0.75)" style={styles.textShadow}>{time}</T>
+      <Pressable disabled={!onProfile} onPress={onProfile} style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 }} accessibilityLabel={name}>
+        <Avatar src={deck.avatar} size={34 * u} />
+        <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "baseline", gap: 7 }}>
+          <T size={14} weight="600" color="#fff" lines={1} style={[styles.textShadow, { flexShrink: 1 }]}>{name}</T>
+          {time ? <T size={13} color="rgba(255,255,255,0.75)" style={styles.textShadow}>{time}</T> : null}
         </View>
-        {music ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Music size={12} weight="bold" color="rgba(255,255,255,0.9)" />
-            <T size={12} color="rgba(255,255,255,0.9)" lines={1} style={styles.textShadow}>{music.title} · {music.artist}</T>
+        {story.closeFriends ? (
+          <View style={styles.close}>
+            <Star size={10} weight="fill" color="#fff" />
+            <T size={11} weight="700" color="#fff">{t("Amici stretti")}</T>
           </View>
         ) : null}
-      </View>
+      </Pressable>
       {onMore ? <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Altro")} onPress={onMore}><More size={26} weight="bold" color="#fff" /></Pressable> : null}
       {onClose ? <Pressable hitSlop={8} style={styles.icon} accessibilityLabel={t("Chiudi")} onPress={onClose}><Close size={26} color="#fff" /></Pressable> : null}
     </View>
@@ -722,8 +879,10 @@ const styles = StyleSheet.create({
   foot: { position: "absolute", zIndex: 20, left: 12, right: 6, flexDirection: "row", alignItems: "center", gap: 4 },
   reply: { flex: 1, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "rgba(255,255,255,0.6)", paddingHorizontal: 18, justifyContent: "center" },
   replyInput: { color: "#fff", fontSize: 15, height: 44, padding: 0 },
-  face: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: "#000", marginRight: -9 },
-  closed: { position: "absolute", zIndex: 20, left: 0, right: 0, textAlign: "center" },
+  face: { borderRadius: 16, borderWidth: 2, borderColor: "#000", marginRight: -9 },
+  close: { flexDirection: "row", alignItems: "center", gap: 3, height: 20, paddingHorizontal: 7, borderRadius: 10, backgroundColor: "#1fcf5c" },
+  pillBtn: { height: 38, paddingHorizontal: 20, borderRadius: 19, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  sheetGo: { marginHorizontal: 20, marginTop: 4, height: 44, borderRadius: 10, backgroundColor: "#0095f6", alignItems: "center", justifyContent: "center" },
   reactions: { ...StyleSheet.absoluteFill, zIndex: 19, alignItems: "center", justifyContent: "center", gap: 22, paddingBottom: 80, backgroundColor: "rgba(0,0,0,0.62)" },
   reactGrid: { width: 4 * 64 + 3 * 10, flexDirection: "row", flexWrap: "wrap", columnGap: 10, rowGap: 14 },
   burst: { position: "absolute", zIndex: 21, left: 0, right: 0, top: "40%", alignItems: "center" },

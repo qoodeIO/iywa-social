@@ -1,4 +1,5 @@
 import { handlePayments, migratePayments } from "./payments.js";
+import { Social, migrateSocial } from "./social.js";
 // Space realtime hub: direct messages, groups, presence, typing, read receipts,
 // call ringing and WebRTC signalling for mesh calls (up to 6 people).
 // The call model is ported from Spinchat (VideoApp): the server only relays
@@ -25,8 +26,8 @@ const STUN = [{ urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:
 function cors(headers = {}) {
   return {
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "content-type",
-    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "content-type, authorization, x-password",
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     ...headers,
   };
 }
@@ -51,6 +52,26 @@ export default {
     if (request.method === "OPTIONS") return json(null, 204);
     const url = new URL(request.url);
     if (url.pathname === "/calls/health") return json({ ok: true });
+    // Uploaded photos, videos and voice notes (R2), public and cached forever.
+    if (url.pathname.startsWith("/calls/media/") && request.method === "GET") {
+      if (!env.MEDIA) return json({ error: "media-not-configured" }, 503);
+      const key = decodeURIComponent(url.pathname.slice("/calls/media/".length));
+      const object = await env.MEDIA.get(key, { range: request.headers });
+      if (!object) return json({ error: "not-found" }, 404);
+      const headers = new Headers(cors());
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("accept-ranges", "bytes");
+      if (object.range && request.headers.get("range")) {
+        const start = object.range.offset ?? 0;
+        const length = object.range.length ?? object.size - start;
+        headers.set("content-range", `bytes ${start}-${start + length - 1}/${object.size}`);
+        headers.set("content-length", String(length));
+        return new Response(object.body, { status: 206, headers });
+      }
+      headers.set("content-length", String(object.size));
+      return new Response(object.body, { headers });
+    }
     if (url.pathname === "/calls/hub") {
       if (request.headers.get("Upgrade") !== "websocket") return json({ error: "upgrade" }, 426);
       const hub = env.HUB.get(env.HUB.idFromName("space"));
@@ -75,6 +96,7 @@ export class Hub {
     this.ice = null;
     this.lastStamp = 0;
     this.migrate();
+    this.social = new Social(this);
   }
 
   migrate() {
@@ -99,6 +121,18 @@ export class Hub {
         PRIMARY KEY (message_id, handle));
     `);
     migratePayments(this.sql);
+    migrateSocial(this.sql);
+    // Chats, people and shops from before real accounts (demo handles) are dropped.
+    this.sql.exec(`
+      DELETE FROM members WHERE handle NOT IN (SELECT handle FROM accounts);
+      DELETE FROM users WHERE handle NOT IN (SELECT handle FROM accounts);
+      DELETE FROM messages WHERE conv_id NOT IN (SELECT conv_id FROM members);
+      DELETE FROM reactions WHERE message_id NOT IN (SELECT id FROM messages);
+      DELETE FROM convs WHERE id NOT IN (SELECT conv_id FROM members);
+      DELETE FROM pay_products WHERE seller NOT IN (SELECT handle FROM accounts);
+      DELETE FROM pay_accounts WHERE handle NOT IN (SELECT handle FROM accounts);
+      DELETE FROM orders WHERE buyer NOT IN (SELECT handle FROM accounts) OR seller NOT IN (SELECT handle FROM accounts);
+    `);
     // Columns added after the first release: ignore "duplicate column" on later boots.
     for (const column of ["about TEXT", "photo TEXT", "pinned TEXT"]) {
       try {
@@ -116,6 +150,14 @@ export class Hub {
     const now = Date.now();
     this.lastStamp = now > this.lastStamp ? now : this.lastStamp + 1;
     return this.lastStamp;
+  }
+
+  // Any account can be messaged, even before it ever opened the chat.
+  known(handle) {
+    if (this.one("SELECT 1 AS ok FROM users WHERE handle = ?", handle)) return true;
+    if (!this.social.account(handle)) return false;
+    this.social.syncHubUser(handle);
+    return true;
   }
 
   rows(query, ...args) {
@@ -292,7 +334,15 @@ export class Hub {
 
   async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/calls/api/")) return handlePayments(this, request, url);
+    if (url.pathname.startsWith("/calls/api/")) {
+      try {
+        const answer = await this.social.handle(url.pathname === "/calls/api/media" ? request : request.clone(), url);
+        if (answer) return answer;
+      } catch (error) {
+        return new Response(JSON.stringify({ error: "server", detail: String(error?.message || error) }), { status: 500, headers: { "content-type": "application/json", "access-control-allow-origin": "*" } });
+      }
+      return handlePayments(this, request, url, await this.social.me(request));
+    }
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
     server.accept();
@@ -382,22 +432,24 @@ export class Hub {
     }
   }
 
+  // A socket signs in with the session token from /calls/api/auth/login; the handle,
+  // name and photo come from the account, never from the client.
   async hello(socketId, msg) {
-    const handle = handleOf(msg.handle);
-    if (!handle) {
-      this.send(socketId, { type: "error", code: "handle" });
+    const handle = await this.social.handleForToken(String(msg.token || ""));
+    const account = handle && this.social.account(handle);
+    if (!account) {
+      this.send(socketId, { type: "error", code: "auth" });
       return;
     }
     const socket = this.sockets.get(socketId);
+    if (!socket) return;
     const first = !this.socketsOf(handle).length;
     socket.handle = handle;
-    const name = clean(msg.name, 60) || handle;
-    const src = typeof msg.src === "string" && msg.src.length < 40_000 ? msg.src : "";
     this.sql.exec(
       `INSERT INTO users (handle, name, src, last_seen, receipts, show_online) VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(handle) DO UPDATE SET name = excluded.name, src = excluded.src, last_seen = excluded.last_seen,
        receipts = excluded.receipts, show_online = excluded.show_online`,
-      handle, name, src, Date.now(), msg.receipts === false ? 0 : 1, msg.showOnline === false ? 0 : 1,
+      handle, account.name, account.avatar || "", Date.now(), msg.receipts === false ? 0 : 1, msg.showOnline === false ? 0 : 1,
     );
     await this.ready(socketId, handle);
     if (first) this.sendAll({ type: "presence", person: this.person(handle) });
@@ -436,8 +488,8 @@ export class Hub {
 
   openDm(socketId, me, msg) {
     const other = handleOf(msg.handle);
-    if (!other || other === me || !this.one("SELECT 1 AS ok FROM users WHERE handle = ?", other)) {
-      this.send(socketId, { type: "error", code: "no-user" });
+    if (!other || other === me || !this.known(other)) {
+      this.send(socketId, { type: "error", code: "no-user", ref: msg.ref });
       return;
     }
     const id = `dm:${[me, other].sort().join("|")}`;
@@ -466,7 +518,7 @@ export class Hub {
   createGroup(socketId, me, msg) {
     const title = clean(msg.title, LIMITS.title);
     const picked = [...new Set((Array.isArray(msg.members) ? msg.members : []).map(handleOf))]
-      .filter((handle) => handle && handle !== me && this.one("SELECT 1 AS ok FROM users WHERE handle = ?", handle));
+      .filter((handle) => handle && handle !== me && this.known(handle));
     if (!title || !picked.length || picked.length + 1 > LIMITS.groupMembers) {
       this.send(socketId, { type: "error", code: "group", ref: msg.ref });
       return;
@@ -499,7 +551,7 @@ export class Hub {
     if (msg.about != null) this.sql.exec("UPDATE convs SET about = ? WHERE id = ?", clean(msg.about, LIMITS.about), convId);
     if (msg.photo != null) this.sql.exec("UPDATE convs SET photo = ? WHERE id = ?", photoOf(msg.photo), convId);
     const add = (Array.isArray(msg.add) ? msg.add : []).map(handleOf)
-      .filter((handle) => handle && !before.includes(handle) && this.one("SELECT 1 AS ok FROM users WHERE handle = ?", handle));
+      .filter((handle) => handle && !before.includes(handle) && this.known(handle));
     const room = LIMITS.groupMembers - before.length;
     for (const handle of add.slice(0, Math.max(0, room))) {
       this.sql.exec("INSERT OR IGNORE INTO members (conv_id, handle, last_read_at, joined_at) VALUES (?, ?, 0, ?)", convId, handle, Date.now());

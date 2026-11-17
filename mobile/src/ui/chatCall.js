@@ -13,7 +13,6 @@ import { RTCView } from "react-native-webrtc";
 import { LiveProvider, useLive } from "../live/LiveStore";
 import { routeAudio } from "../live/calls";
 import { CALL_NOTICES, callStamp, groupToneOf, liveThread, toneOf } from "../live/format";
-import { useStore } from "../lib/store";
 import { Face, GroupAvatar, useChatTheme } from "./chat";
 import { Mic, MicOff, Minimize, Phone, PhoneOff, SwitchCamera, Video, VideoOff, Volume } from "./chatIcons";
 import { T, tap } from "./kit";
@@ -105,7 +104,6 @@ function ControlButton({ icon: Icon, label, on, end, onPress }) {
 
 function CallLayer() {
   const live = useLive();
-  const store = useStore();
   const insets = useSafeAreaInsets();
   const call = live?.call;
   const [speaker, setSpeaker] = useState(true);
@@ -128,10 +126,7 @@ function CallLayer() {
   const convOf = (convId) => live.convs[convId];
   const titleOf = (convId) => {
     const conv = convOf(convId);
-    if (!conv) {
-      const local = store.chats.find((item) => item.id === convId);
-      return { name: call.demo?.name || local?.name || "", src: call.demo?.src || local?.src || "", photo: call.demo?.photo || local?.photo, group: call.demo?.group, faces: local?.members };
-    }
+    if (!conv) return { name: "", src: "", photo: "", group: false, faces: [] };
     const thread = liveThread(conv, me, null);
     return { name: thread.name, src: thread.src, faces: thread.people, photo: thread.photo, group: thread.group };
   };
@@ -182,7 +177,7 @@ function CallLayer() {
     ? t("Connessione…")
     : connected
       ? (peers.some((peer) => peer.state === "reconnecting" || peer.state === "disconnected") ? t("Riconnessione…") : callStamp(elapsed))
-      : call.demo || !peers.length ? t("Squilla…") : t("Connessione…");
+      : !peers.length ? t("Squilla…") : t("Connessione…");
   const anyVideo = call.cam || peers.some((peer) => peer.video);
 
   if (call.minimized) {

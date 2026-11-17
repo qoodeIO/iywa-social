@@ -4,10 +4,10 @@ import { useStore } from "../../lib/store";
 import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
 import { useInboxRules, useThreads } from "../../live/threads";
-import { demoTime, listTime, tickFor } from "../../live/format";
+import { listTime, tickFor } from "../../live/format";
 import { EmptyState, Hint, SubHead, Toast, useChatTheme, useFlash } from "../../ui/chat";
 import { Archive } from "../../ui/chatIcons";
-import { InboxRow } from "../messages";
+import { InboxRow } from "../../screens/Messages";
 
 export default function ArchivedChats() {
   const theme = useChatTheme();
@@ -16,8 +16,7 @@ export default function ArchivedChats() {
   const threads = useThreads();
   const { hiddenOut, isArchived, isMuted, unreadOf } = useInboxRules();
   const [hint, flash] = useFlash();
-  const blocked = store.prefs.blocked || [];
-  const archived = threads.filter((item) => !hiddenOut(item) && isArchived(item) && (item.live || item.members || !blocked.includes(item.name)));
+  const archived = threads.filter((item) => !hiddenOut(item) && isArchived(item));
   const receipts = store.prefs.readReceipts !== false;
 
   function rowTick(item) {
@@ -39,17 +38,17 @@ export default function ArchivedChats() {
           <InboxRow
             item={item}
             pinned={false}
-            time={item.live ? listTime(item.updatedAt) : demoTime(item.time)}
+            time={listTime(item.updatedAt)}
             count={unreadOf(item)}
             muted={isMuted(item)}
-            room={item.live ? live?.call.rooms[item.id] : null}
+            room={live?.call.rooms[item.id] || null}
             tick={rowTick(item)}
             selecting={false}
             selected={false}
-            onOpen={() => { if (!item.live && item.unread) store.readChat(item.id); router.push(`/chat/${item.id}`); }}
+            onOpen={() => router.push(`/chat/${item.id}`)}
             onLongPress={() => {}}
             onMute={() => store.setDmFlag(item.id, "muted", !isMuted(item))}
-            onDelete={() => (item.live ? store.setDmFlag(item.id, "hiddenAt", Date.now()) : store.deleteChat(item.id))}
+            onDelete={() => store.setDmFlag(item.id, "hiddenAt", Date.now())}
             onUnarchive={() => { store.setDmFlags([item.id], "archivedAt", null); flash(t("Riportata nelle chat"), 2200); }}
           />
         )}

@@ -3,6 +3,8 @@
 // Without it, or when the hub is not deployed, every call fails and the screens say so.
 import * as WebBrowser from "expo-web-browser";
 import { hubUrl } from "../live/config";
+import { apiToken } from "./api";
+import { myHandle } from "./session";
 import { t } from "./i18n";
 
 export function payBase() {
@@ -23,9 +25,11 @@ export async function payApi(path, body) {
     error.code = "offline";
     throw error;
   }
+  // The server acts for the signed-in account (Authorization), not for a handle in the body.
+  const auth = apiToken() ? { authorization: `Bearer ${apiToken()}` } : {};
   const response = await fetch(`${base}${path}`, body
-    ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }
-    : undefined);
+    ? { method: "POST", headers: { "content-type": "application/json", ...auth }, body: JSON.stringify(body) }
+    : { headers: auth });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(data.error || `http ${response.status}`);
@@ -48,11 +52,8 @@ export const RETURN_URL = "space://payments";
 export const CHECKOUT_RETURN = "space://checkout";
 
 // The handle the hub knows this account by (same as payments.js / orders.js).
-export function payHandle(store) {
-  const own = store?.auth?.handle;
-  if (own) return own;
-  const handle = String(store?.profile?.handle || "").replace(/^@/, "").toLowerCase().replace(/[^a-z0-9._-]/g, "");
-  return handle || null;
+export function payHandle() {
+  return myHandle();
 }
 
 function webReturn() {
@@ -60,7 +61,8 @@ function webReturn() {
   return base ? `${base.replace(/\/calls\/api$/, "")}/` : null;
 }
 
-// body: { buyer, seller, productId, qty, variant } or { buyer, seller, items: [{ productId, qty, variant }] }.
+// body: { seller, productId, qty, variant } or { seller, items: [{ productId, qty, variant }] }.
+// The buyer is the signed-in account (the token), never a handle in the body.
 // Resolves { status: "paid" | "processing" | "cancelled" | "unknown", order }.
 export async function startCheckout(body) {
   let start;
@@ -77,7 +79,7 @@ export async function startCheckout(body) {
   const back = result?.type === "success" && result.url ? (String(result.url).match(/[?&]checkout=([^&#]+)/) || [])[1] : null;
   if (back === "cancel") return { status: "cancelled", order: null, orderId: start.orderId };
   try {
-    const { order } = await payApi("/orders/confirm", { handle: body.buyer, orderId: start.orderId });
+    const { order } = await payApi("/orders/confirm", { orderId: start.orderId });
     if (order?.status === "paid" || order?.status === "shipped") return { status: "paid", order, orderId: start.orderId };
     return { status: back === "success" ? "processing" : "cancelled", order, orderId: start.orderId };
   } catch {
@@ -99,7 +101,9 @@ export function checkoutErrorText(code) {
     "seller-not-ready": t("Questa bottega non accetta ancora pagamenti"),
     stock: t("Non ci sono abbastanza pezzi"),
     "own-product": t("Non puoi comprare un tuo prodotto"),
-    "unknown-user": t("Prima collegati al Direct"),
+    product: t("Questo prodotto non è più in vendita"),
+    "unknown-user": t("Accedi per acquistare"),
+    auth: t("Accedi per acquistare"),
   }[code] || t("Pagamento non avviato. Riprova.");
 }
 

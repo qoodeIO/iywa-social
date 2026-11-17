@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { INSET, useTheme } from "../../theme";
 import { useStore } from "../../lib/store";
-import { ChevronRight, ClearIcon, Search, Trash } from "../../ui/icons";
-import { Avatar, Header, T, tap } from "../../ui/kit";
+import { ChevronRight, ClearIcon, Search } from "../../ui/icons";
+import { Header, T, tap } from "../../ui/kit";
+import { Face } from "../../ui/profile";
+import { signOut, useMe } from "../../lib/session";
 import { Card, Kicker, Row, SETTING_GROUPS, SettingIcon, settingValue } from "../../ui/settings";
 import { t } from "../../lib/i18n";
 
@@ -15,6 +17,7 @@ const ROUTES = { orders: "/shop/orders", payments: "/payments", edit: "/edit-pro
 export default function Settings() {
   const theme = useTheme();
   const store = useStore();
+  const me = useMe();
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
   const groups = SETTING_GROUPS
@@ -22,10 +25,15 @@ export default function Settings() {
     .filter((group) => group.rows.length);
   const open = (id) => router.push(ROUTES[id] || `/settings/${id}`);
 
-  function reset() {
-    Alert.alert(t("Azzerare i dati?"), t("Carrello, preferiti, like, messaggi e impostazioni tornano come all'inizio."), [
+  // "Privacy dell'account" shows the server's setting, kept in prefs for the row value.
+  useEffect(() => {
+    if (me && Boolean(me.private) !== Boolean(store.prefs.private)) store.setPrefs({ private: Boolean(me.private) });
+  }, [me?.private]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function logout() {
+    Alert.alert(t("Uscire?"), t("Puoi rientrare quando vuoi."), [
       { text: t("Annulla"), style: "cancel" },
-      { text: t("Azzera"), style: "destructive", onPress: () => store.reset() },
+      { text: t("Esci"), style: "destructive", onPress: () => { router.dismissAll(); signOut(); } },
     ]);
   }
 
@@ -42,10 +50,10 @@ export default function Settings() {
         {!needle ? (
           <Card style={{ marginTop: 14 }}>
             <Pressable onPress={() => { tap(); open("edit"); }} style={({ pressed }) => [styles.me, pressed ? { backgroundColor: theme.fill } : null]}>
-              <Avatar src={store.profile.src} size={54} />
+              <Face src={me?.avatar} name={me?.name || me?.handle} size={54} />
               <View style={{ flex: 1, gap: 2 }}>
-                <T size={17} weight="700">{store.profile.name}</T>
-                <T size={13.5} color={theme.text2}>{store.profile.handle}</T>
+                <T size={17} weight="700">{me?.name || ""}</T>
+                <T size={13.5} color={theme.text2}>@{me?.handle || ""}</T>
               </View>
               <ChevronRight size={14} weight="bold" color={theme.text3} />
             </Pressable>
@@ -75,13 +83,12 @@ export default function Settings() {
           <>
             <Card style={{ marginTop: 26 }}>
               <Pressable onPress={() => { tap(); open("login"); }} style={({ pressed }) => [styles.center, pressed ? { backgroundColor: theme.fill } : null]}>
-                <T size={15.5} weight="600" color={theme.blue}>{t("Esci")}</T>
+                <T size={15.5} weight="600" color={theme.blue}>{t("Aggiungi o cambia account")}</T>
               </Pressable>
             </Card>
             <Card style={{ marginTop: 12 }}>
-              <Pressable onPress={reset} style={({ pressed }) => [styles.center, { flexDirection: "row", gap: 8 }, pressed ? { backgroundColor: theme.fill } : null]}>
-                <Trash size={18} color={theme.red} />
-                <T size={15.5} color={theme.red}>{t("Azzera i dati della demo")}</T>
+              <Pressable onPress={logout} style={({ pressed }) => [styles.center, pressed ? { backgroundColor: theme.fill } : null]}>
+                <T size={15.5} color={theme.red}>{t("Esci da @{handle}", { handle: me?.handle || "" })}</T>
               </Pressable>
             </Card>
             <T size={12} color={theme.text2} style={{ textAlign: "center", marginTop: 22 }}>

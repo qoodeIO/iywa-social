@@ -6,17 +6,15 @@ import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
-import { useStore } from "../lib/store";
-import { AVATAR, avatarFor } from "../data";
+import { signIn, signUp, switchAccount, useSession } from "../lib/session";
+import { api, errorText } from "../lib/api";
 import { Checked, ChevronLeft, Eye, EyeOff, Warn } from "./icons-profile";
 import { T, tap } from "./kit";
 import { LANGS, currentLanguage, t } from "../lib/i18n";
 
-export const DEMO_USER = { name: "Giulia Neri", handle: "forno.neri", password: "forno" };
-
 export function strengthOf(value) {
   let score = 0;
-  if (value.length >= 4) score += 1;
+  if (value.length >= 6) score += 1;
   if (value.length >= 8) score += 1;
   if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
   if (/\d/.test(value) || /[^\w]/.test(value)) score += 1;
@@ -70,11 +68,12 @@ export function AuthScreen({ onDone, backHandle }) {
   const theme = useTheme();
   const a = palette(theme);
   const insets = useSafeAreaInsets();
-  const store = useStore();
-  const users = store.auth?.users?.length ? store.auth.users : [DEMO_USER];
-  const back = backHandle || store.auth?.previous || null;
+  const session = useSession();
+  const users = session.accounts || [];
+  const back = backHandle || null;
   const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [handle, setHandle] = useState("");
   const [password, setPassword] = useState("");
   const [again, setAgain] = useState("");
@@ -82,6 +81,7 @@ export function AuthScreen({ onDone, backHandle }) {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [taken, setTaken] = useState({ handle: false, email: false });
   // The last account used on this phone opens ready: only its password is needed, like Instagram.
   const [chosen, setChosen] = useState(() => (back ? null : users.find((user) => user.handle !== back)?.handle || null));
   const passRef = useRef(null);
@@ -111,75 +111,58 @@ export function AuthScreen({ onDone, backHandle }) {
     setShow(false);
   }
 
-  function findUser(value) {
-    const key = value.trim().replace(/^@/, "").toLowerCase();
-    return users.find((user) => user.handle === key || user.name.toLowerCase() === value.trim().toLowerCase());
-  }
-
-  function enterAs(next) {
-    store.signIn(next);
-    onDone?.();
+  async function enterAs(next) {
+    tap();
+    if (await switchAccount(next)) onDone?.();
+    else { setChosen(next); setTimeout(() => passRef.current?.focus(), 60); }
   }
 
   const joinKey = handle.trim().replace(/^@/, "").toLowerCase();
-  const handleOk = /^[a-z0-9._]{3,30}$/.test(joinKey);
-  const taken = mode === "join" && users.some((user) => user.handle === joinKey);
+  const mailKey = email.trim().toLowerCase();
+  const handleOk = /^[a-z0-9._]{3,30}$/.test(joinKey) && !/^\.|\.$|\.\./.test(joinKey);
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mailKey);
+
+  // Username and email availability, checked on the server while typing.
+  useEffect(() => {
+    if (mode !== "join" || (!handleOk && !emailOk)) return undefined;
+    const timer = setTimeout(() => {
+      api("/auth/available", { query: { handle: handleOk ? joinKey : "", email: emailOk ? mailKey : "" } })
+        .then((data) => setTaken({ handle: data.handle === false, email: data.email === false }))
+        .catch(() => {});
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [mode, joinKey, mailKey, handleOk, emailOk]);
+
   const strength = strengthOf(password);
   const ready = mode === "login"
     ? (chosen || handle.trim().length > 1) && password.length > 0
     : mode === "join"
-      ? name.trim().length > 1 && handleOk && !taken && password.length >= 4 && again.length > 0
-      : mode === "forgot"
-        ? handle.trim().length > 1
-        : password.length >= 4 && again.length > 0;
+      ? name.trim().length > 0 && emailOk && !taken.email && handleOk && !taken.handle && password.length >= 6 && again.length > 0
+      : false;
 
-  function submit() {
+  async function submit() {
     if (!ready || busy) return;
     setError("");
+    if (mode === "join" && password !== again) return fail(t("Le due password non coincidono."));
     setBusy(true);
     tap();
-    // A short beat so the button can show it is working, like a real sign-in.
-    setTimeout(() => {
-      if (mode === "login") {
-        const user = findUser(chosen || handle);
-        if (!user) return fail(t("Nessun account con questo nome utente."));
-        if (user.password !== password) return fail(t("Password errata. Riprova."));
-        setBusy(false);
-        enterAs(user.handle);
-        return;
-      }
-      if (mode === "forgot") {
-        const user = findUser(handle);
-        if (!user) return fail(t("Nessun account con questo nome utente."));
-        setBusy(false);
-        setHandle(user.handle);
-        setMode("reset");
-        setPassword("");
-        setAgain("");
-        return;
-      }
-      if (password !== again) return fail(t("Le due password non coincidono."));
-      if (mode === "reset") {
-        store.resetPassword(handle, password);
-        setBusy(false);
-        go("login");
-        setNote(t("Password aggiornata. Accedi con quella nuova."));
-        return;
-      }
-      if (taken) return fail(t("Questo nome utente è già in uso."));
+    try {
+      if (mode === "login") await signIn(chosen || handle.trim(), password);
+      else await signUp({ name: name.trim(), handle: joinKey, email: mailKey, password });
       setBusy(false);
-      store.joinAccount({ name: name.trim(), handle: joinKey, password });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onDone?.();
-    }, 520);
+    } catch (err) {
+      fail(errorText(err, t));
+    }
   }
 
-  const cta = mode === "join" ? t("Crea account") : mode === "forgot" ? t("Continua") : mode === "reset" ? t("Salva password") : t("Accedi");
-  const heading = { login: backUser ? t("Aggiungi un account") : t("Bentornato"), join: t("Crea il tuo account"), forgot: t("Trova il tuo account"), reset: t("Scegli una nuova password") }[mode];
+  const cta = mode === "join" ? t("Crea account") : t("Accedi");
+  const heading = { login: backUser ? t("Aggiungi un account") : t("Bentornato"), join: t("Crea il tuo account"), forgot: t("Password dimenticata?") }[mode];
   const sub = {
     login: "",
     join: t("Condividi il tuo lavoro, segui gli artigiani e chatta in tempo reale."),
-    forgot: t("Scrivi il tuo nome utente e ti aiutiamo a impostare una nuova password."),
-    reset: t("Per @{handle}. Usa almeno 4 caratteri.", { handle }),
+    forgot: t("Il recupero della password via email arriverà presto. Per ora, se sei ancora dentro su un altro telefono, puoi cambiarla da Impostazioni › Password."),
   }[mode];
   const saved = users.filter((user) => user.handle !== back).slice(0, 3);
   const eye = password ? (
@@ -191,7 +174,6 @@ export function AuthScreen({ onDone, backHandle }) {
 
   const picked = mode === "login" && chosen ? users.find((user) => user.handle === chosen) : null;
   const others = saved.filter((user) => user.handle !== chosen);
-  const faceOf = (user) => ({ uri: user.handle === DEMO_USER.handle ? store.profile?.src || AVATAR : avatarFor(user.name || user.handle) || AVATAR });
   const language = LANGS.find((lang) => lang.id === currentLanguage())?.label || "Italiano";
 
   function choose(next) {
@@ -228,7 +210,7 @@ export function AuthScreen({ onDone, backHandle }) {
             </View>
           ) : picked ? (
             <View style={styles.who}>
-              <Image source={faceOf(picked)} style={[styles.whoFace, { borderColor: a.line }]} />
+              <Face user={picked} size={96} a={a} style={[styles.whoFace, { borderColor: a.line }]} />
               <T size={18} weight="700" color={a.text}>{picked.handle}</T>
               {picked.name ? <T size={14} color={a.sub}>{picked.name}</T> : null}
             </View>
@@ -243,24 +225,36 @@ export function AuthScreen({ onDone, backHandle }) {
           ) : null}
           <Animated.View style={{ width: "100%", gap: 10, transform: [{ translateX: shake }] }}>
             {mode === "join" ? <AuthField a={a} label={t("Nome e cognome")} value={name} onChange={setName} autoComplete="name" returnKeyType="next" /> : null}
-            {mode !== "reset" && !picked ? (
+            {mode === "join" ? (
               <AuthField
                 a={a}
-                label={t("Nome utente")}
+                label={t("Email")}
+                value={email}
+                onChange={(value) => setEmail(value.replace(/\s+/g, ""))}
+                autoComplete="email"
+                returnKeyType="next"
+                state={email ? (!emailOk || taken.email ? "err" : "ok") : ""}
+                hint={email ? (taken.email ? t("Già registrata") : !emailOk ? t("Email non valida") : "") : ""}
+              />
+            ) : null}
+            {mode !== "forgot" && !picked ? (
+              <AuthField
+                a={a}
+                label={mode === "login" ? t("Nome utente o email") : t("Nome utente")}
                 value={handle}
                 onChange={(value) => setHandle(mode === "join" ? value.toLowerCase().replace(/\s+/g, "") : value)}
                 autoComplete="username"
-                returnKeyType={mode === "forgot" ? "go" : "next"}
-                onSubmit={mode === "forgot" ? submit : () => passRef.current?.focus()}
-                state={mode === "join" && handle ? (taken || !handleOk ? "err" : "ok") : ""}
-                trailing={mode === "join" && handle ? <View style={styles.trail}>{taken || !handleOk ? <Warn size={20} weight="fill" color={a.red} /> : <Checked size={20} weight="fill" color={a.green} />}</View> : null}
-                hint={mode === "join" && handle ? (taken ? t("Già in uso") : !handleOk ? t("3–30 lettere, numeri, . o _") : t("Disponibile")) : ""}
+                returnKeyType="next"
+                onSubmit={() => passRef.current?.focus()}
+                state={mode === "join" && handle ? (taken.handle || !handleOk ? "err" : "ok") : ""}
+                trailing={mode === "join" && handle ? <View style={styles.trail}>{taken.handle || !handleOk ? <Warn size={20} weight="fill" color={a.red} /> : <Checked size={20} weight="fill" color={a.green} />}</View> : null}
+                hint={mode === "join" && handle ? (taken.handle ? t("Già in uso") : !handleOk ? t("3–30 lettere, numeri, . o _") : t("Disponibile")) : ""}
               />
             ) : null}
             {mode !== "forgot" ? (
               <AuthField
                 a={a}
-                label={mode === "reset" ? t("Nuova password") : t("Password")}
+                label={t("Password")}
                 value={password}
                 onChange={setPassword}
                 secure={!show}
@@ -271,7 +265,7 @@ export function AuthScreen({ onDone, backHandle }) {
                 trailing={eye}
               />
             ) : null}
-            {(mode === "join" || mode === "reset") && password ? (
+            {mode === "join" && password ? (
               <View style={styles.strength} accessibilityLabel={t("Robustezza password")}>
                 <View style={{ flex: 1, flexDirection: "row", gap: 4 }}>
                   {[1, 2, 3, 4].map((i) => <View key={i} style={[styles.bar, { backgroundColor: strength >= i ? strengthColors[strength] : a.line }]} />)}
@@ -279,7 +273,7 @@ export function AuthScreen({ onDone, backHandle }) {
                 <T size={12} weight="600" color={a.sub} style={{ minWidth: 64, textAlign: "right" }}>{[t("Troppo corta"), t("Debole"), t("Discreta"), t("Buona"), t("Forte")][strength]}</T>
               </View>
             ) : null}
-            {mode === "join" || mode === "reset" ? (
+            {mode === "join" ? (
               <AuthField
                 a={a}
                 label={t("Ripeti password")}
@@ -299,11 +293,11 @@ export function AuthScreen({ onDone, backHandle }) {
                 <T size={13.5} weight="500" color={a.red}>{error}</T>
               </View>
             ) : null}
-            <Pressable disabled={!ready} onPress={submit} style={({ pressed }) => [styles.go, { backgroundColor: pressed && ready ? "#1877f2" : a.blue, opacity: ready ? 1 : 0.45 }]}>
+            {mode !== "forgot" ? <Pressable disabled={!ready} onPress={submit} style={({ pressed }) => [styles.go, { backgroundColor: pressed && ready ? "#1877f2" : a.blue, opacity: ready ? 1 : 0.45 }]}>
               {busy ? <ActivityIndicator color="#fff" /> : <T size={15.5} weight="700" color="#fff">{cta}</T>}
-            </Pressable>
+            </Pressable> : null}
             {mode === "login" ? (
-              <Pressable onPress={() => { if (picked) setHandle(picked.handle); go("forgot"); }} style={styles.link}>
+              <Pressable onPress={() => go("forgot")} style={styles.link}>
                 <T size={14.5} weight="600" color={a.text}>{t("Password dimenticata?")}</T>
               </Pressable>
             ) : null}
@@ -313,7 +307,7 @@ export function AuthScreen({ onDone, backHandle }) {
             <View style={styles.switch}>
               {others.map((user) => (
                 <Pressable key={user.handle} onPress={() => choose(user.handle)} style={({ pressed }) => [styles.chip, { borderColor: a.line, opacity: pressed ? 0.6 : 1 }]}>
-                  <Image source={faceOf(user)} style={styles.chipFace} />
+                  <Face user={user} size={36} a={a} style={styles.chipFace} />
                   <T size={14} weight="600" color={a.text}>{user.handle}</T>
                 </Pressable>
               ))}
@@ -336,12 +330,22 @@ export function AuthScreen({ onDone, backHandle }) {
   );
 }
 
-// Covers the app until someone signs in (the web app renders AuthScreen on top while auth.handle is empty).
+// A saved account's face, or its initial on a soft circle when it has no photo yet.
+function Face({ user, size, a, style }) {
+  if (user?.avatar) return <Image source={{ uri: user.avatar }} style={style} />;
+  return (
+    <View style={[style, { width: size, height: size, borderRadius: size / 2, backgroundColor: a.line, alignItems: "center", justifyContent: "center" }]}>
+      <T size={size * 0.42} weight="700" color={a.sub}>{String(user?.name || user?.handle || "?").slice(0, 1).toUpperCase()}</T>
+    </View>
+  );
+}
+
+// Covers the app until someone signs in.
 export function AuthGate() {
-  const store = useStore();
+  const session = useSession();
   const theme = useTheme();
-  if (!store.ready) return <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.bg }]} />;
-  if (store.auth?.handle) return null;
+  if (session.status === "loading") return <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.bg, zIndex: 100 }]} />;
+  if (session.status === "in") return null;
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 100 }]}>
       <AuthScreen />

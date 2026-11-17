@@ -1,7 +1,7 @@
 // WebSocket client for the iywa hub (calls/src/worker.js), ported from src/live/hub.js.
 // Reconnects with backoff, keeps the socket alive with pings and detects "zombie"
 // sockets. When the hub has never been reached the status is "offline" (not an
-// error): the app keeps working with demo chats and retries quietly in the background.
+// error): the app shows the inbox as connecting and retries quietly in the background.
 
 import { AppState } from "react-native";
 import { hubUrl } from "./config";

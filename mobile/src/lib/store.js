@@ -2,7 +2,9 @@ import { createContext, createElement, useContext, useEffect, useMemo, useRef, u
 import { applyDirection, resolveLanguage, setLanguage, t } from "./i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { relinkMedia } from "./media-store";
-import { BUSINESS, CHATS, EXPLORE, FEED_PAGES, MY_PRODUCTS, NOTIFICATIONS, POSTS, PROFILE, REELS, THOUGHTS } from "../data";
+import { BUSINESS } from "../data";
+import { signOut, switchAccount, updateMe, useSession } from "./session";
+import { uploadMedia } from "./api";
 
 // Same preferences as the web app's settings, kept on the phone.
 export const DEFAULT_PREFS = {
@@ -29,17 +31,16 @@ export const DEFAULT_PREFS = {
   hiddenWords: ["spam"],
   blocked: [],
   muted: [],
-  closeFriends: ["Marta Colle", "Leo Bassi"],
+  closeFriends: [],
   restricted: [],
   notes: { likes: true, comments: true, follows: true, messages: true, mentions: true },
 };
 
-const KEY = "space-mobile-v1";
+// v2: real accounts; everything saved by the demo builds is dropped.
+const KEY = "iywa-mobile-v2";
 
 const INITIAL = {
-  profile: PROFILE,
-  accountType: "business",
-  follows: ["Leo Bassi", "Adele Romano", "Marta Colle"],
+  follows: [],
   likes: [],
   saves: [],
   // A copy of each saved item (by id), so own posts, thoughts and reels still show in Salvati.
@@ -57,15 +58,14 @@ const INITIAL = {
   wishlist: [],
   recentProducts: [],
   reviews: {},
-  myProducts: MY_PRODUCTS,
-  chats: CHATS,
+  myProducts: [],
+  chats: [],
   // Messages: per-chat flags (muted, pinned, archivedAt, hiddenAt, wall, pin) and chat folders (null = defaults).
   dmFlags: {},
   dmFolders: null,
   readNotes: false,
   orders: [],
   prefs: DEFAULT_PREFS,
-  business: BUSINESS,
   // Home feed: posts I published (newest first), comments I wrote per post id,
   // archived post ids, liked comment keys, and live notifications (newest first).
   library: [],
@@ -79,7 +79,6 @@ const INITIAL = {
   thoughtReplies: {},
   repostAt: {},
   pinned: [],
-  auth: { users: [{ name: "Giulia Neri", handle: "forno.neri", password: "forno" }], handle: null, previous: null },
 };
 
 const Store = createContext(null);
@@ -104,7 +103,6 @@ export function StoreProvider({ children }) {
           ...prev,
           ...saved,
           prefs: { ...DEFAULT_PREFS, ...(saved.prefs || {}), notes: { ...DEFAULT_PREFS.notes, ...(saved.prefs?.notes || {}) } },
-          business: { ...BUSINESS, ...(saved.business || {}) },
         }));
       })
       .catch(() => {})
@@ -188,10 +186,19 @@ export function StoreProvider({ children }) {
       toggleCommentLike: (key) => set((s) => ({ commentLikes: toggle(s.commentLikes || [], key) })),
       pushNote: (entry) => set((s) => ({ notifications: [{ id: `nt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, at: Date.now(), read: false, ...entry }, ...(s.notifications || [])].slice(0, 80) })),
       markNotificationsRead: () => set((s) => ({ readNotes: true, notifications: (s.notifications || []).map((note) => (note.read ? note : { ...note, read: true })) })),
-      setAccountType: (accountType) => set(() => ({ accountType })),
+      // Profile, account type and business details live on the server (my account).
+      setAccountType: (accountType) => updateMe({ kind: accountType === "business" ? "business" : "personal" }).catch(() => {}),
       setPrefs: (patch) => set((s) => ({ prefs: { ...s.prefs, ...patch, notes: { ...s.prefs.notes, ...(patch.notes || {}) } } })),
-      setProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
-      setBusiness: (patch) => set((s) => ({ business: { ...s.business, ...patch } })),
+      setProfile: async (patch) => {
+        const body = {};
+        if (patch.name != null) body.name = patch.name;
+        if (patch.bio != null) body.bio = patch.bio;
+        if (patch.website != null || patch.link != null) body.website = patch.website ?? patch.link;
+        if (patch.handle != null) body.handle = String(patch.handle).replace(/^@/, "");
+        if (patch.src != null) body.avatar = patch.src ? await uploadMedia(patch.src) : "";
+        return updateMe(body);
+      },
+      setBusiness: (patch) => updateMe({ business: { ...(stateRef.current.business || {}), ...patch } }),
       addStory: (frame) => set((s) => ({ myStories: [...(s.myStories || []), frame] })),
       deleteStory: (id) => set((s) => ({ myStories: (s.myStories || []).filter((item) => item.id !== id), hiddenStories: [...(s.hiddenStories || []), id] })),
       addHighlight: (item) => set((s) => ({ highlights: [item, ...(s.highlights || [])] })),
@@ -211,11 +218,9 @@ export function StoreProvider({ children }) {
       togglePin: (id) => set((s) => ({ pinned: toggle(s.pinned || [], id) })),
       saveProduct: (product) => set((s) => ({ myProducts: s.myProducts.some((item) => item.id === product.id) ? s.myProducts.map((item) => (item.id === product.id ? product : item)) : [product, ...s.myProducts] })),
       deleteProduct: (id) => set((s) => ({ myProducts: s.myProducts.filter((item) => item.id !== id) })),
-      signIn: (handle) => set((s) => ({ auth: { ...s.auth, handle, previous: null } })),
-      joinAccount: (user) => set((s) => ({ auth: { users: [...s.auth.users, user], handle: user.handle, previous: null } })),
-      resetPassword: (handle, password) => set((s) => ({ auth: { ...s.auth, users: s.auth.users.map((user) => (user.handle === handle ? { ...user, password } : user)) } })),
-      logout: () => set((s) => ({ auth: { ...s.auth, handle: null, previous: null } })),
-      addAccount: () => set((s) => ({ auth: { ...s.auth, handle: null, previous: s.auth.handle } })),
+      // Accounts: see lib/session.js. "Aggiungi account" opens the /auth screen.
+      signIn: (handle) => switchAccount(handle),
+      logout: () => signOut(),
     };
   }, []);
 
@@ -223,7 +228,19 @@ export function StoreProvider({ children }) {
   const language = resolveLanguage(state.prefs?.language);
   setLanguage(language);
   useEffect(() => { if (ready) applyDirection(language); }, [ready, language]);
-  const value = useMemo(() => ({ ...state, ready, language, ...api }), [state, ready, language, api]);
+  // My profile comes from the server session, in the shape the screens have always read.
+  const session = useSession();
+  const me = session.me;
+  const derived = useMemo(() => ({
+    profile: me
+      ? { name: me.name, handle: `@${me.handle}`, bio: me.bio || "", src: me.avatar || "", website: me.website || "", followers: me.followers || 0, following: me.following || 0, posts: me.posts || 0, private: Boolean(me.private), verified: Boolean(me.verified), email: me.email }
+      : { name: "", handle: "", bio: "", src: "", followers: 0, following: 0, posts: 0 },
+    accountType: me?.kind === "business" ? "business" : "personal",
+    business: { ...BUSINESS, ...(me?.business || {}) },
+    auth: { handle: me?.handle || null, users: session.accounts || [] },
+  }), [me, session.accounts]);
+  stateRef.current = { ...state, ...derived };
+  const value = useMemo(() => ({ ...state, ...derived, ready: ready && session.status !== "loading", language, ...api }), [state, derived, ready, session.status, language, api]);
   return createElement(Store.Provider, { value }, children);
 }
 
@@ -248,15 +265,6 @@ export function resolveSaved(state, id) {
   if (mine) return { ...mine, kind: mine.kind || mine.type || "post", mine: true };
   const thought = (state?.myThoughts || []).find((item) => item.id === key);
   if (thought) return { ...thought, kind: "thought", mine: true };
-  const post = POSTS.find((item) => item.id === key) || EXPLORE.find((item) => item.id === key);
-  if (post) return { ...post, kind: post.kind || post.type || "post" };
-  const feed = FEED_PAGES.flat().find((item) => item.id === key);
-  if (feed) return { ...feed, kind: feed.kind || feed.type || "post" };
-  const reelId = key.startsWith("reel-") ? key.slice(5) : key;
-  const reel = REELS.find((item) => item.id === reelId);
-  if (reel) return { ...reel, id: key, reelId, kind: "reel", text: reel.caption };
-  const seed = THOUGHTS.find((item) => item.id === key);
-  if (seed) return { ...seed, kind: "thought" };
   return null;
 }
 
@@ -287,8 +295,8 @@ export function useAccentChoice() {
   return useContext(Store)?.prefs?.accent || "default";
 }
 
-export function chatIdFor(store, person) {
-  return store.chats.find((chat) => chat.name === person.name)?.id || null;
+export function chatIdFor() {
+  return null;
 }
 
 function clock() {
@@ -296,8 +304,8 @@ function clock() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
-export const ALL_THOUGHTS = THOUGHTS;
-export const ALL_NOTIFICATIONS = NOTIFICATIONS;
+export const ALL_THOUGHTS = [];
+export const ALL_NOTIFICATIONS = [];
 
 // ---------------------------------------------------------------------------
 // Time spent: foreground milliseconds per local day, kept in its own small store so the

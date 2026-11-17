@@ -1,15 +1,14 @@
-import { Fragment, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { ZoomIn } from "react-native-reanimated";
-import { AVATAR, CONTACTS } from "../../data";
 import { useStore } from "../../lib/store";
 import { t } from "../../lib/i18n";
 import { useLive } from "../../live/LiveStore";
-import { GROUP_TONES, personHidden, seenText } from "../../live/format";
-import { fileToDataUrl, keepFile } from "../../live/media";
+import { fileToDataUrl } from "../../live/media";
+import { usePeople } from "../../live/people";
 import { Face, GroupAvatar, Hint, Spinner, SubHead, useChatTheme, useFlash } from "../../ui/chat";
 import { CheckRow, ToneRow } from "../../ui/chatPick";
 import { ArrowRight, Camera, Check, Close, ImageIcon, Plus } from "../../ui/chatIcons";
@@ -23,51 +22,25 @@ export default function NewGroup() {
   const live = useLive();
   const [step, setStep] = useState("members");
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState(() => new Set());
+  const [picked, setPicked] = useState(() => new Map());
   const [name, setName] = useState("");
   const [about, setAbout] = useState("");
   const [photo, setPhoto] = useState("");
   const [photoPick, setPhotoPick] = useState(false);
   const [busy, setBusy] = useState(false);
   const [hint, flash] = useFlash();
-  const needle = query.trim().toLowerCase();
-  const me = live?.me?.handle;
+  const people = usePeople(query);
   const online = live?.status === "open";
-  const livePeople = live
-    ? Object.values(live.people)
-      .filter((person) => person.handle !== me && !personHidden(store.prefs, person.name, true))
-      .filter((person) => !needle || `${person.name} ${person.handle}`.toLowerCase().includes(needle))
-      .sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name))
-    : [];
-  const people = CONTACTS.filter((person) => !personHidden(store.prefs, person.name, true) && (!needle || `${person.name} ${person.meta}`.toLowerCase().includes(needle)));
-  const pickedLive = [...picked].filter((key) => key.startsWith("live:")).map((key) => key.slice(5));
-  const pickedDemo = [...picked].filter((key) => key.startsWith("demo:")).map((key) => key.slice(5));
-  const mixed = pickedLive.length > 0 && pickedDemo.length > 0;
-  const enough = pickedLive.length ? pickedLive.length >= 1 : pickedDemo.length >= 2;
-  const ready = name.trim().length > 0 && enough && !mixed && !busy;
-  const chips = [
-    ...pickedLive.map((handle) => {
-      const person = live?.people[handle];
-      return { key: `live:${handle}`, label: (person?.name || handle).split(" ")[0], name: person?.name || handle, src: person?.src || "", meta: person ? seenText(person) : `@${handle}` };
-    }),
-    ...pickedDemo.map((who) => {
-      const person = CONTACTS.find((item) => item.name === who);
-      return { key: `demo:${who}`, label: who.split(" ")[0], name: who, src: person?.src || "", meta: person?.meta || "" };
-    }),
-  ];
-  const sorted = [...people].sort((x, y) => x.name.localeCompare(y.name));
-  const letters = [];
-  for (const person of sorted) {
-    const letter = person.name[0].toUpperCase();
-    if (!letters.length || letters[letters.length - 1][0] !== letter) letters.push([letter, []]);
-    letters[letters.length - 1][1].push(person);
-  }
+  const chips = [...picked.values()].map((person) => ({ key: person.handle, label: person.name.split(" ")[0], name: person.name, src: person.src, meta: person.meta }));
+  const enough = chips.length >= 1;
+  const ready = name.trim().length > 0 && enough && !busy && online;
+  const list = people.searching ? people.results : [...people.following, ...people.suggested];
 
-  function toggle(key) {
+  function toggle(person) {
     setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      const next = new Map(prev);
+      if (next.has(person.handle)) next.delete(person.handle);
+      else next.set(person.handle, person);
       return next;
     });
   }
@@ -75,17 +48,15 @@ export default function NewGroup() {
   async function uploadPhoto() {
     tap();
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.25 });
+      const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,  mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.25 });
       if (result.canceled || !result.assets?.[0]) return;
-      const uri = result.assets[0].uri;
-      if (pickedLive.length) {
-        const url = await fileToDataUrl(uri, "image/jpeg");
-        if (!url || url.length > 160_000) {
-          flash(t("Foto troppo grande per un gruppo live."), 2200);
-          return;
-        }
-        setPhoto(url);
-      } else setPhoto(keepFile(uri, "group"));
+      // The hub keeps a group photo as a small data URL (160 kB at most).
+      const url = await fileToDataUrl(result.assets[0].uri, "image/jpeg");
+      if (!url || url.length > 160_000) {
+        flash(t("Foto troppo grande, scegline una più piccola."), 2200);
+        return;
+      }
+      setPhoto(url);
       setPhotoPick(false);
     } catch {
       flash(t("Impossibile aprire la foto."));
@@ -94,34 +65,13 @@ export default function NewGroup() {
 
   function create() {
     const title = name.trim();
-    if (!title || mixed) return;
+    if (!title || !chips.length || busy) return;
     tap();
-    if (pickedLive.length) {
-      if (busy) return;
-      setBusy(true);
-      live.createGroup(title, pickedLive, { about: about.trim(), photo })
-        .then((id) => router.replace(`/chat/${id}`))
-        .catch(() => flash(t("Impossibile creare il gruppo. Riprova."), 2200))
-        .finally(() => setBusy(false));
-      return;
-    }
-    const members = CONTACTS.filter((person) => pickedDemo.includes(person.name));
-    if (members.length < 2) return;
-    const id = `g-${Date.now().toString(36)}`;
-    store.addChat({
-      id,
-      name: title,
-      kind: "Gruppo",
-      preview: members.map((member) => member.name.split(" ")[0]).join(", "),
-      time: "ora",
-      unread: false,
-      src: members[0].src,
-      members,
-      photo: photo || `tone:${Math.floor(Math.random() * GROUP_TONES.length)}`,
-      about: about.trim(),
-      messages: [{ from: "system", text: t("Hai creato il gruppo «{name}».", { name: title }) }],
-    });
-    router.replace(`/chat/${id}`);
+    setBusy(true);
+    live.createGroup(title, chips.map((chip) => chip.key), { about: about.trim(), photo })
+      .then((id) => router.replace(`/chat/${id}`))
+      .catch(() => flash(t("Impossibile creare il gruppo. Riprova."), 2200))
+      .finally(() => setBusy(false));
   }
 
   const fab = (on, icon, onPress, label) => (
@@ -137,7 +87,7 @@ export default function NewGroup() {
         <View style={[styles.chips, { borderBottomColor: theme.line }]}>
           {chips.map((chip) => (
             <Animated.View key={chip.key} entering={ZoomIn.springify().damping(14)}>
-              <Pressable accessibilityLabel={t("Rimuovi {name}", { name: chip.name })} onPress={() => { tap(); toggle(chip.key); }} style={[styles.chip, { backgroundColor: theme.dark ? "#0a2236" : "#e3f2fe" }]}>
+              <Pressable accessibilityLabel={t("Rimuovi {name}", { name: chip.name })} onPress={() => { tap(); toggle({ handle: chip.key }); }} style={[styles.chip, { backgroundColor: theme.dark ? "#0a2236" : "#e3f2fe" }]}>
                 <Face src={chip.src} name={chip.name} size={32} />
                 <T size={14} weight="600">{chip.label}</T>
                 <Close size={12} weight="bold" color={theme.text2} />
@@ -147,7 +97,7 @@ export default function NewGroup() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            onKeyPress={(event) => { if (event.nativeEvent.key === "Backspace" && !query && chips.length) toggle(chips[chips.length - 1].key); }}
+            onKeyPress={(event) => { if (event.nativeEvent.key === "Backspace" && !query && chips.length) toggle({ handle: chips[chips.length - 1].key }); }}
             placeholder={chips.length ? "" : t("Chi vuoi aggiungere?")}
             placeholderTextColor={theme.text3}
             autoCorrect={false}
@@ -156,24 +106,31 @@ export default function NewGroup() {
             style={{ flexGrow: 1, minWidth: 120, height: 32, color: theme.text, fontSize: 15 }}
           />
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 110 }}>
-          {online ? (
-            <>
-              <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("Su iywa")}</T>
-              {livePeople.length ? livePeople.map((person) => (
-                <CheckRow key={person.handle} on={picked.has(`live:${person.handle}`)} src={person.src} name={person.name} online={person.online} meta={person.online ? t("online") : seenText(person)} metaBlue={person.online} onPress={() => toggle(`live:${person.handle}`)} />
-              )) : <Hint>{needle ? t("Nessuno con questo nome su iywa.") : t("Ancora nessun altro iscritto.")}</Hint>}
-            </>
-          ) : null}
-          {letters.map(([letter, list]) => (
-            <Fragment key={letter}>
-              <T size={13} weight="700" color={theme.blue} style={styles.letter}>{letter}</T>
-              {list.map((person) => <CheckRow key={person.name} on={picked.has(`demo:${person.name}`)} src={person.src} name={person.name} meta={person.meta} onPress={() => toggle(`demo:${person.name}`)} />)}
-            </Fragment>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingBottom: 110 }}
+          onScroll={(event) => {
+            const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+            if (layoutMeasurement.height + contentOffset.y > contentSize.height - 300) people.more();
+          }}
+          scrollEventThrottle={200}
+        >
+          {!online ? <Hint>{t("Connessione…")}</Hint> : null}
+          {!people.searching && people.following.length ? <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("Persone che segui")}</T> : null}
+          {list.map((person, index) => (
+            <View key={person.handle}>
+              {!people.searching && index === people.following.length && people.suggested.length ? <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("Suggeriti")}</T> : null}
+              <CheckRow on={picked.has(person.handle)} src={person.src} name={person.name} online={person.online} meta={person.meta} metaBlue={person.online} onPress={() => toggle(person)} />
+            </View>
           ))}
+          {people.loading || people.moreLoading ? <ActivityIndicator style={{ marginVertical: 24 }} color={theme.text2} /> : null}
+          {!people.loading && !list.length ? (
+            <Hint center>{people.searching ? t("Nessun account trovato.") : t("Cerca le persone da aggiungere per nome o nome utente.")}</Hint>
+          ) : null}
         </ScrollView>
-        {mixed || hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint || t("I contatti demo non possono entrare in un gruppo live. Scegli solo persone su iywa o solo contatti demo.")}</Hint> : null}
-        {fab(enough && !mixed, <ArrowRight size={24} weight="bold" color={enough && !mixed ? "#fff" : theme.text3} />, () => { tap(); setStep("details"); setQuery(""); }, t("Avanti"))}
+        {hint ? <Hint style={[styles.floatHint, { bottom: 90 + insets.bottom, backgroundColor: theme.bg }]}>{hint}</Hint> : null}
+        {fab(enough, <ArrowRight size={24} weight="bold" color={enough ? "#fff" : theme.text3} />, () => { tap(); setStep("details"); setQuery(""); }, t("Avanti"))}
       </View>
     );
   }
@@ -208,7 +165,7 @@ export default function NewGroup() {
         <Hint>{t("Puoi cambiare nome, foto e descrizione più tardi nelle info del gruppo.")}</Hint>
         <T size={13} weight="700" color={theme.text2} style={styles.letter}>{t("{n} membri", { n: chips.length + 1 })}</T>
         <View style={styles.member}>
-          <Face src={live?.me?.src || store.profile?.src || AVATAR} name={live?.me?.name || store.profile?.name} size={46} />
+          <Face src={live?.me?.src || store.profile?.src || ""} name={live?.me?.name || store.profile?.name} size={46} />
           <View style={{ flex: 1 }}><T size={15} weight="600">{live?.me?.name || store.profile?.name || t("Tu")}</T><T size={13.5} color={theme.text2}>{t("proprietario")}</T></View>
         </View>
         {chips.map((chip) => (

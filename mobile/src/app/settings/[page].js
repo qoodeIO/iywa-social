@@ -1,16 +1,20 @@
-import { useState } from "react";
-import { Alert, Dimensions, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Dimensions, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import Constants from "expo-constants";
 import { ACCENTS, INSET, useTheme } from "../../theme";
-import { ALL_THOUGHTS, resolveSaved, savedSnapshot, usageWeek, useStore, useUsage } from "../../lib/store";
-import { openTab } from "../../lib/tabs";
+import { usageWeek, useStore, useUsage } from "../../lib/store";
+import { changeEmail, changePassword, deleteAccount, signOut, switchAccount, updateMe, useMe, useSession } from "../../lib/session";
+import { errorText } from "../../lib/api";
+import { editPost, postCard, useLikedPosts, useProfile, useSavedPosts, useSearch, useUserPosts } from "../../lib/social";
+import { openGridItem } from "../../lib/profile-data";
 import { todayMinutes } from "../../ui/time-limit";
 import { LANGS, applyDirection, deviceLanguage, resolveLanguage, setLanguage, t, tk, weekdayLetter } from "../../lib/i18n";
-import { CONTACTS, POSTS, REELS, avatarFor } from "../../data";
-import { Archive, Bookmark, Check, Minus, Plus, Star, Store, User } from "../../ui/icons";
-import { Avatar, Btn, Empty, Header, T, tap } from "../../ui/kit";
+import { BUSINESS } from "../../data";
+import { Archive, Bookmark, Check, Heart, Minus, Plus, Search, Store, User } from "../../ui/icons";
+import { Btn, Empty, Header, T, tap } from "../../ui/kit";
+import { Face } from "../../ui/profile";
 import { Card, ChoiceList, Divider, Kicker, Pick, Row, SettingIcon, ToggleRow, rowById } from "../../ui/settings";
 
 const W = Dimensions.get("window").width;
@@ -24,9 +28,17 @@ const AUDIENCE = [
 
 const audience = () => AUDIENCE.map((option) => ({ ...option, label: t(option.label) }));
 
+// Pages that are not rows of the settings list.
+const TITLES = {
+  liked: tk("Mi piace"),
+  email: tk("Email"),
+  password: tk("Password"),
+  delete: tk("Elimina account"),
+};
+
 const HEROES = {
   edit: tk("Come ti vedono gli altri"),
-  login: tk("Su questo telefono"),
+  login: tk("Il tuo account iywa"),
   saved: tk("Solo tu li vedi"),
   archive: tk("Nascosti dal profilo"),
   activity: tk("Su questo telefono"),
@@ -34,7 +46,7 @@ const HEROES = {
   time: tk("Un promemoria al giorno"),
   privacy: tk("Chi vede i tuoi post"),
   close: tk("Anello verde sulle storie"),
-  blocked: tk("Non possono trovarti"),
+  blocked: tk("Non vedi i loro contenuti"),
   messages: tk("Risposte e attività"),
   tags: tk("Prima che finisca su di te"),
   comments: tk("Chi può rispondere"),
@@ -49,6 +61,9 @@ const HEROES = {
   "account-type": tk("Strumenti per il laboratorio"),
   payments: tk("Vendere su iywa"),
   help: tk("Risposte brevi"),
+  email: tk("Per accedere e recuperare l'account"),
+  password: tk("Almeno 6 caratteri"),
+  delete: tk("Per sempre, con tutto ciò che hai pubblicato"),
   "privacy-policy": "iywa",
   terms: "iywa",
   about: "iywa",
@@ -56,39 +71,49 @@ const HEROES = {
 
 const LEGAL = {
   "privacy-policy": [
-    [tk("Cosa conserva iywa"), tk("Nome, handle, bio, i post che pubblichi in questa anteprima e le preferenze su questo telefono.")],
+    [tk("Cosa conserva iywa"), tk("Nome, nome utente, email, foto, bio, i post, le storie e i messaggi che pubblichi o mandi.")],
     [tk("Chi ti vede"), tk("Un account privato nasconde post, reel e storie a chi non hai approvato. Nome, foto e bio restano visibili.")],
-    [tk("Messaggi"), tk("Stato attività e conferme di lettura seguono gli interruttori in Impostazioni. Se li spegni, si nascondono da entrambe le parti.")],
-    [tk("Le tue scelte"), tk("Account silenziati, bloccati e parole nascoste restano sul telefono finché non li cancelli.")],
+    [tk("Sul telefono"), tk("Tema, lingua, account silenziati e bloccati, parole nascoste e tempo di utilizzo restano su questo telefono.")],
+    [tk("Eliminare i dati"), tk("Da Impostazioni → Account puoi eliminare l'account: profilo, post, storie e commenti vengono cancellati.")],
   ],
   terms: [
-    [tk("L'anteprima"), tk("iywa è una demo privata. Post, chat e account che aggiungi vivono su questo telefono.")],
-    [tk("I tuoi contenuti"), tk("Le didascalie che scrivi restano tue. Non pubblicare ciò che non hai diritto di condividere.")],
-    [tk("Le altre persone"), tk("Bloccare, limitare e silenziare cambia ciò che vedi in questa anteprima.")],
-    [tk("Modifiche"), tk("Questi termini descrivono l'anteprima di oggi. L'app può cambiare mentre la demo cresce.")],
+    [tk("Il tuo account"), tk("Sei responsabile di ciò che pubblichi e della sicurezza della tua password.")],
+    [tk("I tuoi contenuti"), tk("Le foto e le didascalie che pubblichi restano tue. Non pubblicare ciò che non hai diritto di condividere.")],
+    [tk("Le altre persone"), tk("Rispetta chi usa iywa. Puoi bloccare, silenziare o limitare chi non vuoi vedere.")],
+    [tk("Modifiche"), tk("Questi termini possono cambiare mentre iywa cresce: te lo diremo nell'app.")],
   ],
 };
 
 const HELP = [
-  [tk("Account privato"), tk("Chi non hai approvato smette di vedere post, storie e reel. Il nome resta visibile.")],
+  [tk("Account privato"), tk("Chi non hai approvato smette di vedere post, storie e reel. Il nome resta visibile. Le richieste arrivano sul tuo profilo.")],
   [tk("Shop"), tk("Con un account azienda il profilo mostra la scheda Shop. I clienti ti mandano una richiesta d'ordine in chat.")],
   [tk("Aspetto"), tk("Automatico segue il tema del telefono. Chiaro e Scuro lo fissano solo per iywa.")],
-  [tk("I miei dati"), tk("Like, carrello, messaggi e impostazioni restano su questo telefono. Azzera i dati li riporta all'inizio.")],
+  [tk("Eliminare l'account"), tk("Impostazioni → Account → Elimina account. Ti chiediamo la password per conferma.")],
 ];
 
 const KINDS = [tk("Bottega artigiana"), tk("Negozio"), tk("Ristorante"), tk("Laboratorio tessile"), tk("Studio di design"), tk("Scuola e corsi"), tk("Azienda")];
+
+const GRIDS = new Set(["saved", "liked", "archive"]);
 
 export default function SettingPage() {
   const theme = useTheme();
   const { page } = useLocalSearchParams();
   const row = rowById(page);
-  const title = row?.label ? t(row.label) : t("Impostazioni");
+  const title = row?.label ? t(row.label) : TITLES[page] ? t(TITLES[page]) : t("Impostazioni");
+  if (GRIDS.has(page)) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.bg }}>
+        <Header title={title} border />
+        {page === "saved" ? <SavedGrid /> : page === "liked" ? <LikedGrid /> : <ArchiveGrid />}
+      </View>
+    );
+  }
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <Header title={title} border />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={{ paddingBottom: 48 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          {page === "saved" || page === "edit" ? null : <Hero id={page} title={title} meta={HEROES[page] ? t(HEROES[page]) : HEROES[page]} />}
+          {page === "edit" ? null : <Hero id={page === "email" || page === "password" || page === "delete" ? "login" : page} title={title} meta={HEROES[page] ? t(HEROES[page]) : HEROES[page]} />}
           <Body page={page} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -102,7 +127,7 @@ function Hero({ id, title, meta }) {
     <View style={{ alignItems: "center", paddingTop: 22, paddingBottom: 6, gap: 6 }}>
       <SettingIcon id={id} size={56} />
       <T size={20} weight="700" style={{ marginTop: 4 }}>{title}</T>
-      {meta ? <T size={13.5} color={theme.text2}>{meta}</T> : null}
+      {meta ? <T size={13.5} color={theme.text2} style={{ textAlign: "center", paddingHorizontal: 24 }}>{meta}</T> : null}
     </View>
   );
 }
@@ -114,8 +139,9 @@ function Body({ page }) {
   switch (page) {
     case "edit": return <Redirect href="/edit-profile" />;
     case "login": return <Accounts />;
-    case "saved": return <Saved />;
-    case "archive": return <ArchiveGrid />;
+    case "email": return <EmailPage />;
+    case "password": return <PasswordPage />;
+    case "delete": return <DeletePage />;
     case "activity": return <Activity />;
     case "notifications":
       return (
@@ -139,16 +165,11 @@ function Body({ page }) {
           ]} />
         </>
       );
-    case "privacy":
-      return (
-        <Card style={{ marginTop: 14 }}>
-          <ToggleRow first on={prefs.private} label={t("Account privato")} meta={t("Solo chi approvi vede post, storie e reel.")} onPress={() => set({ private: !prefs.private })} />
-        </Card>
-      );
-    case "close": return <People list={prefs.closeFriends} onChange={(closeFriends) => set({ closeFriends })} />;
-    case "blocked": return <People list={prefs.blocked} onChange={(blocked) => set({ blocked })} />;
-    case "muted": return <People list={prefs.muted} onChange={(muted) => set({ muted })} />;
-    case "restricted": return <People list={prefs.restricted} onChange={(restricted) => set({ restricted })} />;
+    case "privacy": return <Privacy />;
+    case "close": return <People listKey="closeFriends" note={t("Le storie che condividi con gli amici più stretti hanno l'anello verde e le vedono solo loro.")} />;
+    case "blocked": return <People listKey="blocked" note={t("Non vedi i post, i reel e i pensieri degli account bloccati.")} />;
+    case "muted": return <People listKey="muted" note={t("I post degli account silenziati escono dal tuo feed. Non lo sapranno.")} />;
+    case "restricted": return <People listKey="restricted" note={t("I commenti di chi limiti restano visibili solo a te.")} />;
     case "messages":
       return (
         <>
@@ -261,9 +282,9 @@ function LanguagePicker() {
   );
 }
 
-function Note({ children }) {
+function Note({ children, color }) {
   const theme = useTheme();
-  return <T size={13} color={theme.text2} style={{ paddingHorizontal: INSET + 4, paddingTop: 10, lineHeight: 18 }}>{children}</T>;
+  return <T size={13} color={color || theme.text2} style={{ paddingHorizontal: INSET + 4, paddingTop: 10, lineHeight: 18 }}>{children}</T>;
 }
 
 // Today's minutes on iywa, counted by ui/time-limit.js.
@@ -304,10 +325,12 @@ function Week() {
 function Activity() {
   const theme = useTheme();
   const store = useStore();
+  const me = useMe();
   const usage = useUsage();
   const week = usageWeek(usage);
   const counted = week.filter((entry) => entry.minutes > 0);
   const avg = counted.length ? Math.round(counted.reduce((sum, entry) => sum + entry.minutes, 0) / counted.length) : 0;
+  const recent = store.recentSearches || [];
   return (
     <>
       <View style={{ alignItems: "center", paddingTop: 12 }}>
@@ -318,40 +341,71 @@ function Activity() {
       <Week />
       <Kicker>{t("Interazioni")}</Kicker>
       <Card>
-        <Row first label={t("Like")} value={String(store.likes.length)} />
-        <Row label={t("Salvati")} value={String(store.saves.length)} onPress={() => router.push("/settings/saved")} />
-        <Row label={t("Persone che segui")} value={String(store.follows.length)} />
+        <Row first label={t("Mi piace")} meta={t("Post e reel a cui hai messo mi piace")} onPress={() => router.push("/settings/liked")} />
+        <Row label={t("Salvati")} onPress={() => router.push("/settings/saved")} />
+        <Row label={t("Persone che segui")} value={String(me?.following || 0)} onPress={() => router.push("/people/following")} />
+        <Row label={t("Archivio")} onPress={() => router.push("/settings/archive")} />
       </Card>
       <Kicker>{t("Ricerche")}</Kicker>
       <Card>
-        <Row first label={t("Cronologia di ricerca")} meta={store.prefs.searchesCleared ? t("Cancellata") : "forno, smalto, Adele"} right={store.prefs.searchesCleared ? null : <T size={14} weight="600" color={theme.blue}>{t("Cancella")}</T>} onPress={store.prefs.searchesCleared ? undefined : () => store.setPrefs({ searchesCleared: true })} />
+        <Row
+          first
+          label={t("Cronologia di ricerca")}
+          meta={recent.length ? recent.slice(0, 3).map((item) => item.label || item.key).filter(Boolean).join(", ") : t("Vuota")}
+          right={recent.length ? <T size={14} weight="600" color={theme.blue}>{t("Cancella")}</T> : null}
+          onPress={recent.length ? () => store.forgetSearch() : undefined}
+        />
       </Card>
     </>
   );
 }
 
-function People({ list, onChange }) {
+// Close friends, blocked, muted, restricted: people by handle, kept on this phone.
+function People({ listKey, note }) {
+  const theme = useTheme();
+  const store = useStore();
+  const list = store.prefs[listKey] || [];
+  const [query, setQuery] = useState("");
+  const [needle, setNeedle] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setNeedle(query.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const search = useSearch(needle);
+  const results = (search.data?.people || []).filter((person) => person.handle !== store.auth?.handle);
+  const toggle = (handle) => { tap(); store.setPrefs({ [listKey]: list.includes(handle) ? list.filter((item) => item !== handle) : [...list, handle] }); };
   return (
     <>
+      <View style={[styles.input, { backgroundColor: theme.fill }]}>
+        <Search size={17} color={theme.text2} />
+        <TextInput value={query} onChangeText={setQuery} placeholder={t("Cerca persone")} placeholderTextColor={theme.text2} autoCapitalize="none" autoCorrect={false} style={{ flex: 1, fontSize: 15.5, color: theme.text }} returnKeyType="search" />
+      </View>
+      {needle ? (
+        <>
+          <Kicker>{t("Risultati")}</Kicker>
+          <Card>
+            {search.loading && !results.length ? <View style={{ paddingVertical: 18 }}><ActivityIndicator color={theme.text2} /></View> : null}
+            {!search.loading && !results.length ? <T size={14} color={theme.text2} style={{ padding: 16 }}>{t("Nessun account trovato.")}</T> : null}
+            {results.map((person, index) => (
+              <Row key={person.handle} first={index === 0} icon={<Face src={person.avatar} name={person.name || person.handle} size={40} />} label={person.handle} meta={person.name} right={<Pick on={list.includes(person.handle)} />} onPress={() => toggle(person.handle)} />
+            ))}
+          </Card>
+        </>
+      ) : null}
       <Kicker>{list.length ? t("{n} selezionati", { n: list.length }) : t("Nessuno selezionato")}</Kicker>
-      <Card>
-        {CONTACTS.slice(0, 8).map((person, index) => {
-          const on = list.includes(person.name);
-          return (
-            <Row
-              key={person.name}
-              first={index === 0}
-              icon={<Avatar src={person.src} size={40} />}
-              label={person.name}
-              meta={person.meta}
-              right={<Pick on={on} />}
-              onPress={() => onChange(on ? list.filter((name) => name !== person.name) : [...list, person.name])}
-            />
-          );
-        })}
-      </Card>
+      {list.length ? (
+        <Card>
+          {list.map((handle, index) => <PersonRow key={handle} handle={handle} first={index === 0} onPress={() => toggle(handle)} />)}
+        </Card>
+      ) : null}
+      {note ? <Note>{note}</Note> : null}
     </>
   );
+}
+
+function PersonRow({ handle, first, onPress }) {
+  const { data } = useProfile(handle);
+  return <Row first={first} icon={<Face src={data?.avatar} name={data?.name || handle} size={40} />} label={handle} meta={data?.name} right={<Pick on />} onPress={onPress} />;
 }
 
 function Words() {
@@ -384,23 +438,15 @@ function Words() {
   );
 }
 
-// Where a saved or archived tile leads.
-function openItem(item, store) {
-  const reelId = item.reelId || String(item.id).replace(/^reel-/, "");
-  if (item.kind === "reel" && (REELS.some((reel) => reel.id === reelId) || (store.library || []).some((post) => post.id === item.id))) {
-    openTab("reels", { id: REELS.some((reel) => reel.id === reelId) ? reelId : item.id });
-    return;
-  }
-  const thought = item.kind === "thought" && [...(store.myThoughts || []), ...ALL_THOUGHTS].some((entry) => entry.id === item.id);
-  router.push(thought ? `/thought/${encodeURIComponent(item.id)}` : `/post/${encodeURIComponent(item.id)}`);
-}
-
+// ---------------------------------------------------------------------------
+// Saved, liked and archived posts: server grids with refresh and infinite scroll.
+// ---------------------------------------------------------------------------
 function Tile({ item, onPress }) {
   const theme = useTheme();
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
       {item.image ? (
-        <Image source={{ uri: item.image }} style={{ width: CELL, height: CELL * 1.33, backgroundColor: theme.fill }} contentFit="cover" transition={150} />
+        <Image source={{ uri: item.image }} recyclingKey={item.image} style={{ width: CELL, height: CELL * 1.33, backgroundColor: theme.fill }} contentFit="cover" transition={150} />
       ) : (
         <View style={{ width: CELL, height: CELL * 1.33, backgroundColor: theme.card, padding: 10, justifyContent: "space-between" }}>
           <T size={13} lines={6} style={{ lineHeight: 18 }}>{item.text}</T>
@@ -411,45 +457,83 @@ function Tile({ item, onPress }) {
   );
 }
 
-function Saved() {
-  const store = useStore();
-  // Live copy first (fresh caption and photo), then the snapshot taken when it was saved.
-  const items = [...store.saves].reverse()
-    .map((id) => savedSnapshot(resolveSaved(store, id)) || store.savedItems?.[id])
-    .filter(Boolean);
-  if (!items.length) return <Empty icon={Bookmark} title={t("Niente qui")} text={t("Salva un post dal feed: lo ritrovi qui. Solo tu vedi cosa hai salvato.")} />;
+function PostGrid({ list, empty, onPick, head }) {
+  const theme = useTheme();
+  const cards = list.items.map(postCard);
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 1, paddingTop: 1 }}>
-      {items.map((item) => <Tile key={item.id} item={item} onPress={() => { tap(); openItem(item, store); }} />)}
-    </View>
+    <FlatList
+      data={cards}
+      numColumns={3}
+      keyExtractor={(item) => item.id}
+      columnWrapperStyle={{ gap: 1 }}
+      contentContainerStyle={{ gap: 1, paddingTop: 1, paddingBottom: 40 }}
+      refreshing={list.refreshing}
+      onRefresh={list.refresh}
+      onEndReached={list.more}
+      onEndReachedThreshold={0.6}
+      ListHeaderComponent={head}
+      ListEmptyComponent={
+        list.loading ? <View style={{ paddingVertical: 50 }}><ActivityIndicator color={theme.text2} /></View>
+          : list.error ? (
+            <View style={{ alignItems: "center", gap: 10, paddingVertical: 50 }}>
+              <T size={14} color={theme.text2}>{errorText(list.error, t)}</T>
+              <Btn title={t("Riprova")} height={32} onPress={list.refresh} />
+            </View>
+          ) : empty
+      }
+      ListFooterComponent={list.moreLoading ? <View style={{ paddingVertical: 18 }}><ActivityIndicator color={theme.text2} /></View> : null}
+      renderItem={({ item }) => <Tile item={item} onPress={() => { tap(); onPick(item, cards); }} />}
+    />
   );
 }
 
-// Archived posts (web ArchiveList): tap one to put it back on the profile.
+function SavedGrid() {
+  const list = useSavedPosts();
+  return (
+    <PostGrid
+      list={list}
+      empty={<Empty icon={Bookmark} title={t("Niente qui")} text={t("Salva un post dal feed: lo ritrovi qui. Solo tu vedi cosa hai salvato.")} />}
+      onPick={(item, cards) => openGridItem(item, cards, t("Salvati"))}
+    />
+  );
+}
+
+function LikedGrid() {
+  const list = useLikedPosts();
+  return (
+    <PostGrid
+      list={list}
+      empty={<Empty icon={Heart} title={t("Niente qui")} text={t("I post a cui metti mi piace appaiono qui.")} />}
+      onPick={(item, cards) => openGridItem(item, cards, t("Mi piace"))}
+    />
+  );
+}
+
+// Archived posts: tap one to put it back on the profile.
 function ArchiveGrid() {
   const theme = useTheme();
-  const store = useStore();
-  const archived = store.archived || [];
-  const seen = new Set();
-  const items = [...(store.library || []), ...POSTS]
-    .filter((post) => archived.includes(post.id) && !seen.has(post.id) && seen.add(post.id))
-    .map((post) => savedSnapshot({ ...post, kind: post.kind || post.type || "post" }));
-  if (!items.length) return <Empty icon={Archive} title={t("Niente qui")} text={t("I post che archivi aspettano qui.")} />;
-  function pick(item) {
-    tap();
+  const me = useMe();
+  const list = useUserPosts(me?.handle || null, "archived");
+  function pick(item, cards) {
     Alert.alert(t("Post archiviato"), t("Solo tu lo vedi. Ripristinalo per rimetterlo sul profilo."), [
-      { text: t("Ripristina"), onPress: () => { tap(); store.toggleArchive(item.id); } },
-      { text: t("Apri"), onPress: () => openItem(item, store) },
+      {
+        text: t("Ripristina"),
+        onPress: () => {
+          tap();
+          editPost(item.id, { archived: false }).then(() => list.refresh()).catch((err) => Alert.alert(errorText(err, t)));
+        },
+      },
+      { text: t("Apri"), onPress: () => openGridItem(item, cards, t("Archivio")) },
       { text: t("Annulla"), style: "cancel" },
     ]);
   }
   return (
-    <>
-      <Note>{t("Tocca un post per ripristinarlo sul profilo.")}</Note>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 1, paddingTop: 12, backgroundColor: theme.bg }}>
-        {items.map((item) => <Tile key={item.id} item={item} onPress={() => pick(item)} />)}
-      </View>
-    </>
+    <PostGrid
+      list={list}
+      head={list.items.length ? <T size={13} color={theme.text2} style={{ padding: 12, paddingHorizontal: INSET + 4 }}>{t("Tocca un post per ripristinarlo sul profilo.")}</T> : null}
+      empty={<Empty icon={Archive} title={t("Niente qui")} text={t("I post che archivi aspettano qui.")} />}
+      onPick={pick}
+    />
   );
 }
 
@@ -472,7 +556,7 @@ function AccentPicker({ value, onPick }) {
   );
 }
 
-function Field({ label, value, onChange, max, multiline, prefix, lower, first }) {
+function Field({ label, value, onChange, max, multiline, prefix, lower, first, secure, keyboardType, onBlur }) {
   const theme = useTheme();
   return (
     <>
@@ -483,10 +567,14 @@ function Field({ label, value, onChange, max, multiline, prefix, lower, first })
         <TextInput
           value={value}
           onChangeText={onChange}
+          onBlur={onBlur}
           maxLength={max}
           multiline={multiline}
-          autoCapitalize={lower ? "none" : "sentences"}
-          autoCorrect={!lower}
+          secureTextEntry={secure}
+          keyboardType={keyboardType}
+          accessibilityLabel={label}
+          autoCapitalize={lower || secure ? "none" : "sentences"}
+          autoCorrect={!lower && !secure}
           style={{ flex: 1, fontSize: 15.5, color: theme.text, minHeight: multiline ? 66 : undefined, padding: 0 }}
         />
       </View>
@@ -494,57 +582,270 @@ function Field({ label, value, onChange, max, multiline, prefix, lower, first })
   );
 }
 
+// ---------------------------------------------------------------------------
+// Account: accounts on this phone, email, password, privacy, sign out, delete.
+// ---------------------------------------------------------------------------
 function Accounts() {
   const theme = useTheme();
-  const store = useStore();
+  const session = useSession();
+  const me = session.me;
+  const [switching, setSwitching] = useState(null);
+
+  async function pick(user) {
+    setSwitching(user.handle);
+    const ok = user.token ? await switchAccount(user.handle) : false;
+    setSwitching(null);
+    if (ok) { router.dismissAll(); router.replace("/"); } else router.push("/auth");
+  }
+
   return (
     <>
+      <Kicker>{t("Il tuo account")}</Kicker>
+      <Card>
+        <Row first label={t("Email")} value={me?.email || ""} onPress={() => router.push("/settings/email")} />
+        <Row label={t("Password")} meta={t("Cambia la password")} onPress={() => router.push("/settings/password")} />
+        <Row label={t("Privacy dell'account")} value={me?.private ? t("Privato") : t("Pubblico")} onPress={() => router.push("/settings/privacy")} />
+        <Row label={t("Tipo di account e shop")} value={me?.kind === "business" ? t("Azienda") : t("Personale")} onPress={() => router.push("/settings/account-type")} />
+      </Card>
       <Kicker>{t("Account su questo telefono")}</Kicker>
       <Card>
-        {(store.auth?.users || []).map((user, index) => {
-          const on = user.handle === store.auth?.handle;
-          const demo = user.handle === "forno.neri";
+        {(session.accounts || []).map((user, index) => {
+          const on = user.handle === me?.handle;
           return (
             <Row
               key={user.handle}
               first={index === 0}
-              icon={<Avatar src={demo ? store.profile.src : avatarFor(user.name || user.handle) || store.profile.src} size={40} />}
-              label={demo ? store.profile.name : user.name || user.handle}
-              meta={on ? t("@{handle} · in uso", { handle: user.handle }) : `@${user.handle}`}
-              right={<Pick on={on} />}
-              onPress={on ? undefined : () => { store.signIn(user.handle); router.dismissAll(); router.replace("/"); }}
+              icon={<Face src={on ? me?.avatar : user.avatar} name={user.name || user.handle} size={40} />}
+              label={user.name || user.handle}
+              meta={on ? t("@{handle} · in uso", { handle: user.handle }) : user.token ? `@${user.handle}` : t("@{handle} · accedi di nuovo", { handle: user.handle })}
+              right={switching === user.handle ? <ActivityIndicator color={theme.text2} /> : <Pick on={on} />}
+              onPress={on || switching ? undefined : () => pick(user)}
             />
           );
         })}
-        <Row icon={<View style={[styles.plus, { borderColor: theme.text3 }]}><Plus size={18} weight="bold" color={theme.text} /></View>} label={t("Aggiungi account")} onPress={() => { router.dismissAll(); router.replace("/"); store.addAccount(); }} />
+        <Row icon={<View style={[styles.plus, { borderColor: theme.text3 }]}><Plus size={18} weight="bold" color={theme.text} /></View>} label={t("Aggiungi account")} onPress={() => router.push("/auth")} />
       </Card>
       <Note>{t("Cambiando account resti connesso a tutti gli account di questo telefono.")}</Note>
       <Card style={{ marginTop: 22 }}>
         <Pressable
           onPress={() => Alert.alert(t("Uscire?"), t("Puoi rientrare quando vuoi."), [
             { text: t("Annulla"), style: "cancel" },
-            { text: t("Esci"), style: "destructive", onPress: () => { router.dismissAll(); router.replace("/"); store.logout(); } },
+            { text: t("Esci"), style: "destructive", onPress: () => { router.dismissAll(); signOut(); } },
           ])}
-          style={({ pressed }) => [{ height: 50, alignItems: "center", justifyContent: "center" }, pressed ? { backgroundColor: theme.fill } : null]}
+          style={({ pressed }) => [styles.center, pressed ? { backgroundColor: theme.fill } : null]}
         >
-          <T size={15.5} weight="600" color={theme.red}>{t("Esci da @{handle}", { handle: store.auth?.handle || String(store.profile.handle).replace(/^@/, "") })}</T>
+          <T size={15.5} weight="600" color={theme.blue}>{t("Esci da @{handle}", { handle: me?.handle || "" })}</T>
+        </Pressable>
+      </Card>
+      <Card style={{ marginTop: 12 }}>
+        <Pressable onPress={() => router.push("/settings/delete")} style={({ pressed }) => [styles.center, pressed ? { backgroundColor: theme.fill } : null]}>
+          <T size={15.5} color={theme.red}>{t("Elimina account")}</T>
         </Pressable>
       </Card>
     </>
   );
 }
 
-function Business() {
+function SaveButton({ title, busy, disabled, onPress, danger }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      disabled={disabled || busy}
+      onPress={() => { tap("medium"); onPress(); }}
+      style={({ pressed }) => [styles.save, { backgroundColor: danger ? theme.red : theme.blue, opacity: disabled ? 0.4 : pressed || busy ? 0.7 : 1 }]}
+    >
+      {busy ? <ActivityIndicator color="#fff" /> : <T size={15.5} weight="600" color={danger ? "#fff" : theme.accentInk || "#fff"}>{title}</T>}
+    </Pressable>
+  );
+}
+
+function EmailPage() {
+  const theme = useTheme();
+  const me = useMe();
+  const [email, setEmail] = useState(me?.email || "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+  const next = email.trim().toLowerCase();
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next);
+  async function save() {
+    setBusy(true);
+    setError("");
+    try {
+      await changeEmail(next);
+      setDone(true);
+    } catch (err) {
+      setError(errorText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Kicker>{t("Email")}</Kicker>
+      <Card>
+        <Field first label={t("Email")} value={email} onChange={(value) => { setEmail(value); setDone(false); setError(""); }} max={120} lower keyboardType="email-address" />
+      </Card>
+      {error ? <Note color={theme.red}>{error}</Note> : done ? <Note>{t("Email aggiornata.")}</Note> : <Note>{t("La usi per accedere. Non è visibile sul profilo.")}</Note>}
+      <View style={{ paddingHorizontal: INSET, paddingTop: 18 }}>
+        <SaveButton title={t("Salva")} busy={busy} disabled={!valid || next === (me?.email || "")} onPress={save} />
+      </View>
+    </>
+  );
+}
+
+function PasswordPage() {
+  const theme = useTheme();
+  const [form, setForm] = useState({ current: "", next: "", again: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+  const set = (key) => (value) => { setForm((prev) => ({ ...prev, [key]: value })); setError(""); setDone(false); };
+  const problem = form.next && form.next.length < 6
+    ? t("La password deve avere almeno 6 caratteri.")
+    : form.again && form.again !== form.next ? t("Le due password non coincidono.") : "";
+  const ready = form.current && form.next.length >= 6 && form.again === form.next;
+  async function save() {
+    setBusy(true);
+    setError("");
+    try {
+      await changePassword(form.current, form.next);
+      setForm({ current: "", next: "", again: "" });
+      setDone(true);
+    } catch (err) {
+      setError(err?.code === "password" ? t("La password attuale non è corretta.") : errorText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Kicker>{t("Password")}</Kicker>
+      <Card>
+        <Field first label={t("Attuale")} value={form.current} onChange={set("current")} max={200} secure />
+        <Field label={t("Nuova")} value={form.next} onChange={set("next")} max={200} secure />
+        <Field label={t("Ripeti")} value={form.again} onChange={set("again")} max={200} secure />
+      </Card>
+      {error || problem ? <Note color={theme.red}>{error || problem}</Note> : done ? <Note>{t("Password aggiornata.")}</Note> : null}
+      <View style={{ paddingHorizontal: INSET, paddingTop: 18 }}>
+        <SaveButton title={t("Cambia password")} busy={busy} disabled={!ready} onPress={save} />
+      </View>
+    </>
+  );
+}
+
+// Account deletion (required by the App Store): confirm, then the password.
+function DeletePage() {
+  const theme = useTheme();
+  const me = useMe();
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  function ask() {
+    Alert.alert(t("Eliminare @{handle}?", { handle: me?.handle || "" }), t("Profilo, post, storie, commenti e messaggi vengono cancellati per sempre. Non si può annullare."), [
+      { text: t("Annulla"), style: "cancel" },
+      { text: t("Elimina"), style: "destructive", onPress: remove },
+    ]);
+  }
+  async function remove() {
+    setBusy(true);
+    setError("");
+    try {
+      await deleteAccount(password);
+      // Signed out now: the sign-in screen takes over.
+      if (router.canDismiss()) router.dismissAll();
+    } catch (err) {
+      setError(err?.code === "password" ? t("Password errata. Riprova.") : errorText(err, t));
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Card style={{ marginTop: 14, padding: 16, gap: 8 }}>
+        <T size={15.5} weight="700">{t("Cosa succede")}</T>
+        <T size={14} color={theme.text2} style={{ lineHeight: 20 }}>{t("Il tuo profilo @{handle}, i post, i reel, i pensieri, le storie, i commenti e i prodotti dello shop vengono eliminati. Chi ti segue non ti vedrà più.", { handle: me?.handle || "" })}</T>
+      </Card>
+      <Kicker>{t("Conferma con la password")}</Kicker>
+      <Card>
+        <Field first label={t("Password")} value={password} onChange={(value) => { setPassword(value); setError(""); }} max={200} secure />
+      </Card>
+      {error ? <Note color={theme.red}>{error}</Note> : null}
+      <View style={{ paddingHorizontal: INSET, paddingTop: 18 }}>
+        <SaveButton title={t("Elimina account")} danger busy={busy} disabled={!password} onPress={ask} />
+      </View>
+    </>
+  );
+}
+
+function Privacy() {
   const theme = useTheme();
   const store = useStore();
-  const biz = store.business;
+  const me = useMe();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const on = Boolean(me?.private);
+  async function flip() {
+    if (busy) return;
+    tap();
+    setBusy(true);
+    setError("");
+    try {
+      await updateMe({ private: !on });
+      store.setPrefs({ private: !on });
+    } catch (err) {
+      setError(errorText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Card style={{ marginTop: 14 }}>
+        <ToggleRow first on={on} label={t("Account privato")} meta={t("Solo chi approvi vede post, storie e reel.")} onPress={flip} />
+        {on ? <Row label={t("Richieste di follow")} onPress={() => router.push("/people/requests")} /> : null}
+      </Card>
+      {error ? <Note color={theme.red}>{error}</Note> : <Note>{on ? t("Chi ti segue già continua a vederti. Le nuove richieste aspettano la tua conferma.") : t("Se torni pubblico, le richieste in attesa vengono accettate.")}</Note>}
+    </>
+  );
+}
+
+function Business() {
+  const theme = useTheme();
+  const me = useMe();
+  const kind = me?.kind === "business" ? "business" : "personal";
+  const [biz, setBiz] = useState(() => ({ ...BUSINESS, ...(me?.business || {}), hours: { ...BUSINESS.hours, ...(me?.business?.hours || {}) } }));
+  const [error, setError] = useState("");
+  const pending = useRef(null);
+  const timer = useRef(0);
   const types = [
     { id: "personal", icon: User, tone: "#8e8e93", label: t("Personale"), meta: t("Per condividere con amici e follower.") },
-    { id: "creator", icon: Star, tone: "#bf5af2", label: t("Creator"), meta: t("Per chi crea e vuole farsi conoscere.") },
-    { id: "business", icon: Store, tone: "#0a84ff", label: t("Azienda / Bottega"), meta: t("Shop, orari, contatti e statistiche.") },
+    { id: "business", icon: Store, tone: "#0a84ff", label: t("Azienda / Bottega"), meta: t("Shop, orari, contatti e la scheda Shop.") },
   ];
   const days = [1, 2, 3, 4, 5, 6, 0].map((day) => [day, weekdayLetter(day)]);
-  const patch = (next) => store.setBusiness(next);
+
+  // Business details are saved a moment after the last change, not on every key.
+  function flush() {
+    clearTimeout(timer.current);
+    const next = pending.current;
+    pending.current = null;
+    if (next) updateMe({ business: next }).catch((err) => setError(errorText(err, t)));
+  }
+  useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const patch = (change) => {
+    setError("");
+    setBiz((prev) => {
+      const next = { ...prev, ...change };
+      pending.current = next;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(flush, 700);
+      return next;
+    });
+  };
+  function pickKind(id) {
+    if (id === kind) return;
+    tap();
+    updateMe(id === "business" ? { kind: id, business: biz } : { kind: id }).catch((err) => setError(errorText(err, t)));
+  }
   return (
     <>
       <Kicker>{t("Tipo di account")}</Kicker>
@@ -556,28 +857,29 @@ function Business() {
             icon={<View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: type.tone, alignItems: "center", justifyContent: "center" }}><type.icon size={18} weight="fill" color="#fff" /></View>}
             label={type.label}
             meta={type.meta}
-            right={<Pick on={store.accountType === type.id} />}
-            onPress={() => store.setAccountType(type.id)}
+            right={<Pick on={kind === type.id} />}
+            onPress={() => pickKind(type.id)}
           />
         ))}
       </Card>
-      {store.accountType === "business" ? (
+      {error ? <Note color={theme.red}>{error}</Note> : null}
+      {kind === "business" ? (
         <>
           <Kicker>{t("La tua attività")}</Kicker>
           <Card>
-            <Field first label={t("Nome")} value={biz.title} onChange={(title) => patch({ title })} max={40} />
-            <Field label={t("Indirizzo")} value={biz.address} onChange={(address) => patch({ address })} max={60} />
-            <Field label={t("Città")} value={biz.city} onChange={(city) => patch({ city })} max={40} />
-            <Field label={t("Telefono")} value={biz.phone} onChange={(phone) => patch({ phone })} max={24} lower />
-            <Field label={t("Email")} value={biz.email} onChange={(email) => patch({ email })} max={60} lower />
+            <Field first label={t("Nome")} value={biz.title} onChange={(title) => patch({ title })} onBlur={flush} max={40} />
+            <Field label={t("Indirizzo")} value={biz.address} onChange={(address) => patch({ address })} onBlur={flush} max={60} />
+            <Field label={t("Città")} value={biz.city} onChange={(city) => patch({ city })} onBlur={flush} max={40} />
+            <Field label={t("Telefono")} value={biz.phone} onChange={(phone) => patch({ phone })} onBlur={flush} max={24} lower keyboardType="phone-pad" />
+            <Field label={t("Email")} value={biz.email} onChange={(email) => patch({ email })} onBlur={flush} max={60} lower keyboardType="email-address" />
           </Card>
           <Kicker>{t("Categoria")}</Kicker>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: INSET }}>
-            {KINDS.map((kind) => {
-              const on = biz.category === kind;
+            {KINDS.map((item) => {
+              const on = biz.category === t(item);
               return (
-                <Pressable key={kind} onPress={() => { tap(); patch({ category: kind }); }} style={[styles.word, { backgroundColor: on ? theme.text : theme.fill }]}>
-                  <T size={14} weight="600" color={on ? theme.bg : theme.text}>{t(kind)}</T>
+                <Pressable key={item} onPress={() => { tap(); patch({ category: on ? "" : t(item) }); }} style={[styles.word, { backgroundColor: on ? theme.text : theme.fill }]}>
+                  <T size={14} weight="600" color={on ? theme.bg : theme.text}>{t(item)}</T>
                 </Pressable>
               );
             })}
@@ -645,7 +947,7 @@ function Payments() {
       <Kicker>{t("Come vendi oggi")}</Kicker>
       <Card>
         <Row first label={t("Richiesta d'ordine in chat")} meta={t("Il cliente sceglie, tu confermi e concordi il pagamento.")} right={<Pick on />} />
-        <Row label={t("Pagamento con carta")} meta={t("Con Stripe, nella versione web di iywa.")} />
+        <Row label={t("Pagamento con carta")} meta={t("Con Stripe, da Pagamenti.")} onPress={() => router.push("/payments")} />
       </Card>
       <Note>{business ? t("Gli ordini ricevuti e quelli fatti sono in Ordini.") : t("Per vendere passa a un account Azienda in Tipo di account e shop.")}</Note>
       <View style={{ paddingHorizontal: INSET, paddingTop: 18, gap: 10 }}>
@@ -698,4 +1000,6 @@ const styles = StyleSheet.create({
   day: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   step: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   swatch: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  center: { height: 50, alignItems: "center", justifyContent: "center" },
+  save: { height: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
 });

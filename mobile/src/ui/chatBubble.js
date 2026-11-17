@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
@@ -11,9 +12,33 @@ import { MINE, VoiceBubble, useChatTheme } from "./chat";
 import { Check, CheckCheck, Clock, Forward, Phone, Reply, Video } from "./chatIcons";
 import { T, tap } from "./kit";
 import { t } from "../lib/i18n";
+import { postCard, usePost } from "../lib/social";
 
 // Figure spaces reserve room for the time + ticks at the end of the last line (Telegram style).
 const SPACE = " ";
+
+// A shared post travels as a text message with its link (the hub has no post kind).
+const POST_LINK = /https:\/\/iywa\.app\/p\/([A-Za-z0-9_-]+)/;
+export function postIdIn(text) {
+  return POST_LINK.exec(String(text || ""))?.[1] || null;
+}
+
+function SharedPost({ id, mine }) {
+  const theme = useChatTheme();
+  const { data, loading } = usePost(id);
+  const post = postCard(data?.post);
+  const fg = mine ? "#fff" : theme.text;
+  const sub = mine ? "rgba(255,255,255,0.78)" : theme.text2;
+  return (
+    <View style={[styles.shared, { backgroundColor: mine ? "rgba(255,255,255,0.14)" : theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" }]}>
+      {post?.image ? <Image source={{ uri: post.image }} recyclingKey={post.image} style={styles.sharedImage} contentFit="cover" transition={120} /> : null}
+      <View style={{ paddingVertical: 7, paddingHorizontal: 10 }}>
+        <T size={13.5} weight="600" color={fg} lines={1}>{post ? post.name || post.handle : loading ? t("Caricamento…") : t("Post non disponibile")}</T>
+        {post?.text ? <T size={13} color={sub} lines={2}>{post.text}</T> : null}
+      </View>
+    </View>
+  );
+}
 
 export function Highlight({ text, query, color }) {
   if (!query) return text;
@@ -99,6 +124,7 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
   const mineReacted = message.reactions?.[myKey];
   const quote = message.reply;
   const hasText = kind !== "audio" && Boolean(message.text);
+  const sharedId = kind === "text" ? postIdIn(message.text) : null;
   const fg = mine ? "#fff" : theme.text;
 
   const radius = {
@@ -122,6 +148,9 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
     if (kind === "image") {
       clearTimeout(tp.timer);
       tp.timer = setTimeout(() => onZoom(message.image), 300);
+    } else if (sharedId) {
+      clearTimeout(tp.timer);
+      tp.timer = setTimeout(() => router.push(`/post/${sharedId}`), 300);
     }
   }
 
@@ -172,6 +201,7 @@ export const DmBubble = memo(function DmBubble({ message, mine, first, last, sho
       <>
         {fwd}
         {kind === "audio" ? <VoiceBubble message={message} color={fg} knob={mine ? "rgba(255,255,255,0.22)" : theme.dark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.08)"} /> : null}
+        {sharedId ? <SharedPost id={sharedId} mine={mine} /> : null}
         {textBody}
         <Meta message={message} mine={mine} tick={tick} />
       </>
@@ -257,6 +287,8 @@ function ReplyHint({ translation }) {
 
 const styles = StyleSheet.create({
   msg: { maxWidth: "74%", minWidth: 0 },
+  shared: { width: 220, marginBottom: 6, borderRadius: 14, overflow: "hidden" },
+  sharedImage: { width: 220, height: 220 },
   padText: { paddingVertical: 8, paddingHorizontal: 13 },
   padAudio: { paddingTop: 6, paddingHorizontal: 10, paddingBottom: 18 },
   lift: { shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 1.5, shadowOffset: { width: 0, height: 1 }, elevation: 1 },

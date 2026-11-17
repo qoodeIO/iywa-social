@@ -102,7 +102,6 @@ export function settingValue(id, store) {
     case "muted": return count(prefs.muted);
     case "restricted": return count(prefs.restricted);
     case "words": return count(prefs.hiddenWords);
-    case "saved": return count(store.saves);
     case "data": return prefs.dataSaver ? t("Attivo") : t("Spento");
     case "theme": return prefs.appearance === "light" ? t("Chiaro") : prefs.appearance === "dark" ? t("Scuro") : t("Automatico");
     case "language": return LANGS.find((lang) => lang.id === store.language)?.label || "";

@@ -1,18 +1,16 @@
 import { memo, useEffect, useId, useRef, useState } from "react";
-import { Keyboard, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, Linking, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router } from "expo-router";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
-import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
-import { useStore } from "../lib/store";
-import { filterOf, GIF_TONES } from "../lib/stories";
-import { euro, findProduct, productRef, reviewsFor, stockLabel, storeOf } from "../data";
-import { At, Bag, Bell, Check, ChevronRight, Hash, Heart, MapPin, Send } from "./icons";
-import { HelpCircle, LinkIcon, MessageCircle, Music, Timer } from "./storyIcons";
-import { Btn, Rating, Sheet, T, tap } from "./kit";
-import { productHref } from "./market";
+import { filterOf, storyFrame } from "../lib/stories";
+import { useProduct } from "../lib/social";
+import { euro } from "../data";
+import { At, Bag, ChevronRight, Hash, MapPin, Send } from "./icons";
+import { HelpCircle, LinkIcon, MessageCircle } from "./storyIcons";
+import { Btn, Sheet, T, tap } from "./kit";
 import { INSET, useTheme } from "../theme";
 import { t } from "../lib/i18n";
 
@@ -21,7 +19,8 @@ const MONO = Platform.select({ ios: "Courier New", default: "monospace" });
 // ---------------------------------------------------------------------------
 // Media: photo, clip, gradient ("Crea") or collage ("Layout"), with the story filter.
 
-export const StoryMedia = memo(function StoryMedia({ frame, live = false, paused = false, onReady, onDuration, onEnd, style }) {
+export const StoryMedia = memo(function StoryMedia({ frame: source, live = false, paused = false, onReady, onDuration, onEnd, style }) {
+  const frame = storyFrame(source);
   const look = filterOf(frame?.filter);
   let body = null;
   if (frame?.gradient) {
@@ -155,29 +154,6 @@ export function textBox(item, u) {
   };
 }
 
-function Equalizer({ on, u }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2 * u, height: 14 * u }}>
-      {[0.4, 0.8, 0.55].map((rest, i) => <EqBar key={i} rest={rest} on={on} u={u} delay={i * 150} />)}
-    </View>
-  );
-}
-
-function EqBar({ rest, on, u, delay }) {
-  const v = useSharedValue(rest);
-  useEffect(() => {
-    if (on) {
-      const timer = setTimeout(() => { v.value = withRepeat(withTiming(1, { duration: 700 }), -1, true); }, delay);
-      return () => { clearTimeout(timer); cancelAnimation(v); };
-    }
-    cancelAnimation(v);
-    v.value = withTiming(rest, { duration: 150 });
-    return undefined;
-  }, [on, rest, delay, v]);
-  const style = useAnimatedStyle(() => ({ height: `${v.value * 100}%` }));
-  return <Animated.View style={[{ width: 2.5 * u, borderRadius: 2 * u, backgroundColor: "#fff" }, style]} />;
-}
-
 function Kicker({ icon: Icon, children, u }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 4 * u }}>
@@ -220,7 +196,7 @@ function SliderTrack({ item, u, onAct, live }) {
   );
 }
 
-export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPick, playing, notified, onAct, live = false }) {
+export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPick, onAct, live = false }) {
   const act = (value) => onAct?.(item, value);
   switch (item.type) {
     case "text":
@@ -229,29 +205,16 @@ export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPi
           <T style={textStyle(item, u)}>{item.text}</T>
         </Pressable>
       );
-    case "music":
-      return (
-        <Pressable disabled={!live} onPress={() => act()} style={st.music(u)}>
-          <Music size={15 * u} weight="bold" color="#fff" />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <T size={13.5 * u} weight="700" color="#fff" lines={1}>{item.title}</T>
-            <T size={11 * u} color="rgba(255,255,255,0.7)" lines={1}>{item.artist}</T>
-          </View>
-          <Equalizer on={playing} u={u} />
-        </Pressable>
-      );
     case "place":
     case "tag":
     case "hash":
-    case "link":
-    case "notify": {
-      const Icon = { place: MapPin, tag: At, hash: Hash, link: LinkIcon, notify: Bell }[item.type];
-      const label = { place: item.name, tag: item.name, hash: item.tag, link: item.label, notify: notified ? t("Notifiche attive") : t("Attiva notifiche") }[item.type];
-      const on = item.type === "notify" && notified;
+    case "link": {
+      const Icon = { place: MapPin, tag: At, hash: Hash, link: LinkIcon }[item.type];
+      const label = { place: item.name, tag: item.handle || item.name, hash: item.tag, link: item.label || item.url }[item.type];
       return (
-        <Pressable disabled={!live} onPress={() => act()} style={[st.pill(u), on ? { backgroundColor: "#0095f6" } : null]}>
-          <Icon size={15 * u} weight="bold" color={on ? "#fff" : "#111"} />
-          <T size={14 * u} weight="700" color={on ? "#fff" : "#111"} lines={1} style={{ letterSpacing: -0.28 * u }}>{label}</T>
+        <Pressable disabled={!live} onPress={() => act()} style={st.pill(u)}>
+          <Icon size={15 * u} weight="bold" color="#111" />
+          <T size={14 * u} weight="700" color="#111" lines={1} style={{ letterSpacing: -0.28 * u }}>{label}</T>
         </Pressable>
       );
     }
@@ -272,8 +235,6 @@ export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPi
           <T size={54 * u} style={{ lineHeight: 62 * u, textShadowColor: "rgba(0,0,0,0.35)", textShadowRadius: 8, textShadowOffset: { width: 0, height: 4 } }}>{item.char}</T>
         </Pressable>
       );
-    case "gif":
-      return <T size={34 * u} weight="800" color={GIF_TONES[item.tone] || "#fff"} style={{ letterSpacing: -1.7 * u, textShadowColor: "#111", textShadowRadius: 0.1, textShadowOffset: { width: 0, height: 3 * u } }}>{item.label}</T>;
     case "slider":
       return (
         <View style={st.card(u)}>
@@ -282,47 +243,34 @@ export const StickerFace = memo(function StickerFace({ item, u = 1, vote, quizPi
           <SliderTrack item={item} u={u} onAct={onAct} live={live} />
         </View>
       );
-    case "yours":
     case "ask":
       return (
         <Pressable disabled={!live} onPress={() => act()} style={st.card(u)}>
-          <Kicker icon={item.type === "ask" ? MessageCircle : null} u={u}>{item.type === "ask" ? t("Domanda") : t("Aggiungi il tuo")}</Kicker>
+          <Kicker icon={MessageCircle} u={u}>{t("Domanda")}</Kicker>
           <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.prompt}</T>
-          <T size={12 * u} color="rgba(0,0,0,0.5)">{item.type === "ask" ? t("Rispondi") : t("Tocca e rispondi")}</T>
+          <T size={12 * u} color="rgba(0,0,0,0.5)">{t("Rispondi")}</T>
         </Pressable>
       );
-    case "count":
-      return (
-        <View style={st.card(u)}>
-          <Kicker icon={Timer} u={u}>{t("Countdown")}</Kicker>
-          <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.label}</T>
-          <T size={12 * u} color="rgba(0,0,0,0.5)">{item.when}</T>
-        </View>
-      );
-    case "poll": {
-      const left = (item.av || 0) + (vote === "a" ? 1 : 0);
-      const right = (item.bv || 0) + (vote === "b" ? 1 : 0);
-      const total = left + right || 1;
+    case "poll":
+      // Votes go to the author as a message; there is no shared tally to show.
       return (
         <View style={st.card(u)}>
           <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.question}</T>
-          {[["a", item.a, left], ["b", item.b, right]].map(([key, label, count]) => {
-            const pct = Math.round((count / total) * 100);
-            return <PollOpt key={key} u={u} label={label} on={vote === key} fill={vote ? pct : null} percent={vote ? pct : null} onPress={live ? () => act(key) : undefined} />;
-          })}
+          {[["a", item.a], ["b", item.b]].map(([key, label]) => (
+            <PollOpt key={key} u={u} label={label} on={vote === key} onPress={live ? () => act(key) : undefined} />
+          ))}
         </View>
       );
-    }
     case "quiz":
       return (
         <View style={st.card(u)}>
           <Kicker icon={HelpCircle} u={u}>{t("Quiz")}</Kicker>
           <T size={15 * u} weight="700" color="#111" style={{ letterSpacing: -0.45 * u }}>{item.question}</T>
-          {item.options.map((label, index) => {
+          {(item.options || []).map((label, index) => {
             const picked = quizPick === index;
             const right = quizPick != null && index === item.answer;
             const wrong = picked && index !== item.answer;
-            return <PollOpt key={label} u={u} label={label} on={right} bad={wrong} onPress={live ? () => act(index) : undefined} />;
+            return <PollOpt key={`${index}-${label}`} u={u} label={label} on={right} bad={wrong} onPress={live ? () => act(index) : undefined} />;
           })}
         </View>
       );
@@ -364,57 +312,51 @@ function useKeyboardHeight() {
   return height;
 }
 
-// The interactive sticker layer of a live story: polls, quizzes, questions, products, notifications.
-export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave, bottomInset = 0 }) {
+// The interactive sticker layer of a live story. Mentions, hashtags, links and products open
+// their page; answers to questions, polls, quizzes and sliders reach the author as a message (onReply).
+export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave, onReply, bottomInset = 0 }) {
   const [shopping, setShopping] = useState(null);
   const [vote, setVote] = useState(null);
   const [quizPick, setQuizPick] = useState(null);
-  const [playing, setPlaying] = useState(false);
-  const [notified, setNotified] = useState(false);
-  const [ask, setAsk] = useState(false);
+  const [ask, setAsk] = useState(null);
   const [answer, setAnswer] = useState("");
   const keyboard = useKeyboardHeight();
   useEffect(() => () => onPause?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps
   if (!items?.length || !w) return null;
-  const products = items.filter((item) => item.type === "product");
+  const products = items.filter((item) => item.type === "product" && item.owner && item.productId);
+  const go = (href) => onLeave?.(() => router.push(href));
 
   function act(item, value) {
     if (quiet || !item) return;
     const type = item.type;
     tap();
-    if (type === "music") {
-      // The web plays a short demo tone; there is no audio file for it here, so only the equalizer runs.
-      setPlaying((on) => {
-        onPause?.(!on);
-        if (!on) onNote?.(`♫ ${item.title}`);
-        return !on;
-      });
+    if (type === "product") {
+      if (item.owner && item.productId) {
+        setShopping([item]);
+        onPause?.(true);
+      }
       return;
     }
-    if (type === "product") {
-      setShopping([item]);
+    if (type === "tag" && item.handle) go(`/person/${encodeURIComponent(item.handle)}`);
+    if (type === "hash" && item.tag) go(`/hashtag/${encodeURIComponent(item.tag)}`);
+    if (type === "link" && item.url) {
       onPause?.(true);
-      return;
+      Linking.openURL(/^https?:\/\//i.test(item.url) ? item.url : `https://${item.url}`).catch(() => onNote?.(t("Link non valido"))).finally(() => onPause?.(false));
     }
     if (type === "place") onNote?.(item.name);
-    if (type === "tag") onNote?.(`@${item.name}`);
-    if (type === "hash") onNote?.(`#${item.tag}`);
-    if (type === "link") onNote?.(item.label);
-    if (type === "emoji" || type === "gif") onNote?.(item.char || item.label);
-    if (type === "slider") onNote?.(`${value}%`);
-    if (type === "notify") {
-      setNotified((on) => {
-        onNote?.(on ? t("Notifiche spente") : t("Notifiche attive"));
-        return !on;
-      });
+    if (type === "emoji") onNote?.(item.char);
+    if (type === "slider") onReply?.(`${item.char || "❤️"} ${value}% · ${item.prompt}`);
+    if (type === "poll" && !vote) {
+      setVote(value);
+      onReply?.(`📊 ${item.question} → ${value === "a" ? item.a : item.b}`);
     }
-    if (type === "poll" && !vote) setVote(value);
     if (type === "quiz" && quizPick == null) {
       setQuizPick(value);
       onNote?.(value === item.answer ? t("Giusto") : t("Quasi"));
+      onReply?.(`❓ ${item.question} → ${item.options?.[value] ?? ""}`);
     }
-    if (type === "ask" || type === "yours") {
-      setAsk(true);
+    if (type === "ask") {
+      setAsk(item);
       onPause?.(true);
     }
   }
@@ -422,11 +364,11 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
   function send() {
     const text = answer.trim();
     if (!text) return;
+    onReply?.(`💬 ${ask?.prompt ? `${ask.prompt}\n` : ""}${text}`);
     setAnswer("");
-    setAsk(false);
+    setAsk(null);
     Keyboard.dismiss();
     onPause?.(false);
-    onNote?.(t("Risposta inviata"));
   }
 
   return (
@@ -435,7 +377,7 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
         <DrawingLayer key={`draw-${index}`} item={item} w={w} h={h} />
       ) : (
         <StickerSpot key={`${item.type}-${index}`} item={item} w={w} h={h}>
-          <StickerFace item={item} u={u} vote={vote} quizPick={quizPick} playing={playing} notified={notified} onAct={act} live={!quiet} />
+          <StickerFace item={item} u={u} vote={vote} quizPick={quizPick} onAct={act} live={!quiet} />
         </StickerSpot>
       )))}
       {ask ? (
@@ -448,7 +390,7 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
             placeholderTextColor="#8e8e8e"
             returnKeyType="send"
             onSubmitEditing={send}
-            onBlur={() => { if (!answer.trim()) { setAsk(false); onPause?.(false); } }}
+            onBlur={() => { if (!answer.trim()) { setAsk(null); onPause?.(false); } }}
             style={{ flex: 1, height: 42, borderRadius: 21, paddingHorizontal: 14, backgroundColor: "#fff", color: "#111", fontSize: 15 }}
           />
           <Pressable onPress={send} accessibilityLabel={t("Invia")} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
@@ -466,53 +408,53 @@ export function StoryStickers({ items, quiet, w, h, u, onNote, onPause, onLeave,
         <ProductSheet
           items={shopping}
           onClose={() => { setShopping(null); onPause?.(false); }}
-          onOpen={(href) => { setShopping(null); onLeave?.(() => router.push(href)); }}
+          onOpen={(href) => { setShopping(null); go(href); }}
         />
       ) : null}
     </View>
   );
 }
 
-// The sheet a viewer opens from a product sticker: see it, save it, add it to the cart.
+export function productPath(owner, id) {
+  return `/product/${encodeURIComponent(String(owner || "").replace(/^@/, ""))}/${encodeURIComponent(id)}`;
+}
+
+// The sheet a viewer opens from a product sticker, with the product as the shop has it now.
 export function ProductSheet({ items, onClose, onOpen }) {
-  const store = useStore();
-  const theme = useTheme();
-  const [added, setAdded] = useState("");
-  const list = (items || []).map((item) => {
-    const product = findProduct(item.owner || null, item.productId, store.myProducts) || { id: item.productId, name: item.name, price: item.price, images: [item.image].filter(Boolean) };
-    return { product, owner: item.owner || null };
-  });
+  const list = items || [];
   return (
     <Sheet open={Boolean(items)} onClose={onClose} title={list.length > 1 ? t("{n} prodotti", { n: list.length }) : t("Prodotto in questa storia")}>
-      {list.map(({ product, owner }, index) => {
-        const ref = productRef(product, owner);
-        const shop = owner ? storeOf(owner) : null;
-        const stock = stockLabel(product);
-        const rating = reviewsFor(ref.key, store.reviews, store.profile);
-        const wished = store.wishlist.some((entry) => entry.key === ref.key);
-        return (
-          <View key={ref.key} style={{ paddingTop: index ? 12 : 0, marginTop: index ? 12 : 0, borderTopWidth: index ? StyleSheet.hairlineWidth : 0, borderTopColor: theme.line }}>
-            <Pressable onPress={() => onOpen(productHref(ref))} style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-              {product.images?.[0] ? <Image source={{ uri: product.images[0] }} style={{ width: 76, height: 76, borderRadius: 10, backgroundColor: theme.fill }} contentFit="cover" /> : <View style={{ width: 76, height: 76, borderRadius: 10, backgroundColor: theme.fill, alignItems: "center", justifyContent: "center" }}><Bag size={26} weight="fill" color={theme.text2} /></View>}
-              <View style={{ flex: 1, gap: 2 }}>
-                <T size={15} weight="700" lines={1}>{product.name}</T>
-                <T size={15} weight="700">{euro(product.price)}</T>
-                {owner ? <Rating avg={rating.avg} count={rating.count} /> : null}
-                <T size={12.5} lines={1} color={theme.text2}>{shop ? shop.title : t("Il tuo shop")} · <T size={12.5} color={stock.tone === "out" ? theme.red : stock.tone === "low" ? "#ff8a00" : theme.green}>{stock.text}</T></T>
-              </View>
-              <ChevronRight size={14} weight="bold" color={theme.text3} />
-            </Pressable>
-            {owner ? (
-              <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
-                <Btn icon={Heart} kind={wished ? "done" : "gray"} height={40} onPress={() => store.toggleWish(ref)} />
-                <Btn title={added === ref.key ? t("Aggiunto") : t("Aggiungi al carrello")} icon={added === ref.key ? Check : null} kind={added === ref.key ? "done" : "gray"} height={40} flex={1} onPress={() => { store.addToCart(ref, 1, product.variants?.[0] || ""); setAdded(ref.key); setTimeout(() => setAdded(""), 1400); }} />
-                <Btn title={t("Vedi")} kind="primary" height={40} flex={1} onPress={() => onOpen(productHref(ref))} />
-              </View>
-            ) : null}
-          </View>
-        );
-      })}
+      {list.map((item, index) => <ProductLine key={`${item.owner}:${item.productId}`} item={item} first={!index} onOpen={onOpen} />)}
     </Sheet>
+  );
+}
+
+function ProductLine({ item, first, onOpen }) {
+  const theme = useTheme();
+  const { data, loading, error } = useProduct(item.owner, item.productId);
+  const product = data?.product;
+  const gone = !loading && (error || (data && !product));
+  const name = product?.name || item.name;
+  const price = product?.price ?? item.price;
+  const image = product?.images?.[0] || item.image;
+  const href = productPath(item.owner, item.productId);
+  return (
+    <View style={{ paddingTop: first ? 0 : 12, marginTop: first ? 0 : 12, borderTopWidth: first ? 0 : StyleSheet.hairlineWidth, borderTopColor: theme.line }}>
+      <Pressable disabled={Boolean(gone)} onPress={() => onOpen(href)} style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+        {image ? <Image source={{ uri: image }} style={{ width: 76, height: 76, borderRadius: 10, backgroundColor: theme.fill }} contentFit="cover" /> : <View style={{ width: 76, height: 76, borderRadius: 10, backgroundColor: theme.fill, alignItems: "center", justifyContent: "center" }}><Bag size={26} weight="fill" color={theme.text2} /></View>}
+        <View style={{ flex: 1, gap: 2 }}>
+          <T size={15} weight="700" lines={1}>{name}</T>
+          {price != null ? <T size={15} weight="700">{euro(price)}</T> : null}
+          <T size={12.5} lines={1} color={gone ? theme.red : theme.text2}>{gone ? t("Non più disponibile") : `@${item.owner}`}</T>
+        </View>
+        {gone ? null : <ChevronRight size={14} weight="bold" color={theme.text3} />}
+      </Pressable>
+      {gone ? null : (
+        <View style={{ flexDirection: "row", marginTop: 12 }}>
+          <Btn title={t("Vedi prodotto")} kind="primary" height={40} flex={1} onPress={() => onOpen(href)} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -535,12 +477,12 @@ export function StoryRing({ src, size = 66, total = 1, seen = 0, tone = "live" }
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
         <Defs>
-          <SvgGradient id={`${raw}b`} x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
+          <SvgGradient id={`${raw}b`} x1="18" y1="88" x2="82" y2="12" gradientUnits="userSpaceOnUse">
             <Stop offset="0" stopColor="#ffb800" />
             <Stop offset="0.45" stopColor="#ff2d55" />
             <Stop offset="1" stopColor="#c013d1" />
           </SvgGradient>
-          <SvgGradient id={`${raw}g`} x1="18" y1="88" x2="82" y2="12" gradientUnits="useriywaOnUse">
+          <SvgGradient id={`${raw}g`} x1="18" y1="88" x2="82" y2="12" gradientUnits="userSpaceOnUse">
             <Stop offset="0" stopColor="#1fd15a" />
             <Stop offset="1" stopColor="#0aa344" />
           </SvgGradient>
@@ -567,13 +509,6 @@ export function StoryRing({ src, size = 66, total = 1, seen = 0, tone = "live" }
       <Image source={src ? { uri: src } : null} style={{ width: image, height: image, borderRadius: image / 2, backgroundColor: theme.fill }} contentFit="cover" transition={150} />
     </View>
   );
-}
-
-export function ringTone(deck, seenIds, closeFriends = []) {
-  const seenCount = deck.frames.filter((frame) => seenIds.includes(frame.id)).length;
-  const allSeen = seenCount === deck.frames.length;
-  const close = deck.mine ? deck.frames.some((frame) => frame.close) : closeFriends.includes(deck.full);
-  return { seenCount, allSeen, tone: allSeen ? "seen" : close ? "close" : "live" };
 }
 
 const shadow = { shadowColor: "#000", shadowOpacity: 0.28, shadowRadius: 10, shadowOffset: { width: 0, height: 8 }, elevation: 6 };

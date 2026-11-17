@@ -83,8 +83,6 @@ export function dayOf(ms) {
   return dayMonthOf(date, diff > 300);
 }
 
-const pad = (n) => String(n).padStart(2, "0");
-
 export function listTime(ms) {
   if (!ms) return "";
   const diff = Math.round((Date.now() - ms) / 86_400_000);
@@ -92,29 +90,6 @@ export function listTime(ms) {
   if (date.toDateString() === new Date().toDateString()) return clockOf(ms);
   if (diff < 7) return weekdayOf(date);
   return `${date.getDate()}/${date.getMonth() + 1}`;
-}
-
-// Labels of the demo threads ("2h", "3g", "1sett", "Ieri", "ora") as clock or date, like the web's demoTime.
-export function demoTime(label) {
-  const value = String(label || "");
-  if (!value || value === "Now" || value === "ora") return clockNow();
-  const hours = value.match(/^(\d+)h$/);
-  if (hours) return clockOf(Date.now() - Number(hours[1]) * 3_600_000);
-  const weeks = value.match(/^(\d+)\s*(sett|w)/);
-  if (weeks) {
-    const at = new Date(Date.now() - Number(weeks[1]) * 7 * 86_400_000);
-    return `${pad(at.getDate())}/${pad(at.getMonth() + 1)}`;
-  }
-  const days = value.match(/^(\d+)[gd]$/);
-  if (days) {
-    const at = new Date(Date.now() - Number(days[1]) * 86_400_000);
-    if (Number(days[1]) < 7) {
-      const text = weekdayOf(at);
-      return text.charAt(0).toUpperCase() + text.slice(1);
-    }
-    return `${pad(at.getDate())}/${pad(at.getMonth() + 1)}`;
-  }
-  return t(value);
 }
 
 export function seenText(person) {
@@ -146,7 +121,7 @@ export function systemText(message, conv, me) {
   }
 }
 
-// Shape a live conversation like the local demo threads used by the UI.
+// A hub conversation in the shape the inbox and chat screens read.
 export function liveThread(conv, me, typing) {
   const others = conv.members.filter((member) => member.handle !== me);
   const group = conv.kind === "group";
@@ -190,7 +165,6 @@ export function liveThread(conv, me, typing) {
 }
 
 export function tickFor(message, thread, receipts) {
-  if (!thread.live) return receipts ? "read" : "sent";
   if (message.status === "failed") return "failed";
   if (!message.id) return "pending";
   if (!receipts) return "sent";
@@ -268,7 +242,13 @@ export function previewOf(item) {
     const detail = last.duration ? callStamp(last.duration) : last.from === "me" ? t("Nessuna risposta") : t("Persa");
     return { icon: last.call === "video" ? "video" : "phone", text: `${label} · ${detail}` };
   }
-  return { icon: null, text: lead(last.text || item.preview) };
+  // A shared post is a text with its link: show the words around it, or "Post".
+  const text = String(last.text || "");
+  if (/https:\/\/iywa\.app\/p\//.test(text)) {
+    const words = text.replace(/\s*https:\/\/iywa\.app\/p\/\S+\s*/g, " ").trim();
+    return { icon: "image", text: lead(words || t("Post")) };
+  }
+  return { icon: null, text: lead(text || item.preview) };
 }
 
 export function isGroupChat(item) {

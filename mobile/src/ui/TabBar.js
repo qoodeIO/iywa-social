@@ -40,7 +40,7 @@ export default function TabBar() {
   const theme = onPager && (current === "reels" || current === "camera") ? darkTheme : light;
   // On the pager the bar slides away to the right as the story camera comes in from the left.
   const slide = onPager ? pagerX.interpolate({ inputRange: [0, W], outputRange: [W, 0], extrapolate: "clamp" }) : 0;
-  const unread = store.chats.filter((chat) => chat.unread).length + (live?.unread || 0);
+  const unread = live?.unread || 0;
   return (
     <View style={{ backgroundColor: "#000" }}>
     <Animated.View style={[styles.bar, { paddingBottom: insets.bottom, backgroundColor: theme.bg, borderTopColor: theme.line, transform: [{ translateX: slide }] }]}>
@@ -53,7 +53,13 @@ export default function TabBar() {
               <Icon size={27} color={theme.text} weight={on ? "fill" : "regular"} />
             ) : (
               <View style={[styles.face, { borderColor: on ? theme.text : "transparent" }]}>
-                <Image source={{ uri: store.profile.src }} style={styles.faceImg} />
+                {store.profile.src ? (
+                  <Image source={{ uri: store.profile.src }} style={styles.faceImg} />
+                ) : (
+                  <View style={[styles.faceImg, { backgroundColor: theme.fill, alignItems: "center", justifyContent: "center" }]}>
+                    <T size={12} weight="700" color={theme.text2}>{String(store.profile.name || "?").slice(0, 1).toUpperCase()}</T>
+                  </View>
+                )}
               </View>
             )}
             {tab.page === "messages" && unread ? (

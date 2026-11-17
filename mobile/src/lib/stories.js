@@ -1,47 +1,32 @@
 import { useMemo } from "react";
-import seed from "../data/seed.json";
-import { HIGHLIGHTS, STORY_DECKS } from "../data";
-import { useStore } from "./store";
-import { t, tk } from "./i18n";
+import { useHighlights, useStories } from "./social";
+import { myHandle } from "./session";
+import { tk } from "./i18n";
 
 // Story constants, copied from the web app (StoryCamera, StoryViewer, HighlightNew).
-export const STORY_MS = 5200;
+export const STORY_MS = 5000;
 export const MAX_CLIP = 15;
 export const STORY_REACTIONS = ["😂", "😮", "😍", "😢", "👏", "🔥", "🎉", "💯"];
 
+// The sticker tray. Every sticker here is made from what the author types or picks
+// (people come from search, products from their own shop): nothing is pre-filled.
 export const STORY_KIT = [
-  { id: "music", label: tk("Musica"), icon: "music" },
+  { id: "tag", label: tk("Menzione"), icon: "tag" },
   { id: "place", label: tk("Luogo"), icon: "place" },
-  { id: "tag", label: tk("Tag"), icon: "tag" },
-  { id: "product", label: tk("Prodotto"), icon: "product" },
   { id: "hash", label: tk("Hashtag"), icon: "hash" },
+  { id: "product", label: tk("Prodotto"), icon: "product" },
+  { id: "link", label: tk("Link"), icon: "link" },
   { id: "emoji", label: tk("Emoji"), icon: "emoji" },
-  { id: "gif", label: tk("GIF"), icon: "emoji" },
   { id: "poll", label: tk("Sondaggio"), icon: "poll" },
   { id: "ask", label: tk("Domanda"), icon: "ask" },
   { id: "quiz", label: tk("Quiz"), icon: "quiz" },
   { id: "slider", label: tk("Slider"), icon: "slider" },
-  { id: "link", label: tk("Link"), icon: "link" },
-  { id: "count", label: tk("Countdown"), icon: "count" },
-  { id: "yours", label: tk("Aggiungi"), icon: "yours" },
-  { id: "notify", label: tk("Notifiche"), icon: "notify" },
 ];
 
-export const STORY_MUSIC = [
-  { title: "Forno lento", artist: "Giulia Neri" },
-  { title: "Rosso di Prato", artist: "Adele Romano" },
-  { title: "Impasto", artist: "Marta Colle" },
-  { title: "Secondo fuoco", artist: "Leo Bassi" },
+export const STORY_EMOJI = [
+  "😀", "😂", "🥰", "😍", "😘", "😊", "😉", "😎", "🤔", "😴", "🔥", "❤️", "✨", "⭐", "💯", "👏", "🙌", "👍", "👎", "💪",
+  "🎉", "🥂", "🍷", "☕️", "🍕", "🍝", "🎶", "🎵", "📸", "💫", "🌹", "💎", "🖤", "🤍", "💛", "💚", "💙", "💜", "🌙", "☀️",
 ];
-export const STORY_PLACES = seed.STORY_PLACES || ["Milano", "Torino", "Prato", "Cremona", "Bologna", "Firenze", "Roma", "Napoli", "Venezia", "Faenza", "Padova", "Genova"];
-export const STORY_EMOJI = seed.STORY_EMOJI || ["😀", "😂", "🥰", "😍", "🔥", "❤️", "✨", "🎉"];
-export const STORY_HASH = seed.STORY_HASH || ["forno", "rosso", "ceramica"];
-export const STORY_GIFS = [
-  { label: "FORNO", tone: "hot" },
-  { label: "LENTO", tone: "slow" },
-  { label: "ROSSO", tone: "red" },
-];
-export const GIF_TONES = { hot: "#ffb020", slow: "#9ad7ff", red: "#ff4d4d" };
 
 export const TEXT_FONTS = [
   { id: "classic", label: tk("Classic") },
@@ -88,45 +73,159 @@ export const BRUSHES = [
   { id: "eraser", label: tk("Gomma"), width: 28, alpha: 1, erase: true },
 ];
 
-export function openFrame(deck, seen) {
+// A server story ({ id, media: { url, type }, text, stickers, style, closeFriends, seen, liked … })
+// in the shape the renderer reads: image / video / cells / gradient / filter / muted.
+// The look chosen in the editor (filter, collage, gradient, mute) travels in `style`.
+export function storyFrame(frame) {
+  if (!frame) return null;
+  if (!frame.media) return frame;
+  const style = frame.style || {};
+  const video = frame.media.type === "video";
+  return {
+    ...frame,
+    image: video ? style.poster || "" : frame.media.url || "",
+    video: video ? frame.media.url || "" : "",
+    cells: Array.isArray(style.cells) && style.cells.length ? style.cells : undefined,
+    layout: style.layout || undefined,
+    gradient: Array.isArray(style.gradient) ? style.gradient : undefined,
+    filter: style.filter || "normal",
+    muted: Boolean(style.muted),
+    close: Boolean(frame.closeFriends),
+  };
+}
+
+// The first frame not watched yet (or the first one when all are).
+export function openFrame(deck) {
   if (!deck) return 0;
-  const index = deck.frames.findIndex((frame) => !seen.includes(frame.id));
+  const index = deck.frames.findIndex((frame) => !frame.seen);
   return index < 0 ? 0 : index;
 }
 
-// The cover picture of a story frame (photo, poster or the first collage cell).
+// The cover picture of a story frame (photo, or the first collage cell). Videos have none.
 export function frameCover(frame) {
-  return frame?.image || frame?.cells?.[0] || "";
+  const item = storyFrame(frame);
+  return item?.image || item?.cells?.[0] || "";
 }
 
-// Story decks for Home, the viewer and the profile: yours first, then the people you follow.
+// A server deck ({ handle, name, avatar, mine, seen, frames }) with the fields older screens read.
+export function deckCard(deck) {
+  return {
+    ...deck,
+    id: deck.handle,
+    full: deck.name || deck.handle,
+    src: deck.avatar || "",
+    frames: (deck.frames || []).map(storyFrame),
+  };
+}
+
+// Story decks for Home and the profile: yours first, then the people you follow (server order).
 export function useStoryDecks() {
-  const store = useStore();
-  const { myStories, hiddenStories, prefs, profile } = store;
-  return useMemo(() => {
-    const hidden = new Set(hiddenStories || []);
-    const blocked = new Set([...(prefs?.blocked || []), ...(prefs?.muted || [])]);
-    const mine = (myStories || []).filter((frame) => !hidden.has(frame.id));
-    return [
-      ...(mine.length ? [{ id: "you", name: t("La tua"), full: profile.name, src: profile.src, mine: true, frames: mine }] : []),
-      ...STORY_DECKS
-        .map((deck) => ({ ...deck, frames: deck.frames.filter((frame) => !hidden.has(frame.id)) }))
-        .filter((deck) => deck.frames.length && !blocked.has(deck.full || deck.name)),
-    ];
-  }, [myStories, hiddenStories, prefs?.blocked, prefs?.muted, profile.name, profile.src]);
+  const { data } = useStories();
+  return useMemo(() => (data || []).map(deckCard), [data]);
 }
 
-export function useHighlightDecks() {
-  const store = useStore();
-  const { highlights, hiddenStories, profile } = store;
-  return useMemo(() => {
-    const hidden = new Set(hiddenStories || []);
-    return [...(highlights || []), ...HIGHLIGHTS]
-      .map((item) => ({ ...item, id: `hl-${item.id}`, raw: item.id, src: item.src || profile.src, highlight: true, frames: item.frames.filter((frame) => !hidden.has(frame.id)) }))
-      .filter((item) => item.frames.length);
-  }, [highlights, hiddenStories, profile.src]);
+// Someone's highlights (yours when no handle) as decks; `href` opens one in the viewer.
+export function useHighlightDecks(handle) {
+  const owner = String(handle || myHandle() || "").replace(/^@/, "");
+  const { data } = useHighlights(owner || null);
+  return useMemo(() => (data || []).filter((item) => item.frames?.length).map((item) => ({
+    ...item,
+    id: `h:${item.id}`,
+    raw: item.id,
+    name: item.title,
+    src: item.cover || frameCover(item.frames[0]),
+    owner,
+    highlight: true,
+    href: `/story/h:${item.id}?owner=${encodeURIComponent(owner)}`,
+    frames: item.frames.map(storyFrame),
+  })), [data, owner]);
 }
 
 export function mineDeck(decks) {
   return decks[0]?.mine ? decks[0] : null;
+}
+
+// ---------------------------------------------------------------------------
+// A small PNG of a two-colour vertical gradient, for "Crea" stories: the server stores one
+// picture per story, and this is what the rail, highlights and other clients show for them.
+// The viewer still draws the real gradient from `style.gradient`.
+
+function hex(color) {
+  const value = String(color || "#000").replace("#", "");
+  const full = value.length === 3 ? value.split("").map((c) => c + c).join("") : value.padEnd(6, "0");
+  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) || 0);
+}
+
+let crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n += 1) {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crcTable[n] = c >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i += 1) crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function u32(n) {
+  return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+}
+
+function chunk(type, data) {
+  const head = [...type].map((c) => c.charCodeAt(0));
+  const body = [...head, ...data];
+  return [...u32(data.length), ...body, ...u32(crc32(body))];
+}
+
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function base64(bytes) {
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i];
+    const b = bytes[i + 1];
+    const c = bytes[i + 2];
+    out += B64[a >> 2] + B64[((a & 3) << 4) | ((b ?? 0) >> 4)];
+    out += b === undefined ? "=" : B64[((b & 15) << 2) | ((c ?? 0) >> 6)];
+    out += c === undefined ? "=" : B64[c & 63];
+  }
+  return out;
+}
+
+// Returns the PNG as base64 (9×16 proportions, small enough to stay a few KB).
+export function gradientPng(colors, width = 36, height = 64) {
+  const [from, to] = [hex(colors?.[0]), hex(colors?.[1] || colors?.[0])];
+  const raw = [];
+  for (let y = 0; y < height; y += 1) {
+    raw.push(0);
+    for (let x = 0; x < width; x += 1) {
+      // Mostly top to bottom, slightly diagonal like the on-screen gradient.
+      const k = Math.min(1, Math.max(0, (y / (height - 1)) * 0.85 + (x / (width - 1)) * 0.15));
+      for (let i = 0; i < 3; i += 1) raw.push(Math.round(from[i] + (to[i] - from[i]) * k));
+    }
+  }
+  // zlib stream with "stored" deflate blocks (no compression needed for a few KB).
+  const z = [0x78, 0x01];
+  for (let i = 0; i < raw.length; i += 65535) {
+    const block = raw.slice(i, i + 65535);
+    const last = i + 65535 >= raw.length ? 1 : 0;
+    z.push(last, block.length & 255, block.length >> 8, ~block.length & 255, (~block.length >> 8) & 255, ...block);
+  }
+  let a = 1;
+  let b = 0;
+  for (const byte of raw) {
+    a = (a + byte) % 65521;
+    b = (b + a) % 65521;
+  }
+  z.push(...u32(((b << 16) | a) >>> 0));
+  const png = [
+    137, 80, 78, 71, 13, 10, 26, 10,
+    ...chunk("IHDR", [...u32(width), ...u32(height), 8, 2, 0, 0, 0]),
+    ...chunk("IDAT", z),
+    ...chunk("IEND", []),
+  ];
+  return base64(png);
 }

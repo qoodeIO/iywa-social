@@ -1,23 +1,14 @@
-// Data helpers for the Home feed, posts, comments, hashtags and notifications.
-// Mirrors the web helpers in src/App.jsx (FEED_PAGES, hashtagPool, tally, commentCount, shown…).
-import { AVATAR, CONTACTS, EXPLORE, FEED_PAGES, PEOPLE, PORTRAIT, POSTS, REELS, WORKS, avatarFor, personByName } from "../data";
-import { t, tk } from "../lib/i18n";
-
-export const FEED_ITEMS = FEED_PAGES.flat();
-
-// Every photo the "Nuovo post" picker shows before the phone's own library.
-export const DEMO_GALLERY = [...new Set([
-  ...WORKS.map((work) => work.src),
-  PORTRAIT,
-  ...PEOPLE.map((person) => person.src),
-  ...POSTS.map((post) => post.image).filter(Boolean),
-])];
+// Small helpers shared by the feed, posts, comments, hashtags and notifications.
+// Posts, comments and people come from the server (lib/social.js); nothing here holds data.
+import { cachedPost, postCard } from "../lib/social";
+import { t } from "../lib/i18n";
 
 export { STORY_FILTERS as POST_FILTERS, filterOf } from "../lib/stories";
 
-export const STORY_PLACES = ["Milano", "Torino", "Prato", "Cremona", "Bologna", "Firenze", "Roma", "Napoli", "Venezia", "Faenza", "Padova", "Genova"];
+export const SHARE_BASE = "https://iywa.app/p/";
 
 export function parseCount(label) {
+  if (typeof label === "number") return label;
   const text = String(label ?? "0").trim().toLowerCase().replace(/\s/g, "");
   if (text.endsWith("k")) {
     const n = parseFloat(text.replace(",", "."));
@@ -27,27 +18,27 @@ export function parseCount(label) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function tally(label, on) {
-  if (!on) return String(label ?? "0");
-  return String(parseCount(label) + 1);
+// Counts come from the server already including my own like.
+export function tally(label) {
+  return String(parseCount(label));
 }
 
-export function commentCount(post, extras) {
-  const added = Array.isArray(extras) ? extras.length : 0;
-  const base = post.comments != null ? parseCount(post.comments) : (post.thread || []).length;
-  return base + added;
+export function commentCount(post) {
+  return parseCount(post?.comments);
 }
 
 export function hashtagsOf(text) {
   return (String(text || "").match(/#[\p{L}\d_]+/gu) || []).map((tag) => tag.slice(1).toLowerCase());
 }
 
-// Muted / blocked people and hidden words, same rules as the web.
-export function personHidden(prefs, name, blockOnly = false) {
-  if (!name) return false;
-  const blocked = Array.isArray(prefs?.blocked) && prefs.blocked.includes(name);
+// Muted / blocked people (by handle or, for older lists, by name) and hidden words.
+export function personHidden(prefs, who, blockOnly = false) {
+  if (!who) return false;
+  const key = String(who).replace(/^@/, "");
+  const has = (list) => Array.isArray(list) && (list.includes(key) || list.includes(who));
+  const blocked = has(prefs?.blocked);
   if (blocked || blockOnly) return blocked;
-  return Array.isArray(prefs?.muted) && prefs.muted.includes(name);
+  return has(prefs?.muted);
 }
 export function textHidden(prefs, text) {
   const blob = String(text || "").toLowerCase();
@@ -58,7 +49,9 @@ export function textHidden(prefs, text) {
   });
 }
 export function shown(prefs, item) {
-  return !personHidden(prefs, item?.name) && !textHidden(prefs, item?.text || item?.caption);
+  if (!item) return false;
+  const handle = item.owner || item.author?.handle;
+  return !personHidden(prefs, handle) && !personHidden(prefs, item.name || item.author?.name) && !textHidden(prefs, item.text || item.caption);
 }
 export function canReach(prefs, follows, name, key) {
   const rule = prefs?.[key] || "everyone";
@@ -67,60 +60,29 @@ export function canReach(prefs, follows, name, key) {
   return true;
 }
 
-// One post shape for every source: `src` is the author's face.
+// One card shape for a server post or an already shaped card.
 export function shapePost(item) {
   if (!item) return null;
-  return { ...item, src: item.src || item.avatar || avatarFor(item.name) || AVATAR, avatar: item.avatar || item.src };
+  if (item.server) return item;
+  if (item.author) return postCard(item);
+  return { ...item, src: item.src || item.avatar || "", avatar: item.avatar || item.src || "" };
 }
 
-export const HOME_HERO = {
-  ...POSTS[0],
-  src: AVATAR,
-  handle: "Milano",
-  time: tk("2 ore fa"),
-};
-
-function reelPosts() {
-  return REELS.map((reel) => ({ id: `reel-${reel.id}`, name: reel.name, handle: reel.handle, avatar: reel.avatar || reel.src, src: reel.avatar || reel.src, image: reel.src, text: reel.caption, likes: reel.likes, comments: reel.comments, saves: reel.saves, kind: "reel", thread: reel.thread }));
+// The cached copy of a post (card shape), or null when it has not been loaded yet.
+export function findPost(id) {
+  const post = cachedPost(String(id || ""));
+  return post ? postCard(post) : null;
 }
 
-export function hashtagPool(library) {
-  const seen = new Set();
-  return [...(library || []).filter((item) => item.image), ...POSTS.filter((item) => item.image), ...EXPLORE, ...reelPosts()].filter((post) => {
-    if (!post.image || seen.has(post.id)) return false;
-    seen.add(post.id);
-    return true;
-  });
-}
-
-// Finds a post by id in my library, the profile posts, Explore, the Home feed or Reels.
-export function findPost(id, library) {
-  const key = String(id || "");
-  const found = (library || []).find((item) => item.id === key)
-    || POSTS.find((item) => item.id === key)
-    || EXPLORE.find((item) => item.id === key)
-    || FEED_ITEMS.find((item) => item.id === key)
-    || reelPosts().find((item) => item.id === key);
-  if (!found) return null;
-  const post = shapePost(found);
-  if (post.type && !post.kind) post.kind = post.type;
-  if (!post.thread && post.kind !== "tweet") {
-    // Web asPost(): feed posts open with two demo replies.
-    post.thread = [
-      { name: "Leo Bassi", text: "Il bordo tiene." },
-      { name: "Marta Colle", text: "Lo voglio sul banco." },
-    ];
-  }
-  return post;
-}
-
+// Faces come with the server's people objects now; without one there is no face to show.
 export function faceOf(name, me) {
-  if (me && name === me.name) return me.src || AVATAR;
-  return PEOPLE.find((p) => p.name === name)?.src || CONTACTS.find((p) => p.name === name)?.src || avatarFor(name) || null;
+  if (me && name && (name === me.name || name === me.handle)) return me.src || me.avatar || null;
+  return null;
 }
 
-export function handleOf(name) {
-  return personByName(name)?.handle || null;
+// Names no longer map to handles on the device: people are looked up on the server.
+export function handleOf() {
+  return null;
 }
 
 export function noteAgo(at) {
@@ -131,5 +93,3 @@ export function noteAgo(at) {
   if (diff < 7 * 86_400_000) return t("{n} g", { n: Math.floor(diff / 86_400_000) });
   return t("{n} sett", { n: Math.floor(diff / (7 * 86_400_000)) });
 }
-
-export const SHARE_BASE = "https://iywa.app/p/";
